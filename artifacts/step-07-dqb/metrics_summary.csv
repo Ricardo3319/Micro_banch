@@ -1,0 +1,13 @@
+scenario,method,P99_median_us,P999_median_us,slo_violation_median,migration_rate_median,invalid_ratio_median,batch_candidate_median,batch_selected_median,batch_move_median,avg_move_batch_size_median,saturation_guard_median
+W2_burst_homo_rho0.85,B2_Reactive,1610,2270,0.468508,0.0123568,0.221303,0,0,0,0,0
+W2_burst_homo_rho0.85,M0_Proactive,1420,2010,0.386676,0.0400124,0.145056,0,0,0,0,0
+W2_burst_homo_rho0.85,M1_AQB_PM,1100,1730,0.385527,0.0453816,0.100943,0,0,0,0,0
+W2_burst_homo_rho0.85,M2_DQB_PM,430,884,0.231632,0.0156658,0.0380709,13644619,19357,19357,1.00,0
+W3_heavytail_homo_rho0.85,B2_Reactive,200,394,0.096214,0.0221686,0.297758,0,0,0,0,0
+W3_heavytail_homo_rho0.85,M0_Proactive,186,360,0.088628,0.0402885,0.0508681,0,0,0,0,0
+W3_heavytail_homo_rho0.85,M1_AQB_PM,176,338,0.084086,0.0451337,0.035445,0,0,0,0,0
+W3_heavytail_homo_rho0.85,M2_DQB_PM,192,386,0.089972,0.0135295,0.00647843,2307288,16360,16363,1.00,0
+W1_saturation_homo_rho0.95,B2_Reactive,1380,1600,0.996324,0.000411213,0.402612,0,0,0,0,0
+W1_saturation_homo_rho0.95,M0_Proactive,1500,2700,0.991473,0.0394141,0.379253,0,0,0,0,0
+W1_saturation_homo_rho0.95,M1_AQB_PM,1370,1580,0.996731,0.0175483,0.249164,0,0,0,0,0
+W1_saturation_homo_rho0.95,M2_DQB_PM,1350,1590,0.995763,0,0,25918946,0,0,0,1559211

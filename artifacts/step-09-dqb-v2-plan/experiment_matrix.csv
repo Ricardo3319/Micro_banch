@@ -1,0 +1,20 @@
+scenario_id,workload,cluster,rho,methods,seeds,purpose,status
+w1_saturation_boundary,W1_POISSON_BIMODAL,HOMOGENEOUS,0.50,B1_PowerOf2;B2_Reactive;M0_Proactive;M1_AQB_PM;M2_DQB_PM;DQB_v2,11;23;37;47;59,saturation guard and no-migrate boundary,planned
+w1_saturation_boundary,W1_POISSON_BIMODAL,HOMOGENEOUS,0.70,B1_PowerOf2;B2_Reactive;M0_Proactive;M1_AQB_PM;M2_DQB_PM;DQB_v2,11;23;37;47;59,saturation guard and no-migrate boundary,planned
+w1_saturation_boundary,W1_POISSON_BIMODAL,HOMOGENEOUS,0.85,B1_PowerOf2;B2_Reactive;M0_Proactive;M1_AQB_PM;M2_DQB_PM;DQB_v2,11;23;37;47;59,saturation guard and no-migrate boundary,planned
+w1_saturation_boundary,W1_POISSON_BIMODAL,HOMOGENEOUS,0.92,B1_PowerOf2;B2_Reactive;M0_Proactive;M1_AQB_PM;M2_DQB_PM;DQB_v2,11;23;37;47;59,saturation guard and no-migrate boundary,planned
+w1_saturation_boundary,W1_POISSON_BIMODAL,HOMOGENEOUS,0.95,B1_PowerOf2;B2_Reactive;M0_Proactive;M1_AQB_PM;M2_DQB_PM;DQB_v2,11;23;37;47;59,saturation guard and no-migrate boundary,planned
+w2_burst_pressure_batch,W2_MMPP_BIMODAL,HOMOGENEOUS,0.50,B1_PowerOf2;B2_Reactive;M0_Proactive;M1_AQB_PM;M2_DQB_PM;DQB_v2,11;23;37;47;59,burst hotspot and pressure-batch repair,planned
+w2_burst_pressure_batch,W2_MMPP_BIMODAL,HOMOGENEOUS,0.70,B1_PowerOf2;B2_Reactive;M0_Proactive;M1_AQB_PM;M2_DQB_PM;DQB_v2,11;23;37;47;59,burst hotspot and pressure-batch repair,planned
+w2_burst_pressure_batch,W2_MMPP_BIMODAL,HOMOGENEOUS,0.85,B1_PowerOf2;B2_Reactive;M0_Proactive;M1_AQB_PM;M2_DQB_PM;DQB_v2,11;23;37;47;59,burst hotspot and pressure-batch repair,planned
+w2_burst_pressure_batch,W2_MMPP_BIMODAL,HOMOGENEOUS,0.92,B1_PowerOf2;B2_Reactive;M0_Proactive;M1_AQB_PM;M2_DQB_PM;DQB_v2,11;23;37;47;59,burst hotspot and pressure-batch repair,planned
+w3_heavytail_blocking_batch,W3_POISSON_LOGNORMAL,HOMOGENEOUS,0.50,B1_PowerOf2;B2_Reactive;M0_Proactive;M1_AQB_PM;M2_DQB_PM;DQB_v2,11;23;37;47;59,mice-behind-elephant and sparse blocking boundary,planned
+w3_heavytail_blocking_batch,W3_POISSON_LOGNORMAL,HOMOGENEOUS,0.70,B1_PowerOf2;B2_Reactive;M0_Proactive;M1_AQB_PM;M2_DQB_PM;DQB_v2,11;23;37;47;59,mice-behind-elephant and sparse blocking boundary,planned
+w3_heavytail_blocking_batch,W3_POISSON_LOGNORMAL,HOMOGENEOUS,0.85,B1_PowerOf2;B2_Reactive;M0_Proactive;M1_AQB_PM;M2_DQB_PM;DQB_v2,11;23;37;47;59,mice-behind-elephant and sparse blocking boundary,planned
+w3_heavytail_blocking_batch,W3_POISSON_LOGNORMAL,HOMOGENEOUS,0.92,B1_PowerOf2;B2_Reactive;M0_Proactive;M1_AQB_PM;M2_DQB_PM;DQB_v2,11;23;37;47;59,mice-behind-elephant and sparse blocking boundary,planned
+hetero_w2_slow_node_pressure,W2_MMPP_BIMODAL,HETERO_25PCT,0.70,B1_PowerOf2;B2_Reactive;M0_Proactive;M1_AQB_PM;M2_DQB_PM;DQB_v2,11;23;37;47;59,slow-node pressure and slow-to-fast repair,planned
+hetero_w2_slow_node_pressure,W2_MMPP_BIMODAL,HETERO_25PCT,0.85,B1_PowerOf2;B2_Reactive;M0_Proactive;M1_AQB_PM;M2_DQB_PM;DQB_v2,11;23;37;47;59,slow-node pressure and slow-to-fast repair,planned
+hetero_w2_slow_node_pressure,W2_MMPP_BIMODAL,HETERO_25PCT,0.92,B1_PowerOf2;B2_Reactive;M0_Proactive;M1_AQB_PM;M2_DQB_PM;DQB_v2,11;23;37;47;59,slow-node pressure and slow-to-fast repair,planned
+hetero_w3_slow_heavytail,W3_POISSON_LOGNORMAL,HETERO_25PCT,0.70,B1_PowerOf2;B2_Reactive;M0_Proactive;M1_AQB_PM;M2_DQB_PM;DQB_v2,11;23;37;47;59,slow-node heavy-tail blocking boundary,planned
+hetero_w3_slow_heavytail,W3_POISSON_LOGNORMAL,HETERO_25PCT,0.85,B1_PowerOf2;B2_Reactive;M0_Proactive;M1_AQB_PM;M2_DQB_PM;DQB_v2,11;23;37;47;59,slow-node heavy-tail blocking boundary,planned
+hetero_w3_slow_heavytail,W3_POISSON_LOGNORMAL,HETERO_25PCT,0.92,B1_PowerOf2;B2_Reactive;M0_Proactive;M1_AQB_PM;M2_DQB_PM;DQB_v2,11;23;37;47;59,slow-node heavy-tail blocking boundary,planned

@@ -1,0 +1,6 @@
+scenario,method,rho,seed,P99_us,P999_us,slo_violation_rate,migration_rate,invalid_migration_ratio,total_finished,total_generated,batch_candidate_count,batch_selected_count,batch_move_count,batch_size_1_count,batch_size_2_7_count,batch_size_8_31_count,batch_size_32_plus_count,batch_type_generic_count,batch_type_short_count,batch_type_mice_count,batch_type_slow_count,batch_type_distribution_count,target_plan_reject_count,saturation_guard_count
+W2_burst_homo,M2_DQB_PM,0.85,11,336,474,0.311241,0.013615,0.0290325,1000000,1201685,235046,1920,16387,0,0,1920,0,1295,625,0,0,0,910851,0
+W2_burst_homo,M2_DQB_PM,0.85,23,358,572,0.238589,0.0115643,0.0272085,1000000,1223594,840591,1444,15812,0,0,1404,40,838,534,0,0,72,3299774,0
+W2_burst_homo,M2_DQB_PM,0.85,37,334,458,0.264883,0.00844765,0.0360627,1000000,1201399,250153,1201,10182,0,0,1201,0,778,423,0,0,0,977859,0
+W2_burst_homo,M2_DQB_PM,0.85,47,2.61e+03,3.49e+03,0.519507,0.0117649,0.0227621,1000000,1221094,10898970,924,14446,0,0,787,137,436,403,0,0,85,42909326,0
+W2_burst_homo,M2_DQB_PM,0.85,59,772,1.07e+03,0.355563,0.00105449,0.0528808,1000000,1201530,4485115,150,1289,0,0,150,0,122,28,0,0,0,17658901,0

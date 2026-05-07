@@ -1,0 +1,40 @@
+metric_group,metric_name,unit,description,status
+primary,P99_us,us,99th percentile end-to-end latency,planned
+primary,P999_us,us,99.9th percentile end-to-end latency,planned
+primary,slo_violation_rate,ratio,all-request SLO violation rate,planned
+primary,short_slo_violation_rate,ratio,short-request SLO violation rate,planned
+primary,long_slo_violation_rate,ratio,long-request SLO violation rate,planned
+primary,mice_slo_violation_rate,ratio,mice-request SLO violation rate,planned
+primary,elephant_slo_violation_rate,ratio,elephant-request SLO violation rate,planned
+migration,migration_rate,ratio,moved request count / generated request count,planned
+migration,migration_work_rate,ratio,moved estimated work / generated estimated work,planned
+migration,invalid_migration_ratio,ratio,migrations whose actual latency exceeded local estimate,planned
+migration,target_harm_est_us,us,estimated target-side harm from selected batch,planned
+migration,dst_queue_harm_after_arrival,us,observed target queue impact after migrated arrivals,planned
+migration,per_dst_migrated_work_us,us,incoming migrated work by destination host,planned
+batch,batch_candidate_count,count,batch candidates generated,planned
+batch,batch_selected_count,count,batch candidates committed,planned
+batch,batch_move_count,count,moved requests in committed batches,planned
+batch,batch_size_exact_histogram,histogram,exact moved-request count per committed batch,planned
+batch,batch_type,enum,pressure/blocking/slow-node/distribution batch type,planned
+batch,batch_confidence,ratio,batch distribution estimate confidence,planned
+batch,risk_mass_est,us,estimated source-side batch risk mass,planned
+batch,risk_reduction_est,us,estimated risk reduction after migration,planned
+batch,source_queue_depth,count,source queue depth at decision,planned
+batch,source_queue_work_us,us,source queue work at decision,planned
+batch,destination_virtual_occupancy,us,target virtual-core occupancy estimate,planned
+no_migrate,NO_BATCH_FORMED,count,no legal batch could be formed,planned
+no_migrate,LOW_CONFIDENCE,count,distribution estimate confidence below threshold,planned
+no_migrate,LOW_EXPECTED_GAIN,count,expected gain below migration margin,planned
+no_migrate,DST_RESERVATION_HIGH,count,target incoming reservation too high,planned
+no_migrate,DST_TAIL_HARM,count,target-side harm guard rejected batch,planned
+no_migrate,SATURATION_GUARD,count,global saturation guard rejected migration,planned
+no_migrate,BUDGET_EXHAUSTED,count,migration budget exhausted,planned
+no_migrate,SPARSE_BLOCKING_NOT_BATCHABLE,count,blocking risk too sparse for legal batch,planned
+overhead,summary_update_cost_est_us,us,estimated cost to update queue summary,planned
+overhead,batch_estimation_cost_est_us,us,estimated cost to build and score batch descriptor,planned
+overhead,target_selection_cost_est_us,us,estimated target sampling and rejection cost,planned
+overhead,candidates_per_check,count,candidate count per migration check,planned
+overhead,summaries_per_check,count,summary count per migration check,planned
+overhead,control_messages_per_migration,count,control-plane message count per committed migration,planned
+overhead,decision_cost_over_check_period,ratio,decision cost divided by check period,planned

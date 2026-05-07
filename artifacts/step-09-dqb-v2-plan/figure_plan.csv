@@ -1,0 +1,8 @@
+figure_id,content,scenarios,evidence_goal,status
+fig1_main_gain,W2 burst P99/P999 across B1/B2/M0/M1/M2-v1/DQB-v2 plus migration rate,w2_burst_pressure_batch,effectiveness without relying on higher migration rate,planned
+fig2_mechanism_ablation,full vs prior-only vs summary-only vs queue-length-only vs no-reservation vs no-saturation-guard,w2_burst_pressure_batch;w1_saturation_boundary,"distribution, batch-risk, target protection, and saturation mechanisms",planned
+fig3_batch_behavior,"exact batch-size histogram, batch type distribution, risk mass vs selected probability",w2_burst_pressure_batch;w3_heavytail_blocking_batch,DQB-v2 is truly batch-level and not a size-1 fallback,planned
+fig4_w3_boundary,W3 no-migrate reason distribution and sparse blocking diagnostics,w3_heavytail_blocking_batch,heavy-tail boundary or hybrid blocking-batch benefit,planned
+fig5_heterogeneous,fast/slow source-destination migration matrix and target congestion,hetero_w2_slow_node_pressure;hetero_w3_slow_heavytail,slow-node pressure and receiver-side protection,planned
+fig6_control_overhead,"decision cost, candidate count, summary count versus load and queue depth",all,bounded control-plane cost,planned
+fig7_cloudlab_replay,key results replayed with calibrated CloudLab constants,w2_burst_pressure_batch;w1_saturation_boundary;w3_heavytail_blocking_batch,realism of simulator constants and trend preservation,planned

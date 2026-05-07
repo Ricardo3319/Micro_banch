@@ -1,0 +1,37 @@
+ablation_group,variant,purpose,primary_scenarios,status
+distribution,DQB-v2/full,complete prior + local-summary calibrated policy,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+distribution,DQB-v2/prior-only,remove local queue-summary correction,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+distribution,DQB-v2/summary-only,remove workload prior calibration,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+distribution,DQB-v2/queue-length-only,replace distribution estimate with queue length,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+distribution,DQB-v2/no-confidence,disable confidence-weighted migration margin,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+distribution,DQB-v2/no-pattern-type,disable pressure/blocking/slow-node typing,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+batch_migration,DQB-v2/single-move,force one moved request per selected batch,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+batch_migration,DQB-v2/batch-size=2,cap moved requests per batch at 2,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+batch_migration,DQB-v2/batch-size=4,cap moved requests per batch at 4,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+batch_migration,DQB-v2/batch-size=8,cap moved requests per batch at 8,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+batch_migration,DQB-v2/batch-size=16,cap moved requests per batch at 16,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+batch_migration,DQB-v2/batch-size=32,cap moved requests per batch at 32,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+batch_migration,DQB-v2/batch-size=64,cap moved requests per batch at 64,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+batch_migration,DQB-v2/no-host-aggregation,disable W3 host-level fragment aggregation,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+batch_migration,DQB-v2/no-arrival-epoch-binning,disable arrival-epoch batch formation,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+batch_migration,DQB-v2/pressure-batch-only,disable blocking-oriented batches,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+batch_migration,DQB-v2/blocking-batch-only,disable pressure-oriented batches,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+target_protection,DQB-v2/no-reservation,ignore scheduled incoming migration work,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+target_protection,DQB-v2/host-reservation-only,reserve at host granularity only,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+target_protection,DQB-v2/core-reservation,reserve at virtual-core granularity,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+target_protection,DQB-v2/no-target-harm-guard,disable target-side harm rejection,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+target_protection,DQB-v2/no-saturation-guard,disable global saturation no-migrate guard,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+realism,Oracle-E,use exact service estimate as an upper-bound signal,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+realism,EWMA-E,use online service estimate as the main realistic setting,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+realism,Noisy-E,inject service-estimate error,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+realism,eligible_fraction=1.0,all waiting requests are migratable,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+realism,eligible_fraction=0.75,75 percent of waiting requests are migratable,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+realism,eligible_fraction=0.50,50 percent of waiting requests are migratable,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+realism,sync_period_us=5,stale-view refresh every 5 us,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+realism,sync_period_us=10,stale-view refresh every 10 us,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+realism,sync_period_us=20,stale-view refresh every 20 us,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+realism,sync_period_us=50,stale-view refresh every 50 us,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+realism,check_period_us=0.5,migration check every 0.5 us,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+realism,check_period_us=1,migration check every 1 us,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+realism,check_period_us=2,migration check every 2 us,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
+realism,check_period_us=5,migration check every 5 us,w2_burst_pressure_batch;w3_heavytail_blocking_batch;w1_saturation_boundary,planned
