@@ -1,24 +1,56 @@
+# CMake / build outputs
 build/
 build-aqb-check/
-
-# CMake and compiler-generated files
+cmake-build-*/
+out/
+dist/
+bin/
+lib/
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
 install_manifest.txt
 compile_commands.json
-__pycache__/
-*.pyc
+CTestTestfile.cmake
+Testing/
+Makefile
+*.ninja
+*.ninja_deps
+*.ninja_log
+*.dir/
 
-# IDE and OS files
+# Python generated files
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.venv/
+venv/
+env/
+*.py[cod]
+*.py,cover
+*.egg-info/
+pip-wheel-metadata/
+
+# VS Code / Visual Studio files
 .vscode/
+.history/
 .vs/
+*.code-workspace
 *.user
 *.suo
+*.userossc
+*.rsuser
+
+# OS files
 Thumbs.db
 Desktop.ini
+.DS_Store
 
 # Generic logs and temporary files
 *.log
 *.tmp
 *.temp
+*.swp
+*.swo

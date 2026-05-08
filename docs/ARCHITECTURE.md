@@ -35,6 +35,10 @@ Planning artifacts for the DQB-v2 study are emitted under
 scenario matrix, ablations, metrics schema, figure plan, and acceptance
 criteria; they do not run simulations.
 
+The current DQB-v1 result interpretation and the next diagnostic experiment
+closure are summarized in `docs/DQB_CURRENT_RESULTS_ANALYSIS.md` and
+`artifacts/step-10-dqb-closed-loop/summary.md`.
+
 ## DQB-PM Data Path
 
 ```text
