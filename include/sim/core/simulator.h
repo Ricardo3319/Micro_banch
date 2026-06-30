@@ -63,7 +63,14 @@ private:
     bool move_waiting_task_intra_host(int host, int src_core, int dst_core,
                                       Task* task, double estimated_local_latency_us,
                                       bool proactive);
+    bool move_rescue_task_intra_host(int host, int src_core, int dst_core,
+                                     Task* task,
+                                     double estimated_local_latency_us,
+                                     double estimated_remote_latency_us,
+                                     int predicted_target_delta_risk,
+                                     bool predicted_harmful);
     bool run_intra_proactive_check(int host);
+    bool run_rescue_sched_check(int host);
     void try_b0_pull(int prefer_host = -1);
     int  find_b0_idle_host();
 

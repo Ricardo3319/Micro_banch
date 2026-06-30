@@ -20,6 +20,9 @@ static const char* method_name(sim::MethodType m) {
         case sim::MethodType::B1_POWER_OF_K:           return "B1_PowerOf2";
         case sim::MethodType::B2_REACTIVE_MIGRATION:   return "B2_Reactive";
         case sim::MethodType::M0_INTRA_HOST_PROACTIVE: return "M0_IntraHostProactive";
+        case sim::MethodType::M1_RESCUE_SCHED:         return "M1_RescueSched";
+        case sim::MethodType::M1_RESCUE_NO_TARGET_SAFETY: return "M1_RescueSched_NoTargetSafety";
+        case sim::MethodType::M1_RESCUE_NO_RESCUABLE:  return "M1_RescueSched_NoRescuable";
         case sim::MethodType::M0_PROACTIVE_MIGRATION:  return "M0_Proactive";
         case sim::MethodType::M1_AQB_PROACTIVE_MIGRATION: return "M1_AQB_PM";
         case sim::MethodType::M2_DQB_PROACTIVE_MIGRATION: return "M2_DQB_PM";
@@ -707,6 +710,73 @@ static void write_intra_tuning_row(std::ofstream& csv,
         << m.invalid_intra_move_ratio() << "\n";
 }
 
+static bool method_has_target_safety(sim::MethodType method) {
+    return method != sim::MethodType::M1_RESCUE_NO_TARGET_SAFETY;
+}
+
+static bool method_has_rescuable_filter(sim::MethodType method) {
+    return method != sim::MethodType::M1_RESCUE_NO_RESCUABLE;
+}
+
+static void write_rescue_header(std::ofstream& csv) {
+    csv << "scenario,workload,method,rho,seed,"
+           "check_period_us,epsilon_us,budget_per_check,k_candidates,h_targets,"
+           "target_safety_enabled,rescuable_filter_enabled,"
+           "P99_us,P999_us,slo_violation_rate,total_finished,total_generated,"
+           "migration_rate,invalid_migration_ratio,"
+           "intra_move_rate,intra_move_count,intra_moved_work_us,"
+           "steal_attempt_count,steal_success_count,stolen_task_count,"
+           "proactive_intra_attempt_count,proactive_intra_success_count,"
+           "invalid_intra_move_ratio,"
+           "rescue_attempt_count,rescue_candidate_count,locally_doomed_count,"
+           "remote_feasible_count,target_safe_count,rescue_success_count,"
+           "rescue_moved_work_us,target_unsafe_reject_count,"
+           "remote_infeasible_reject_count,needless_migration_count,"
+           "unsaved_migration_count,beneficial_migration_count,"
+           "harmful_migration_count,beneficial_migration_ratio,"
+           "useless_migration_ratio,rescue_per_migration\n";
+}
+
+static void write_rescue_row(std::ofstream& csv,
+                             const char* scenario,
+                             sim::WorkloadType wl,
+                             sim::MethodType method,
+                             double rho,
+                             unsigned seed,
+                             const sim::M0Config& cfg,
+                             const sim::Simulator& eng) {
+    const auto& m = eng.metrics();
+    uint64_t gen = eng.total_generated();
+    csv << scenario << "," << workload_name(wl) << "," << method_name(method)
+        << "," << rho << "," << seed << ","
+        << cfg.t_check_us << "," << cfg.rescue_epsilon_us << ","
+        << cfg.rescue_budget_per_check << "," << cfg.rescue_k_candidates << ","
+        << cfg.rescue_h_targets << ","
+        << (method_has_target_safety(method) ? 1 : 0) << ","
+        << (method_has_rescuable_filter(method) ? 1 : 0) << ","
+        << std::setprecision(3) << m.p99() << "," << m.p999() << ","
+        << std::setprecision(6) << m.slo_violation_rate() << ","
+        << m.total_finished << "," << gen << ","
+        << m.migration_rate(gen) << "," << m.invalid_migration_ratio() << ","
+        << m.intra_move_rate(gen) << "," << m.intra_move_count << ","
+        << m.intra_moved_work_us << ","
+        << m.steal_attempt_count << "," << m.steal_success_count << ","
+        << m.stolen_task_count << ","
+        << m.proactive_intra_attempt_count << ","
+        << m.proactive_intra_success_count << ","
+        << m.invalid_intra_move_ratio() << ","
+        << m.rescue_attempt_count << "," << m.rescue_candidate_count << ","
+        << m.locally_doomed_count << "," << m.remote_feasible_count << ","
+        << m.target_safe_count << "," << m.rescue_success_count << ","
+        << m.rescue_moved_work_us << "," << m.target_unsafe_reject_count << ","
+        << m.remote_infeasible_reject_count << ","
+        << m.needless_migration_count << "," << m.unsaved_migration_count << ","
+        << m.beneficial_migration_count << "," << m.harmful_migration_count << ","
+        << m.beneficial_migration_ratio() << ","
+        << m.useless_migration_ratio() << ","
+        << m.rescue_per_migration() << "\n";
+}
+
 static int run_intra_smoke() {
     std::cout << "=== Intra-host Smoke: W3 rho=0.85 seed=11 ===\n";
     sim::MethodType methods[] = {
@@ -947,6 +1017,308 @@ static int run_intra_main(const std::string& csv_path) {
     return 0;
 }
 
+static int run_rescue_smoke() {
+    std::cout << "=== RescueSched Smoke: W3 rho=0.85 seed=11 ===\n";
+    sim::MethodType methods[] = {
+        sim::MethodType::L1_WORK_STEALING,
+        sim::MethodType::M0_INTRA_HOST_PROACTIVE,
+        sim::MethodType::M1_RESCUE_SCHED,
+        sim::MethodType::M1_RESCUE_NO_TARGET_SAFETY
+    };
+
+    bool ok = true;
+    for (auto method : methods) {
+        sim::Simulator eng;
+        sim::M0Config cfg;
+        eng.configure(method, 0.85, 11, sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                      sim::ClusterProfile::HOMOGENEOUS, cfg);
+        eng.run();
+        const auto& m = eng.metrics();
+        uint64_t gen = eng.total_generated();
+
+        std::cout << method_name(method)
+                  << " P99=" << std::setprecision(3) << m.p99()
+                  << " P999=" << m.p999()
+                  << " SLO=" << std::setprecision(6) << m.slo_violation_rate()
+                  << " intra_rate=" << m.intra_move_rate(gen)
+                  << " moves=" << m.intra_move_count
+                  << " rescue_moves=" << m.rescue_success_count
+                  << " BMR=" << m.beneficial_migration_ratio()
+                  << " UMR=" << m.useless_migration_ratio()
+                  << " RPM=" << m.rescue_per_migration()
+                  << " cross_mr=" << m.migration_rate(gen)
+                  << " finished=" << m.total_finished
+                  << " generated=" << gen << "\n";
+
+        if (m.total_finished != sim::MEASUREMENT_REQUESTS) ok = false;
+        if (m.p99() <= 0.0 || m.p999() <= 0.0) ok = false;
+        if (m.migration_rate(gen) != 0.0) ok = false;
+        if (method == sim::MethodType::M1_RESCUE_SCHED
+            && (m.rescue_attempt_count == 0 || m.rescue_success_count == 0)) ok = false;
+    }
+
+    std::cout << (ok ? "RescueSched smoke status: PASS\n"
+                     : "RescueSched smoke status: FAIL\n");
+    return ok ? 0 : 2;
+}
+
+static int run_rescue_w3_only(const std::string& csv_path) {
+    std::ofstream csv(csv_path);
+    if (!csv.is_open()) { std::cerr << "Cannot open " << csv_path << "\n"; return 1; }
+    write_rescue_header(csv);
+    csv.flush();
+
+    sim::MethodType methods[] = {
+        sim::MethodType::L0_RANDOM_CORE,
+        sim::MethodType::L1_WORK_STEALING,
+        sim::MethodType::M0_INTRA_HOST_PROACTIVE,
+        sim::MethodType::M1_RESCUE_SCHED,
+        sim::MethodType::M1_RESCUE_NO_TARGET_SAFETY
+    };
+
+    const int total_runs = 5 * sim::SEED_COUNT;
+    int run_count = 0;
+    std::cout << "=== RescueSched W3 Focus: rho=0.85 ===\n";
+    for (auto method : methods) {
+        for (int si = 0; si < sim::SEED_COUNT; ++si) {
+            unsigned seed = sim::SEEDS[si];
+            sim::Simulator eng;
+            sim::M0Config cfg;
+            eng.configure(method, 0.85, seed, sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                          sim::ClusterProfile::HOMOGENEOUS, cfg);
+            eng.run();
+            write_rescue_row(csv, "rescue_w3_heavytail_focus",
+                             sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                             method, 0.85, seed, cfg, eng);
+            csv.flush();
+            ++run_count;
+            const auto& m = eng.metrics();
+            std::cout << "[" << run_count << "/" << total_runs << "] "
+                      << method_name(method) << " seed=" << seed
+                      << " P99=" << std::setprecision(1) << m.p99()
+                      << " P999=" << m.p999()
+                      << " SLO=" << std::setprecision(6) << m.slo_violation_rate()
+                      << " rescue_moves=" << m.rescue_success_count
+                      << " BMR=" << m.beneficial_migration_ratio()
+                      << "\n";
+        }
+    }
+    std::cout << "\nRescueSched W3 focus done -> " << csv_path << "\n";
+    return 0;
+}
+
+static int run_rescue_main(const std::string& csv_path) {
+    std::ofstream csv(csv_path);
+    if (!csv.is_open()) { std::cerr << "Cannot open " << csv_path << "\n"; return 1; }
+    write_rescue_header(csv);
+    csv.flush();
+
+    double rhos[] = {0.50, 0.70, 0.85, 0.92};
+    sim::MethodType methods[] = {
+        sim::MethodType::L0_RANDOM_CORE,
+        sim::MethodType::L1_WORK_STEALING,
+        sim::MethodType::M0_INTRA_HOST_PROACTIVE,
+        sim::MethodType::M1_RESCUE_SCHED,
+        sim::MethodType::M1_RESCUE_NO_TARGET_SAFETY
+    };
+
+    const int total_runs = 4 * 5 * sim::SEED_COUNT;
+    int run_count = 0;
+    std::cout << "=== RescueSched Main: W3 rho sweep ===\n";
+    for (double rho : rhos) {
+        for (auto method : methods) {
+            for (int si = 0; si < sim::SEED_COUNT; ++si) {
+                unsigned seed = sim::SEEDS[si];
+                sim::Simulator eng;
+                sim::M0Config cfg;
+                eng.configure(method, rho, seed, sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                              sim::ClusterProfile::HOMOGENEOUS, cfg);
+                eng.run();
+                write_rescue_row(csv, "rescue_w3_heavytail_main",
+                                 sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                                 method, rho, seed, cfg, eng);
+                csv.flush();
+                ++run_count;
+                const auto& m = eng.metrics();
+                std::cout << "[" << run_count << "/" << total_runs << "] "
+                          << method_name(method)
+                          << " rho=" << std::setprecision(2) << rho
+                          << " seed=" << seed
+                          << " P99=" << std::setprecision(1) << m.p99()
+                          << " P999=" << m.p999()
+                          << " SLO=" << std::setprecision(6) << m.slo_violation_rate()
+                          << " rescue_moves=" << m.rescue_success_count
+                          << " BMR=" << m.beneficial_migration_ratio()
+                          << "\n";
+                std::cout.flush();
+            }
+        }
+    }
+    std::cout << "\nRescueSched main done -> " << csv_path << "\n";
+    return 0;
+}
+
+static int run_rescue_ablation(const std::string& csv_path) {
+    std::ofstream csv(csv_path);
+    if (!csv.is_open()) { std::cerr << "Cannot open " << csv_path << "\n"; return 1; }
+    write_rescue_header(csv);
+    csv.flush();
+
+    sim::MethodType methods[] = {
+        sim::MethodType::M1_RESCUE_SCHED,
+        sim::MethodType::M1_RESCUE_NO_TARGET_SAFETY,
+        sim::MethodType::M1_RESCUE_NO_RESCUABLE
+    };
+
+    const int total_runs = 3 * sim::SEED_COUNT;
+    int run_count = 0;
+    std::cout << "=== RescueSched Ablation: W3 rho=0.85 ===\n";
+    for (auto method : methods) {
+        for (int si = 0; si < sim::SEED_COUNT; ++si) {
+            unsigned seed = sim::SEEDS[si];
+            sim::Simulator eng;
+            sim::M0Config cfg;
+            eng.configure(method, 0.85, seed, sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                          sim::ClusterProfile::HOMOGENEOUS, cfg);
+            eng.run();
+            write_rescue_row(csv, "rescue_w3_ablation",
+                             sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                             method, 0.85, seed, cfg, eng);
+            csv.flush();
+            ++run_count;
+            const auto& m = eng.metrics();
+            std::cout << "[" << run_count << "/" << total_runs << "] "
+                      << method_name(method) << " seed=" << seed
+                      << " P99=" << std::setprecision(1) << m.p99()
+                      << " SLO=" << std::setprecision(6) << m.slo_violation_rate()
+                      << " rescue_moves=" << m.rescue_success_count
+                      << " needless=" << m.needless_migration_count
+                      << " unsaved=" << m.unsaved_migration_count
+                      << " harmful_pred=" << m.harmful_migration_count
+                      << "\n";
+        }
+    }
+    std::cout << "\nRescueSched ablation done -> " << csv_path << "\n";
+    return 0;
+}
+
+static int run_rescue_check_sweep(const std::string& csv_path) {
+    std::ofstream csv(csv_path);
+    if (!csv.is_open()) { std::cerr << "Cannot open " << csv_path << "\n"; return 1; }
+    write_rescue_header(csv);
+    csv.flush();
+
+    struct SweepPoint {
+        const char* scenario;
+        double check_period_us;
+        double epsilon_us;
+        int budget;
+    };
+    std::vector<SweepPoint> points;
+    for (double check : std::vector<double>{1.0, 2.0, 5.0})
+        points.push_back({"rescue_check_period_sweep", check, sim::RESCUE_EPSILON_US,
+                          sim::RESCUE_BUDGET_PER_CHECK});
+    for (double eps : std::vector<double>{0.0, 2.0, 5.0})
+        points.push_back({"rescue_epsilon_sweep", sim::M0_T_CHECK_US, eps,
+                          sim::RESCUE_BUDGET_PER_CHECK});
+    for (int budget : std::vector<int>{1, 2, 4})
+        points.push_back({"rescue_budget_sweep", sim::M0_T_CHECK_US,
+                          sim::RESCUE_EPSILON_US, budget});
+
+    const int total_runs = static_cast<int>(points.size()) * sim::SEED_COUNT;
+    int run_count = 0;
+    std::cout << "=== RescueSched Parameter Sweep: W3 rho=0.85 ===\n";
+    for (const auto& point : points) {
+        for (int si = 0; si < sim::SEED_COUNT; ++si) {
+            unsigned seed = sim::SEEDS[si];
+            sim::Simulator eng;
+            sim::M0Config cfg;
+            cfg.t_check_us = point.check_period_us;
+            cfg.rescue_epsilon_us = point.epsilon_us;
+            cfg.rescue_budget_per_check = point.budget;
+            eng.configure(sim::MethodType::M1_RESCUE_SCHED, 0.85, seed,
+                          sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                          sim::ClusterProfile::HOMOGENEOUS, cfg);
+            eng.run();
+            write_rescue_row(csv, point.scenario,
+                             sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                             sim::MethodType::M1_RESCUE_SCHED,
+                             0.85, seed, cfg, eng);
+            csv.flush();
+            ++run_count;
+            const auto& m = eng.metrics();
+            std::cout << "[" << run_count << "/" << total_runs << "] "
+                      << point.scenario
+                      << " check=" << std::setprecision(3) << point.check_period_us
+                      << " eps=" << point.epsilon_us
+                      << " B=" << point.budget
+                      << " seed=" << seed
+                      << " P99=" << std::setprecision(1) << m.p99()
+                      << " SLO=" << std::setprecision(6) << m.slo_violation_rate()
+                      << " rescue_moves=" << m.rescue_success_count
+                      << " BMR=" << m.beneficial_migration_ratio()
+                      << "\n";
+            std::cout.flush();
+        }
+    }
+    std::cout << "\nRescueSched parameter sweep done -> " << csv_path << "\n";
+    return 0;
+}
+
+static int run_rescue_overload_sanity(const std::string& csv_path) {
+    std::ofstream csv(csv_path);
+    if (!csv.is_open()) { std::cerr << "Cannot open " << csv_path << "\n"; return 1; }
+    write_rescue_header(csv);
+    csv.flush();
+
+    struct Scenario {
+        const char* name;
+        sim::WorkloadType wl;
+        double rho;
+    };
+    Scenario scenarios[] = {
+        {"rescue_w1_sanity", sim::WorkloadType::W1_POISSON_BIMODAL, 0.85},
+        {"rescue_w1_overload_boundary", sim::WorkloadType::W1_POISSON_BIMODAL, 0.95}
+    };
+    sim::MethodType methods[] = {
+        sim::MethodType::L1_WORK_STEALING,
+        sim::MethodType::M0_INTRA_HOST_PROACTIVE,
+        sim::MethodType::M1_RESCUE_SCHED,
+        sim::MethodType::M1_RESCUE_NO_TARGET_SAFETY
+    };
+
+    const int total_runs = 2 * 4 * sim::SEED_COUNT;
+    int run_count = 0;
+    std::cout << "=== RescueSched W1 Sanity and Overload Boundary ===\n";
+    for (const auto& sc : scenarios) {
+        for (auto method : methods) {
+            for (int si = 0; si < sim::SEED_COUNT; ++si) {
+                unsigned seed = sim::SEEDS[si];
+                sim::Simulator eng;
+                sim::M0Config cfg;
+                eng.configure(method, sc.rho, seed, sc.wl,
+                              sim::ClusterProfile::HOMOGENEOUS, cfg);
+                eng.run();
+                write_rescue_row(csv, sc.name, sc.wl, method, sc.rho, seed, cfg, eng);
+                csv.flush();
+                ++run_count;
+                const auto& m = eng.metrics();
+                std::cout << "[" << run_count << "/" << total_runs << "] "
+                          << sc.name << " " << method_name(method)
+                          << " seed=" << seed
+                          << " P99=" << std::setprecision(1) << m.p99()
+                          << " SLO=" << std::setprecision(6) << m.slo_violation_rate()
+                          << " rescue_moves=" << m.rescue_success_count
+                          << " BMR=" << m.beneficial_migration_ratio()
+                          << "\n";
+                std::cout.flush();
+            }
+        }
+    }
+    std::cout << "\nRescueSched overload sanity done -> " << csv_path << "\n";
+    return 0;
+}
+
 int main(int argc, char** argv) {
     std::string mode = "all";
     if (argc > 1) mode = argv[1];
@@ -959,6 +1331,7 @@ int main(int argc, char** argv) {
     ensure_dir("artifacts/step-12-intra-host");
     ensure_dir("artifacts/step-13-intra-host-sweep");
     ensure_dir("artifacts/step-14-intra-check-period");
+    ensure_dir("artifacts/step-15-rescuesched");
 
     int rc = 0;
 
@@ -1133,6 +1506,35 @@ int main(int argc, char** argv) {
 
     if (mode == "intra-main") {
         rc = run_intra_main("artifacts/step-12-intra-host/intra_main.csv");
+    }
+
+    if (mode == "rescue-smoke") {
+        rc = run_rescue_smoke();
+    }
+
+    if (mode == "rescue-w3-only") {
+        rc = run_rescue_w3_only(
+            "artifacts/step-15-rescuesched/rescue_w3_only.csv");
+    }
+
+    if (mode == "rescue-main") {
+        rc = run_rescue_main(
+            "artifacts/step-15-rescuesched/rescue_main.csv");
+    }
+
+    if (mode == "rescue-ablation") {
+        rc = run_rescue_ablation(
+            "artifacts/step-15-rescuesched/rescue_ablation.csv");
+    }
+
+    if (mode == "rescue-check-sweep") {
+        rc = run_rescue_check_sweep(
+            "artifacts/step-15-rescuesched/rescue_check_sweep.csv");
+    }
+
+    if (mode == "rescue-overload-sanity") {
+        rc = run_rescue_overload_sanity(
+            "artifacts/step-15-rescuesched/rescue_overload_sanity.csv");
     }
 
     if (mode == "aqb-eval") {

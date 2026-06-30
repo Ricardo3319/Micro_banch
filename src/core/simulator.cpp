@@ -12,7 +12,10 @@ Simulator::Simulator() = default;
 bool Simulator::is_intra_host_method() const {
     return method_type_ == MethodType::L0_RANDOM_CORE
         || method_type_ == MethodType::L1_WORK_STEALING
-        || method_type_ == MethodType::M0_INTRA_HOST_PROACTIVE;
+        || method_type_ == MethodType::M0_INTRA_HOST_PROACTIVE
+        || method_type_ == MethodType::M1_RESCUE_SCHED
+        || method_type_ == MethodType::M1_RESCUE_NO_TARGET_SAFETY
+        || method_type_ == MethodType::M1_RESCUE_NO_RESCUABLE;
 }
 
 Task* Simulator::alloc_task() {
@@ -35,7 +38,10 @@ void Simulator::configure(MethodType method, double rho, unsigned seed,
     active_host_count_ =
         (method == MethodType::L0_RANDOM_CORE
          || method == MethodType::L1_WORK_STEALING
-         || method == MethodType::M0_INTRA_HOST_PROACTIVE)
+         || method == MethodType::M0_INTRA_HOST_PROACTIVE
+         || method == MethodType::M1_RESCUE_SCHED
+         || method == MethodType::M1_RESCUE_NO_TARGET_SAFETY
+         || method == MethodType::M1_RESCUE_NO_RESCUABLE)
             ? 1 : NUM_HOSTS;
     nodes_.resize(active_host_count_);
     node_capacities_.resize(active_host_count_);
@@ -65,6 +71,9 @@ void Simulator::configure(MethodType method, double rho, unsigned seed,
         case MethodType::L0_RANDOM_CORE:
         case MethodType::L1_WORK_STEALING:
         case MethodType::M0_INTRA_HOST_PROACTIVE:
+        case MethodType::M1_RESCUE_SCHED:
+        case MethodType::M1_RESCUE_NO_TARGET_SAFETY:
+        case MethodType::M1_RESCUE_NO_RESCUABLE:
             break; // local core scheduling only
         case MethodType::B1_POWER_OF_K:
             scheduler_ = std::make_unique<PowerOfKScheduler>(2);
@@ -155,6 +164,14 @@ void Simulator::configure(MethodType method, double rho, unsigned seed,
         chk.host_id = -1;
         schedule_event(chk);
     } else if (method == MethodType::M0_INTRA_HOST_PROACTIVE) {
+        Event chk;
+        chk.timestamp_us = m0_config_.t_check_us;
+        chk.type = EventType::CHECK_MIGRATION;
+        chk.host_id = 0;
+        schedule_event(chk);
+    } else if (method == MethodType::M1_RESCUE_SCHED
+               || method == MethodType::M1_RESCUE_NO_TARGET_SAFETY
+               || method == MethodType::M1_RESCUE_NO_RESCUABLE) {
         Event chk;
         chk.timestamp_us = m0_config_.t_check_us;
         chk.type = EventType::CHECK_MIGRATION;
@@ -412,6 +429,43 @@ bool Simulator::move_waiting_task_intra_host(int host, int src_core_id, int dst_
     return true;
 }
 
+bool Simulator::move_rescue_task_intra_host(int host, int src_core_id, int dst_core_id,
+                                            Task* task,
+                                            double estimated_local_latency_us,
+                                            double estimated_remote_latency_us,
+                                            int predicted_target_delta_risk,
+                                            bool predicted_harmful) {
+    if (!task || host < 0 || host >= static_cast<int>(nodes_.size())) return false;
+    if (src_core_id < 0 || src_core_id >= CORES_PER_HOST) return false;
+    if (dst_core_id < 0 || dst_core_id >= CORES_PER_HOST) return false;
+    if (src_core_id == dst_core_id) return false;
+
+    Node& node = nodes_[host];
+    Core& src_core = node.cores[src_core_id];
+    Core& dst_core = node.cores[dst_core_id];
+
+    src_core.remove_waiting(task);
+    task->intra_moved = true;
+    task->rescue_intra_moved = true;
+    task->rescue_intra_recorded = metrics_.recording;
+    task->rescue_predicted_harmful = predicted_harmful;
+    task->src_host = host;
+    task->src_core = src_core_id;
+    task->assigned_host = host;
+    task->assigned_core = dst_core_id;
+    task->estimated_local_latency_us = estimated_local_latency_us;
+    task->rescue_predicted_remote_latency_us = estimated_remote_latency_us;
+    task->rescue_predicted_target_delta_risk = predicted_target_delta_risk;
+
+    double moved_work_us =
+        task->expected_service_time_us / dst_core.capacity + T_host_us;
+    metrics_.on_rescue_success(moved_work_us, predicted_harmful);
+
+    dst_core.push_waiting(task);
+    if (dst_core.idle) start_execution(dst_core, now_us_);
+    return true;
+}
+
 bool Simulator::steal_one_task(int host, int idle_core_id) {
     metrics_.on_steal_attempt();
     if (host < 0 || host >= static_cast<int>(nodes_.size())) return false;
@@ -509,6 +563,235 @@ bool Simulator::run_intra_proactive_check(int host) {
         best.local_latency_us, true);
 }
 
+bool Simulator::run_rescue_sched_check(int host) {
+    metrics_.on_rescue_attempt();
+    if (host < 0 || host >= static_cast<int>(nodes_.size())) return false;
+
+    const bool no_target_safety =
+        method_type_ == MethodType::M1_RESCUE_NO_TARGET_SAFETY;
+    const bool no_rescuable =
+        method_type_ == MethodType::M1_RESCUE_NO_RESCUABLE;
+    const int scan_depth = std::max(1, m0_config_.rescue_scan_depth);
+    const int max_candidates = std::max(1, m0_config_.rescue_k_candidates);
+    const int target_count = std::max(1, m0_config_.rescue_h_targets);
+    const int budget = std::max(1, m0_config_.rescue_budget_per_check);
+
+    struct TargetSummary {
+        int core = -1;
+        double workload_us = 0.0;
+        int risk_before = 0;
+    };
+
+    struct Candidate {
+        Task* task = nullptr;
+        int src_core = -1;
+        double local_latency_us = 0.0;
+        double local_completion_abs_us = 0.0;
+        double source_work_us = 0.0;
+    };
+
+    struct ScoredMove {
+        Candidate cand;
+        int dst_core = -1;
+        double score = 0.0;
+        double remote_latency_us = 0.0;
+        int target_delta_risk = 0;
+        bool predicted_harmful = false;
+    };
+
+    Node& node = nodes_[host];
+
+    auto estimated_task_work = [](const Core& core, const Task* task) {
+        return task ? task->expected_service_time_us / core.capacity + T_host_us : 0.0;
+    };
+
+    auto deadline_abs = [](const Task* task) {
+        return task->generate_time_us + task->slo_target_us;
+    };
+
+    auto estimate_risk_before = [&](const Core& core) {
+        int risk = 0;
+        double prefix_work_us = 0.0;
+        if (!core.idle && core.running)
+            prefix_work_us = std::max(0.0, core.finish_time_us - now_us_);
+
+        int depth = 0;
+        for (Task* cur = core.wait_queue.begin();
+             cur && depth < scan_depth;
+             cur = cur->next, ++depth) {
+            double work_us = estimated_task_work(core, cur);
+            double completion_abs_us = now_us_ + prefix_work_us + work_us;
+            if (completion_abs_us > deadline_abs(cur)) ++risk;
+            prefix_work_us += work_us;
+        }
+        return risk;
+    };
+
+    std::vector<TargetSummary> targets;
+    targets.reserve(node.cores.size());
+    double total_work_us = 0.0;
+    for (const auto& core : node.cores) {
+        double work_us = core.local_workload_us(now_us_);
+        total_work_us += work_us;
+        targets.push_back(TargetSummary{
+            core.core_id,
+            work_us,
+            estimate_risk_before(core)
+        });
+    }
+    std::sort(targets.begin(), targets.end(),
+              [](const TargetSummary& a, const TargetSummary& b) {
+                  if (a.risk_before != b.risk_before)
+                      return a.risk_before < b.risk_before;
+                  return a.workload_us < b.workload_us;
+              });
+
+    double avg_work_us =
+        node.cores.empty() ? 0.0 : total_work_us / static_cast<double>(node.cores.size());
+
+    std::vector<Candidate> candidates;
+    candidates.reserve(CORES_PER_HOST * max_candidates);
+
+    for (auto& src_core : node.cores) {
+        double source_work_us = src_core.local_workload_us(now_us_);
+        if (no_rescuable && source_work_us <= avg_work_us) continue;
+
+        double prefix_work_us = 0.0;
+        if (!src_core.idle && src_core.running)
+            prefix_work_us = std::max(0.0, src_core.finish_time_us - now_us_);
+
+        int depth = 0;
+        int accepted_from_source = 0;
+        for (Task* cur = src_core.wait_queue.begin();
+             cur && depth < scan_depth && accepted_from_source < max_candidates;
+             cur = cur->next, ++depth) {
+            metrics_.on_rescue_candidate();
+            if (cur->intra_moved) {
+                prefix_work_us += estimated_task_work(src_core, cur);
+                continue;
+            }
+
+            double work_us = estimated_task_work(src_core, cur);
+            double local_completion_abs_us = now_us_ + prefix_work_us + work_us;
+            double local_latency_us = local_completion_abs_us - cur->generate_time_us;
+            bool locally_doomed = local_completion_abs_us > deadline_abs(cur);
+            if (locally_doomed) metrics_.on_rescue_locally_doomed();
+
+            if (no_rescuable || locally_doomed) {
+                candidates.push_back(Candidate{
+                    cur,
+                    src_core.core_id,
+                    local_latency_us,
+                    local_completion_abs_us,
+                    source_work_us
+                });
+                ++accepted_from_source;
+            }
+
+            prefix_work_us += work_us;
+        }
+    }
+
+    std::vector<ScoredMove> scored;
+    scored.reserve(candidates.size());
+
+    for (const auto& cand : candidates) {
+        if (!cand.task) continue;
+        int tried_targets = 0;
+        for (const auto& target : targets) {
+            if (target.core == cand.src_core) continue;
+            if (tried_targets >= target_count) break;
+            ++tried_targets;
+
+            const Core& dst_core = node.cores[target.core];
+            double remote_work_us = estimated_task_work(dst_core, cand.task);
+            double remote_completion_abs_us =
+                now_us_ + m0_config_.rescue_migration_cost_us
+                + target.workload_us + remote_work_us;
+            double remote_latency_us =
+                remote_completion_abs_us - cand.task->generate_time_us;
+            bool remote_feasible =
+                remote_completion_abs_us + m0_config_.rescue_epsilon_us
+                <= deadline_abs(cand.task);
+
+            if (!no_rescuable && !remote_feasible) {
+                metrics_.on_rescue_remote_infeasible_reject();
+                continue;
+            }
+            if (remote_feasible) metrics_.on_rescue_remote_feasible();
+
+            int delta_risk = no_rescuable
+                ? 0
+                : ((remote_completion_abs_us > deadline_abs(cand.task)) ? 1 : 0);
+            bool strict_target_safe =
+                target.risk_before == 0 && delta_risk <= m0_config_.rescue_theta;
+            if (strict_target_safe) {
+                metrics_.on_rescue_target_safe();
+            } else if (!no_target_safety) {
+                metrics_.on_rescue_target_unsafe_reject();
+                continue;
+            }
+
+            double local_lateness_us =
+                std::max(0.0, cand.local_completion_abs_us - deadline_abs(cand.task));
+            double remote_slack_us = deadline_abs(cand.task) - remote_completion_abs_us;
+            double score = remote_slack_us + 0.10 * local_lateness_us
+                         - m0_config_.rescue_migration_cost_us;
+            if (no_rescuable) {
+                double pressure_gain_us =
+                    cand.source_work_us - target.workload_us - remote_work_us;
+                if (pressure_gain_us <= 0.0) continue;
+                score = pressure_gain_us + 0.05 * local_lateness_us
+                      - 0.01 * std::max(0.0, remote_latency_us);
+            }
+
+            scored.push_back(ScoredMove{
+                cand,
+                target.core,
+                score,
+                remote_latency_us,
+                delta_risk,
+                !strict_target_safe
+            });
+        }
+    }
+
+    if (scored.empty()) return false;
+
+    std::sort(scored.begin(), scored.end(),
+              [](const ScoredMove& a, const ScoredMove& b) {
+                  return a.score > b.score;
+              });
+
+    auto task_is_waiting_on_source = [&](const ScoredMove& move) {
+        const Core& src_core = node.cores[move.cand.src_core];
+        for (Task* cur = src_core.wait_queue.begin(); cur; cur = cur->next) {
+            if (cur == move.cand.task) return true;
+        }
+        return false;
+    };
+
+    std::vector<bool> source_used(CORES_PER_HOST, false);
+    int moved = 0;
+    for (const auto& move : scored) {
+        if (moved >= budget) break;
+        if (move.cand.src_core < 0 || move.cand.src_core >= CORES_PER_HOST) continue;
+        if (move.dst_core < 0 || move.dst_core >= CORES_PER_HOST) continue;
+        if (source_used[move.cand.src_core]) continue;
+        if (!task_is_waiting_on_source(move)) continue;
+
+        if (move_rescue_task_intra_host(
+                host, move.cand.src_core, move.dst_core, move.cand.task,
+                move.cand.local_latency_us, move.remote_latency_us,
+                move.target_delta_risk, move.predicted_harmful)) {
+            source_used[move.cand.src_core] = true;
+            ++moved;
+        }
+    }
+
+    return moved > 0;
+}
+
 void Simulator::handle_task_finish(const Event& e) {
     Node& node = nodes_[e.host_id];
     Core& core = node.cores[e.core_id];
@@ -526,6 +809,10 @@ void Simulator::handle_task_finish(const Event& e) {
     if (t->proactive_intra_moved && t->proactive_intra_recorded) {
         bool invalid = (latency_us > t->estimated_local_latency_us);
         metrics_.on_proactive_intra_finish(invalid);
+    }
+    if (t->rescue_intra_moved && t->rescue_intra_recorded) {
+        metrics_.on_rescue_finish(
+            t->estimated_local_latency_us, latency_us, t->slo_target_us);
     }
 
     core.running = nullptr;
@@ -588,6 +875,20 @@ void Simulator::handle_check_migration(const Event& e) {
             if (!run_intra_proactive_check(host_idx)) break;
             ++moved;
         }
+
+        Event next_chk;
+        next_chk.timestamp_us = now_us_ + m0_config_.t_check_us;
+        next_chk.type = EventType::CHECK_MIGRATION;
+        next_chk.host_id = host_idx;
+        schedule_event(next_chk);
+
+    } else if (method_type_ == MethodType::M1_RESCUE_SCHED
+               || method_type_ == MethodType::M1_RESCUE_NO_TARGET_SAFETY
+               || method_type_ == MethodType::M1_RESCUE_NO_RESCUABLE) {
+        int host_idx = e.host_id;
+        if (host_idx < 0 || host_idx >= static_cast<int>(nodes_.size())) return;
+
+        run_rescue_sched_check(host_idx);
 
         Event next_chk;
         next_chk.timestamp_us = now_us_ + m0_config_.t_check_us;

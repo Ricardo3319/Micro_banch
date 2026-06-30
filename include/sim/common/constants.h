@@ -83,6 +83,13 @@ inline constexpr double DQB_W3_BLOCKING_WORK_THRESHOLD_US = 40.0;
 // Intra-host core-scheduling parameters.
 inline constexpr int    INTRA_PROACTIVE_SCAN_DEPTH = 32;
 inline constexpr int    INTRA_MAX_MOVES_PER_CHECK  = 1;
+inline constexpr int    RESCUE_SCAN_DEPTH          = 64;
+inline constexpr int    RESCUE_K_CANDIDATES        = 16;
+inline constexpr int    RESCUE_H_TARGETS           = 4;
+inline constexpr int    RESCUE_BUDGET_PER_CHECK    = 1;
+inline constexpr double RESCUE_EPSILON_US          = 2.0;
+inline constexpr int    RESCUE_THETA               = 0;
+inline constexpr double RESCUE_MIGRATION_COST_US   = 0.5;
 
 // Frozen W2 MMPP parameters.
 inline constexpr double W2_LAMBDA_BURST_FACTOR = 1.5;
@@ -111,6 +118,13 @@ struct M0Config {
     int    aqb_max_batch_per_host = AQB_MAX_BATCH_PER_HOST;
     int    dqb_max_batches_per_host = DQB_MAX_BATCHES_PER_HOST;
     int    dqb_max_tasks_per_batch = DQB_MAX_TASKS_PER_BATCH;
+    int    rescue_scan_depth = RESCUE_SCAN_DEPTH;
+    int    rescue_k_candidates = RESCUE_K_CANDIDATES;
+    int    rescue_h_targets = RESCUE_H_TARGETS;
+    int    rescue_budget_per_check = RESCUE_BUDGET_PER_CHECK;
+    double rescue_epsilon_us = RESCUE_EPSILON_US;
+    int    rescue_theta = RESCUE_THETA;
+    double rescue_migration_cost_us = RESCUE_MIGRATION_COST_US;
 };
 
 // Heterogeneous cluster constants.

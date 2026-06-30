@@ -18,9 +18,14 @@ struct Task {
     bool    intra_moved   = false;
     bool    proactive_intra_moved = false;
     bool    proactive_intra_recorded = false;
+    bool    rescue_intra_moved = false;
+    bool    rescue_intra_recorded = false;
+    bool    rescue_predicted_harmful = false;
     int     src_host      = -1;
     int     src_core      = -1;
     double  estimated_local_latency_us = 0.0; // predicted latency if NOT migrated
+    double  rescue_predicted_remote_latency_us = 0.0;
+    int     rescue_predicted_target_delta_risk = 0;
     uint64_t migration_batch_id = 0;
     int     reserved_dst_host = -1;
     int     reserved_dst_core = -1;

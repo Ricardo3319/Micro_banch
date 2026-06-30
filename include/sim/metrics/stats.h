@@ -40,6 +40,19 @@ struct MetricsCollector {
     uint64_t stolen_task_count = 0;
     uint64_t proactive_intra_attempt_count = 0;
     uint64_t proactive_intra_success_count = 0;
+    uint64_t rescue_attempt_count = 0;
+    uint64_t rescue_candidate_count = 0;
+    uint64_t locally_doomed_count = 0;
+    uint64_t remote_feasible_count = 0;
+    uint64_t target_safe_count = 0;
+    uint64_t rescue_success_count = 0;
+    double rescue_moved_work_us = 0.0;
+    uint64_t target_unsafe_reject_count = 0;
+    uint64_t remote_infeasible_reject_count = 0;
+    uint64_t needless_migration_count = 0;
+    uint64_t unsaved_migration_count = 0;
+    uint64_t beneficial_migration_count = 0;
+    uint64_t harmful_migration_count = 0;
     double intra_moved_work_us = 0.0;
     double migrated_work_us = 0.0;
     uint64_t batch_candidate_count = 0;
@@ -83,6 +96,12 @@ struct MetricsCollector {
         intra_move_count = invalid_intra_moves = 0;
         steal_attempt_count = steal_success_count = stolen_task_count = 0;
         proactive_intra_attempt_count = proactive_intra_success_count = 0;
+        rescue_attempt_count = rescue_candidate_count = locally_doomed_count = 0;
+        remote_feasible_count = target_safe_count = rescue_success_count = 0;
+        rescue_moved_work_us = 0.0;
+        target_unsafe_reject_count = remote_infeasible_reject_count = 0;
+        needless_migration_count = unsaved_migration_count = 0;
+        beneficial_migration_count = harmful_migration_count = 0;
         intra_moved_work_us = 0.0;
         short_finished = short_slo_violations = 0;
         long_finished = long_slo_violations = 0;
@@ -173,6 +192,63 @@ struct MetricsCollector {
     void on_proactive_intra_finish(bool invalid) {
         if (!recording) return;
         if (invalid) ++invalid_intra_moves;
+    }
+
+    void on_rescue_attempt() {
+        if (!recording) return;
+        ++rescue_attempt_count;
+    }
+
+    void on_rescue_candidate() {
+        if (!recording) return;
+        ++rescue_candidate_count;
+    }
+
+    void on_rescue_locally_doomed() {
+        if (!recording) return;
+        ++locally_doomed_count;
+    }
+
+    void on_rescue_remote_feasible() {
+        if (!recording) return;
+        ++remote_feasible_count;
+    }
+
+    void on_rescue_target_safe() {
+        if (!recording) return;
+        ++target_safe_count;
+    }
+
+    void on_rescue_remote_infeasible_reject() {
+        if (!recording) return;
+        ++remote_infeasible_reject_count;
+    }
+
+    void on_rescue_target_unsafe_reject() {
+        if (!recording) return;
+        ++target_unsafe_reject_count;
+    }
+
+    void on_rescue_success(double work_us, bool predicted_harmful) {
+        if (!recording) return;
+        ++rescue_success_count;
+        ++intra_move_count;
+        rescue_moved_work_us += work_us;
+        intra_moved_work_us += work_us;
+        if (predicted_harmful) ++harmful_migration_count;
+    }
+
+    void on_rescue_finish(double predicted_local_latency_us,
+                          double actual_latency_us,
+                          double slo_us) {
+        if (!recording) return;
+        if (predicted_local_latency_us <= slo_us) {
+            ++needless_migration_count;
+        } else if (actual_latency_us <= slo_us) {
+            ++beneficial_migration_count;
+        } else {
+            ++unsaved_migration_count;
+        }
     }
 
     void on_batch_candidates(uint64_t candidates, uint64_t summaries) {
@@ -291,6 +367,20 @@ struct MetricsCollector {
     double invalid_intra_move_ratio() const {
         return proactive_intra_success_count > 0
             ? static_cast<double>(invalid_intra_moves) / proactive_intra_success_count : 0.0;
+    }
+    double beneficial_migration_ratio() const {
+        return rescue_success_count > 0
+            ? static_cast<double>(beneficial_migration_count) / rescue_success_count : 0.0;
+    }
+    double useless_migration_ratio() const {
+        if (rescue_success_count == 0) return 0.0;
+        uint64_t useless = needless_migration_count
+                          + unsaved_migration_count
+                          + harmful_migration_count;
+        return static_cast<double>(useless) / rescue_success_count;
+    }
+    double rescue_per_migration() const {
+        return beneficial_migration_ratio();
     }
     double avg_destination_virtual_occupancy_us() const {
         return destination_virtual_occupancy_samples > 0
