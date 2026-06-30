@@ -81,7 +81,7 @@ public:
         double t_elapsed = now_us - tail->generate_time_us;
         tail->estimated_local_latency_us = t_elapsed + cumulative_wait_us;
 
-        src.cores[worst_core].wait_queue.remove(tail);
+        src.cores[worst_core].remove_waiting(tail);
         dec.dst_host = best_dst;
         dec.task = tail;
         last = now_us;

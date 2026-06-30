@@ -104,7 +104,7 @@ public:
                     if (local_total_us > remote_total_us) {
                         // (3) Hysteresis / margin constraint.
                         if (local_total_us > remote_total_us + effective_margin_us_) {
-                            core.wait_queue.remove(cur);
+                            core.remove_waiting(cur);
                             dec.dst_host = best_dst;
                             dec.task = cur;
                             dec.benefit_est_us = local_total_us - remote_total_us;

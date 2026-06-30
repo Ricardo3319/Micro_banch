@@ -80,6 +80,10 @@ inline constexpr double DQB_BLOCKING_WORK_THRESHOLD_US = 80.0;
 inline constexpr double DQB_W3_MICE_DOMINANT_RATIO = 0.55;
 inline constexpr double DQB_W3_BLOCKING_WORK_THRESHOLD_US = 40.0;
 
+// Intra-host core-scheduling parameters.
+inline constexpr int    INTRA_PROACTIVE_SCAN_DEPTH = 32;
+inline constexpr int    INTRA_MAX_MOVES_PER_CHECK  = 1;
+
 // Frozen W2 MMPP parameters.
 inline constexpr double W2_LAMBDA_BURST_FACTOR = 1.5;
 inline constexpr double W2_NORMAL_STAY_US      = 5000.0;

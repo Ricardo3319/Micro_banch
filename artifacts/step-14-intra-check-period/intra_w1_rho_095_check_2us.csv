@@ -1,0 +1,11 @@
+scenario,workload,method,rho,seed,check_period_us,P99_us,P999_us,slo_violation_rate,total_finished,total_generated,migration_rate,invalid_migration_ratio,intra_move_rate,intra_move_count,intra_moved_work_us,steal_attempt_count,steal_success_count,stolen_task_count,proactive_intra_attempt_count,proactive_intra_success_count,invalid_intra_move_ratio
+intra_w1_bimodal_check_period,W1,L1_WorkStealing,0.95,11,0,1e+04,1e+04,1,1000000,1239245,0,0,0,0,0,0,0,0,0,0,0
+intra_w1_bimodal_check_period,W1,L1_WorkStealing,0.95,23,0,1e+04,1e+04,1,1000000,1242675,0,0,0,0,0,0,0,0,0,0,0
+intra_w1_bimodal_check_period,W1,L1_WorkStealing,0.95,37,0,1e+04,1e+04,1,1000000,1239265,0,0,0,0,0,0,0,0,0,0,0
+intra_w1_bimodal_check_period,W1,L1_WorkStealing,0.95,47,0,1e+04,1e+04,0.999996,1000000,1240497,0,0,8.06129e-07,1,102.1,1,1,1,0,0,0
+intra_w1_bimodal_check_period,W1,L1_WorkStealing,0.95,59,0,1e+04,1e+04,1,1000000,1241950,0,0,0,0,0,0,0,0,0,0,0
+intra_w1_bimodal_check_period,W1,M0_IntraHostProactive,0.95,11,2,1e+04,1e+04,1,1000000,1239231,0,0,0,0,0,0,0,0,816218,0,0
+intra_w1_bimodal_check_period,W1,M0_IntraHostProactive,0.95,23,2,1e+04,1e+04,1,1000000,1242652,0,0,0,0,0,0,0,0,816428,0,0
+intra_w1_bimodal_check_period,W1,M0_IntraHostProactive,0.95,37,2,1e+04,1e+04,1,1000000,1239255,0,0,0,0,0,0,0,0,815714,0,0
+intra_w1_bimodal_check_period,W1,M0_IntraHostProactive,0.95,47,2,1e+04,1e+04,1,1000000,1240510,0,0,4.83672e-06,6,137.6,0,0,0,816749,6,0
+intra_w1_bimodal_check_period,W1,M0_IntraHostProactive,0.95,59,2,1e+04,1e+04,1,1000000,1241910,0,0,0,0,0,0,0,0,816370,0,0

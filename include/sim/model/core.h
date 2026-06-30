@@ -59,17 +59,40 @@ struct Core {
     Task*   running    = nullptr;
     double  finish_time_us = 0.0;
     TaskQueue wait_queue;
+    double  queued_work_us = 0.0;
+
+    double queued_task_work_us(const Task* t) const {
+        if (!t) return 0.0;
+        return t->expected_service_time_us / capacity + T_host_us;
+    }
+
+    void push_waiting(Task* t) {
+        if (!t) return;
+        queued_work_us += queued_task_work_us(t);
+        wait_queue.push_back(t);
+    }
+
+    Task* pop_waiting_front() {
+        Task* t = wait_queue.pop_front();
+        if (t) {
+            queued_work_us -= queued_task_work_us(t);
+            if (queued_work_us < 0.0) queued_work_us = 0.0;
+        }
+        return t;
+    }
+
+    void remove_waiting(Task* t) {
+        if (!t) return;
+        queued_work_us -= queued_task_work_us(t);
+        if (queued_work_us < 0.0) queued_work_us = 0.0;
+        wait_queue.remove(t);
+    }
 
     double local_workload_us(double now_us) const {
-        double work = 0.0;
+        double work = queued_work_us;
         if (!idle && running) {
             double residual = finish_time_us - now_us;
             if (residual > 0.0) work += residual;
-        }
-        Task* cur = wait_queue.begin();
-        while (cur) {
-            work += cur->expected_service_time_us / capacity + T_host_us;
-            cur = cur->next;
         }
         return work;
     }

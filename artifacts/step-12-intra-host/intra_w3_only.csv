@@ -1,0 +1,16 @@
+scenario,workload,method,rho,seed,P99_us,P999_us,slo_violation_rate,total_finished,total_generated,migration_rate,invalid_migration_ratio,intra_move_rate,intra_move_count,intra_moved_work_us,steal_attempt_count,steal_success_count,stolen_task_count,proactive_intra_attempt_count,proactive_intra_success_count,invalid_intra_move_ratio
+intra_w3_heavytail,W3,L0_RandomCore,0.85,11,2.04e+03,2.89e+03,0.761112,1000000,1200156,0,0,0,0,0,0,0,0,0,0,0
+intra_w3_heavytail,W3,L0_RandomCore,0.85,23,2.02e+03,3.14e+03,0.756048,1000000,1200225,0,0,0,0,0,0,0,0,0,0,0
+intra_w3_heavytail,W3,L0_RandomCore,0.85,37,2.1e+03,3.26e+03,0.767092,1000000,1200274,0,0,0,0,0,0,0,0,0,0,0
+intra_w3_heavytail,W3,L0_RandomCore,0.85,47,2.05e+03,3.33e+03,0.762078,1000000,1200353,0,0,0,0,0,0,0,0,0,0,0
+intra_w3_heavytail,W3,L0_RandomCore,0.85,59,2.2e+03,3.43e+03,0.755606,1000000,1200234,0,0,0,0,0,0,0,0,0,0,0
+intra_w3_heavytail,W3,L1_WorkStealing,0.85,11,226,382,0.20307,1000000,1200009,0,0,0.328258,393913,1.25209e+07,470963,393913,393913,0,0,0
+intra_w3_heavytail,W3,L1_WorkStealing,0.85,23,220,364,0.199868,1000000,1200033,0,0,0.3299,395891,1.25427e+07,473475,395891,395891,0,0,0
+intra_w3_heavytail,W3,L1_WorkStealing,0.85,37,220,368,0.206502,1000000,1200026,0,0,0.326405,391694,1.24914e+07,466618,391694,391694,0,0,0
+intra_w3_heavytail,W3,L1_WorkStealing,0.85,47,222,364,0.205331,1000000,1200111,0,0,0.326112,391371,1.24591e+07,466937,391371,391371,0,0,0
+intra_w3_heavytail,W3,L1_WorkStealing,0.85,59,216,356,0.198093,1000000,1200023,0,0,0.330939,397134,1.25595e+07,475787,397134,397134,0,0,0
+intra_w3_heavytail,W3,M0_IntraHostProactive,0.85,11,200,348,0.153335,1000000,1200019,0,0,0.399925,479917,1.02742e+07,0,0,0,1765233,479917,0
+intra_w3_heavytail,W3,M0_IntraHostProactive,0.85,23,198,344,0.149032,1000000,1200030,0,0,0.397911,477505,1.01977e+07,0,0,0,1764153,477505,0
+intra_w3_heavytail,W3,M0_IntraHostProactive,0.85,37,194,350,0.155186,1000000,1200036,0,0,0.400779,480949,1.02951e+07,0,0,0,1764513,480949,0
+intra_w3_heavytail,W3,M0_IntraHostProactive,0.85,47,194,348,0.156497,1000000,1200101,0,0,0.400842,481051,1.02991e+07,0,0,0,1764206,481051,0
+intra_w3_heavytail,W3,M0_IntraHostProactive,0.85,59,190,344,0.149009,1000000,1200025,0,0,0.396553,475874,1.01544e+07,0,0,0,1766835,475874,0

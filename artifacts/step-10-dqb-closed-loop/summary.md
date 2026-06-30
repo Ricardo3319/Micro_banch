@@ -11,11 +11,14 @@ analysis.
 ## Commands Run
 
 ```powershell
-cmake --build build-aqb-check
 .\build-aqb-check\simulator.exe dqb-w2-only
 .\build-aqb-check\simulator.exe dqb-w3-only
 .\build-aqb-check\simulator.exe dqb-w1-only
 ```
+
+Note: the local Ninja build directory had stale lock/dependency-file behavior,
+so the later diagnostic build was refreshed with single-step compile, archive,
+and link commands instead of repeatedly running full `ninja -v`.
 
 ## Validation Outputs
 
@@ -30,6 +33,13 @@ cmake --build build-aqb-check
 | W2 burst rho=0.85 | 358 | 572 | 0.311241 | 0.0115643 | 0.0290325 | 1201 | 14446 |
 | W3 heavy-tail rho=0.85 | 202 | 398 | 0.096336 | 0.00000666 | 0 | 1 | 8 |
 | W1 saturation rho=0.95 | 1380 | 1590 | 0.996014 | 0 | 0 | 0 | 0 |
+
+After the Phase-A diagnostic patch, the focused W1 median remained a no-migrate
+boundary while the control path became bounded:
+
+| Scenario | P99 median | P999 median | migration_rate median | batch candidates median | selected batches median | saturation guards median |
+|---|---:|---:|---:|---:|---:|---:|
+| W1 saturation rho=0.95 | 1310 | 1560 | 0 | 0 | 0 | 3264062 |
 
 ## Analysis
 
@@ -50,9 +60,9 @@ sparse-risk repair path or a richer arrival-epoch batch definition.
 
 - `docs/DQB_CURRENT_RESULTS_ANALYSIS.md`
 
-## Next Phase
+## Phase-A Follow-Up
 
-Before implementing DQB-v2, add diagnostics:
+The diagnostics requested for the next phase were implemented:
 
 - no-migrate reason counters
 - short/long and mice/elephant SLO violation rates
@@ -63,4 +73,10 @@ Before implementing DQB-v2, add diagnostics:
 - migration work rate
 - control-plane cost estimate
 
-Then run the DQB-v1 diagnostic matrix before comparing against DQB-v2.
+During validation, W1 initially exposed a control-plane ordering bug: the
+algorithm set `batch_cap=0` under saturation but still scanned queue summaries
+and target plans. The guard was moved before candidate construction, which
+preserves the no-migrate result and reduces the W1 focused run to normal time.
+
+Next, run the DQB-v1 diagnostic matrix for W2/W3/heterogeneous cases and then
+compare against DQB-v2.

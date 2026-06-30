@@ -14,6 +14,7 @@ struct Node {
 
     void init(int id, int num_cores, double capacity = 1.0) {
         node_id = id;
+        cores.clear();
         cores.resize(num_cores);
         for (int i = 0; i < num_cores; ++i) {
             cores[i].core_id  = i;

@@ -15,7 +15,11 @@ struct Task {
     int     assigned_host = -1;
     int     assigned_core = -1;
     bool    migrated      = false;
+    bool    intra_moved   = false;
+    bool    proactive_intra_moved = false;
+    bool    proactive_intra_recorded = false;
     int     src_host      = -1;
+    int     src_core      = -1;
     double  estimated_local_latency_us = 0.0; // predicted latency if NOT migrated
     uint64_t migration_batch_id = 0;
     int     reserved_dst_host = -1;

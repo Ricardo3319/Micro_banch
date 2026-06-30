@@ -1,15 +1,47 @@
 #pragma once
+#include "sim/common/constants.h"
 #include "sim/metrics/histogram.h"
 #include <cstdint>
+#include <array>
+#include <sstream>
+#include <string>
 
 namespace sim {
+
+enum class NoMigrateReason : int {
+    NO_BATCH_FORMED = 0,
+    LOW_CONFIDENCE = 1,
+    LOW_EXPECTED_GAIN = 2,
+    DST_RESERVATION_HIGH = 3,
+    DST_TAIL_HARM = 4,
+    SATURATION_GUARD = 5,
+    BUDGET_EXHAUSTED = 6,
+    SPARSE_BLOCKING_NOT_BATCHABLE = 7
+};
 
 struct MetricsCollector {
     Histogram latency_hist;
     uint64_t total_finished    = 0;
     uint64_t slo_violations    = 0;
+    uint64_t short_finished    = 0;
+    uint64_t short_slo_violations = 0;
+    uint64_t long_finished     = 0;
+    uint64_t long_slo_violations = 0;
+    uint64_t mice_finished     = 0;
+    uint64_t mice_slo_violations = 0;
+    uint64_t elephant_finished = 0;
+    uint64_t elephant_slo_violations = 0;
     uint64_t total_migrations  = 0;
     uint64_t invalid_migrations = 0;
+    uint64_t intra_move_count = 0;
+    uint64_t invalid_intra_moves = 0;
+    uint64_t steal_attempt_count = 0;
+    uint64_t steal_success_count = 0;
+    uint64_t stolen_task_count = 0;
+    uint64_t proactive_intra_attempt_count = 0;
+    uint64_t proactive_intra_success_count = 0;
+    double intra_moved_work_us = 0.0;
+    double migrated_work_us = 0.0;
     uint64_t batch_candidate_count = 0;
     uint64_t batch_selected_count = 0;
     uint64_t batch_move_count = 0;
@@ -26,6 +58,20 @@ struct MetricsCollector {
     uint64_t batch_type_slow_count = 0;
     uint64_t batch_type_distribution_count = 0;
     uint64_t target_plan_reject_count = 0;
+    uint64_t no_batch_formed_count = 0;
+    uint64_t low_confidence_count = 0;
+    uint64_t low_expected_gain_count = 0;
+    uint64_t dst_reservation_high_count = 0;
+    uint64_t dst_tail_harm_count = 0;
+    uint64_t budget_exhausted_count = 0;
+    uint64_t sparse_blocking_not_batchable_count = 0;
+    double target_harm_est_us = 0.0;
+    double destination_virtual_occupancy_sum_us = 0.0;
+    uint64_t destination_virtual_occupancy_samples = 0;
+    double source_queue_work_sum_us = 0.0;
+    uint64_t source_queue_depth_sum = 0;
+    uint64_t source_queue_samples = 0;
+    std::array<uint64_t, DQB_MAX_TASKS_PER_BATCH + 2> exact_batch_size_hist{};
     uint64_t warmup_remaining  = 0;
     bool     recording         = false;
 
@@ -34,6 +80,15 @@ struct MetricsCollector {
         recording = false;
         latency_hist.reset();
         total_finished = slo_violations = total_migrations = invalid_migrations = 0;
+        intra_move_count = invalid_intra_moves = 0;
+        steal_attempt_count = steal_success_count = stolen_task_count = 0;
+        proactive_intra_attempt_count = proactive_intra_success_count = 0;
+        intra_moved_work_us = 0.0;
+        short_finished = short_slo_violations = 0;
+        long_finished = long_slo_violations = 0;
+        mice_finished = mice_slo_violations = 0;
+        elephant_finished = elephant_slo_violations = 0;
+        migrated_work_us = 0.0;
         batch_candidate_count = batch_selected_count = batch_move_count = 0;
         summary_update_count = reservation_reject_count = saturation_guard_count = 0;
         batch_size_1_count = batch_size_2_7_count = 0;
@@ -41,20 +96,83 @@ struct MetricsCollector {
         batch_type_generic_count = batch_type_short_count = batch_type_mice_count = 0;
         batch_type_slow_count = batch_type_distribution_count = 0;
         target_plan_reject_count = 0;
+        no_batch_formed_count = low_confidence_count = low_expected_gain_count = 0;
+        dst_reservation_high_count = dst_tail_harm_count = budget_exhausted_count = 0;
+        sparse_blocking_not_batchable_count = 0;
+        target_harm_est_us = 0.0;
+        destination_virtual_occupancy_sum_us = 0.0;
+        destination_virtual_occupancy_samples = 0;
+        source_queue_work_sum_us = 0.0;
+        source_queue_depth_sum = 0;
+        source_queue_samples = 0;
+        exact_batch_size_hist.fill(0);
     }
 
-    void on_task_finish(double latency_us, double slo_us) {
+    void on_task_finish(double latency_us, double slo_us, double service_us) {
         if (warmup_remaining > 0) { --warmup_remaining; return; }
         if (!recording) recording = true;
         latency_hist.record(latency_us);
         ++total_finished;
-        if (latency_us > slo_us) ++slo_violations;
+        bool violated = latency_us > slo_us;
+        if (violated) ++slo_violations;
+
+        if (service_us <= SLO_SHORT_SERVICE_THRESHOLD_US) {
+            ++short_finished;
+            ++mice_finished;
+            if (violated) {
+                ++short_slo_violations;
+                ++mice_slo_violations;
+            }
+        } else {
+            ++long_finished;
+            if (violated) ++long_slo_violations;
+        }
+
+        if (service_us >= DQB_ELEPHANT_SERVICE_US) {
+            ++elephant_finished;
+            if (violated) ++elephant_slo_violations;
+        }
     }
 
     void on_migration(bool invalid) {
         if (!recording) return;
         ++total_migrations;
         if (invalid) ++invalid_migrations;
+    }
+
+    void on_migration_scheduled_work(double work_us) {
+        if (!recording) return;
+        migrated_work_us += work_us;
+    }
+
+    void on_steal_attempt() {
+        if (!recording) return;
+        ++steal_attempt_count;
+    }
+
+    void on_steal_success(double work_us) {
+        if (!recording) return;
+        ++steal_success_count;
+        ++stolen_task_count;
+        ++intra_move_count;
+        intra_moved_work_us += work_us;
+    }
+
+    void on_proactive_intra_attempt() {
+        if (!recording) return;
+        ++proactive_intra_attempt_count;
+    }
+
+    void on_proactive_intra_success(double work_us) {
+        if (!recording) return;
+        ++proactive_intra_success_count;
+        ++intra_move_count;
+        intra_moved_work_us += work_us;
+    }
+
+    void on_proactive_intra_finish(bool invalid) {
+        if (!recording) return;
+        if (invalid) ++invalid_intra_moves;
     }
 
     void on_batch_candidates(uint64_t candidates, uint64_t summaries) {
@@ -71,6 +189,10 @@ struct MetricsCollector {
 
     void on_batch_selected_detail(uint64_t moved_tasks, int batch_type) {
         if (!recording) return;
+        uint64_t hist_idx = moved_tasks;
+        if (hist_idx >= exact_batch_size_hist.size())
+            hist_idx = exact_batch_size_hist.size() - 1;
+        ++exact_batch_size_hist[hist_idx];
         if (moved_tasks <= 1) ++batch_size_1_count;
         else if (moved_tasks <= 7) ++batch_size_2_7_count;
         else if (moved_tasks <= 31) ++batch_size_8_31_count;
@@ -89,6 +211,7 @@ struct MetricsCollector {
     void on_reservation_reject() {
         if (!recording) return;
         ++reservation_reject_count;
+        ++dst_reservation_high_count;
     }
 
     void on_saturation_guard() {
@@ -101,16 +224,114 @@ struct MetricsCollector {
         ++target_plan_reject_count;
     }
 
+    void on_no_migrate(NoMigrateReason reason) {
+        if (!recording) return;
+        switch (reason) {
+            case NoMigrateReason::NO_BATCH_FORMED: ++no_batch_formed_count; break;
+            case NoMigrateReason::LOW_CONFIDENCE: ++low_confidence_count; break;
+            case NoMigrateReason::LOW_EXPECTED_GAIN: ++low_expected_gain_count; break;
+            case NoMigrateReason::DST_RESERVATION_HIGH: ++dst_reservation_high_count; break;
+            case NoMigrateReason::DST_TAIL_HARM: ++dst_tail_harm_count; break;
+            case NoMigrateReason::SATURATION_GUARD: ++saturation_guard_count; break;
+            case NoMigrateReason::BUDGET_EXHAUSTED: ++budget_exhausted_count; break;
+            case NoMigrateReason::SPARSE_BLOCKING_NOT_BATCHABLE:
+                ++sparse_blocking_not_batchable_count;
+                break;
+        }
+    }
+
+    void on_target_harm_est(double harm_us) {
+        if (!recording) return;
+        if (harm_us > 0.0) target_harm_est_us += harm_us;
+    }
+
+    void on_destination_virtual_occupancy(double occupancy_us) {
+        if (!recording) return;
+        destination_virtual_occupancy_sum_us += occupancy_us;
+        ++destination_virtual_occupancy_samples;
+    }
+
+    void on_source_queue_diag(uint64_t depth, double work_us) {
+        if (!recording) return;
+        source_queue_depth_sum += depth;
+        source_queue_work_sum_us += work_us;
+        ++source_queue_samples;
+    }
+
     double p99()  const { return latency_hist.percentile(0.99); }
     double p999() const { return latency_hist.percentile(0.999); }
     double slo_violation_rate() const {
         return total_finished > 0 ? static_cast<double>(slo_violations) / total_finished : 0.0;
     }
+    double short_slo_violation_rate() const {
+        return short_finished > 0 ? static_cast<double>(short_slo_violations) / short_finished : 0.0;
+    }
+    double long_slo_violation_rate() const {
+        return long_finished > 0 ? static_cast<double>(long_slo_violations) / long_finished : 0.0;
+    }
+    double mice_slo_violation_rate() const {
+        return mice_finished > 0 ? static_cast<double>(mice_slo_violations) / mice_finished : 0.0;
+    }
+    double elephant_slo_violation_rate() const {
+        return elephant_finished > 0
+            ? static_cast<double>(elephant_slo_violations) / elephant_finished : 0.0;
+    }
     double migration_rate(uint64_t total_generated) const {
         return total_generated > 0 ? static_cast<double>(total_migrations) / total_generated : 0.0;
     }
+    double migration_work_rate(double total_generated_work_us) const {
+        return total_generated_work_us > 0.0 ? migrated_work_us / total_generated_work_us : 0.0;
+    }
     double invalid_migration_ratio() const {
         return total_migrations > 0 ? static_cast<double>(invalid_migrations) / total_migrations : 0.0;
+    }
+    double intra_move_rate(uint64_t total_generated) const {
+        return total_generated > 0 ? static_cast<double>(intra_move_count) / total_generated : 0.0;
+    }
+    double invalid_intra_move_ratio() const {
+        return proactive_intra_success_count > 0
+            ? static_cast<double>(invalid_intra_moves) / proactive_intra_success_count : 0.0;
+    }
+    double avg_destination_virtual_occupancy_us() const {
+        return destination_virtual_occupancy_samples > 0
+            ? destination_virtual_occupancy_sum_us
+                / static_cast<double>(destination_virtual_occupancy_samples)
+            : 0.0;
+    }
+    double avg_source_queue_work_us() const {
+        return source_queue_samples > 0
+            ? source_queue_work_sum_us / static_cast<double>(source_queue_samples)
+            : 0.0;
+    }
+    double avg_source_queue_depth() const {
+        return source_queue_samples > 0
+            ? static_cast<double>(source_queue_depth_sum)
+                / static_cast<double>(source_queue_samples)
+            : 0.0;
+    }
+    double summary_update_cost_est_us() const {
+        return static_cast<double>(summary_update_count) * 0.02;
+    }
+    double batch_estimation_cost_est_us() const {
+        return static_cast<double>(batch_candidate_count) * 0.03;
+    }
+    double target_selection_cost_est_us() const {
+        return static_cast<double>(target_plan_reject_count + batch_selected_count) * 0.005;
+    }
+    std::string exact_batch_size_histogram() const {
+        std::ostringstream out;
+        bool first = true;
+        for (uint64_t i = 0; i < exact_batch_size_hist.size(); ++i) {
+            uint64_t count = exact_batch_size_hist[i];
+            if (count == 0) continue;
+            if (!first) out << ";";
+            first = false;
+            if (i == exact_batch_size_hist.size() - 1)
+                out << ">=" << i << ":" << count;
+            else
+                out << i << ":" << count;
+        }
+        return out.str();
     }
 };
 

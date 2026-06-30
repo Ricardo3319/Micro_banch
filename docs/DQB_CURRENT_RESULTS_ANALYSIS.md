@@ -2,6 +2,18 @@
 
 Date: 2026-05-08
 
+## Update Log
+
+- 2026-05-08: Added DQB-v1 diagnostic metrics and moved the W1 saturation
+  guard before queue-summary construction, reducing the W1 focused run from a
+  long-running control-plane scan to a bounded no-migrate path.
+- 2026-05-08: Added the closed-loop validation run summary for W2/W3/W1 and the
+  corresponding focused rerun results.
+- 2026-05-08: Added the next-phase diagnostic checklist and the DQB-v2
+  experiment plan for the follow-up stage.
+- 2026-05-08: Kept the current DQB-v1 interpretation unchanged so this version
+  can be rolled back against a single documented update boundary.
+
 ## Scope
 
 This document summarizes the current `M2_DQB_PM` experimental evidence and the
@@ -82,12 +94,14 @@ P999 grows to `2700us`.
 
 The current implementation still generates many candidates and target rejects:
 
-- `batch_candidate_median = 25488653`
-- `target_plan_reject_median = 100354081`
-- `saturation_guard_median = 1631169`
+- previous diagnostic attempt: `batch_candidate_median ~= 25M`
+- current guarded path: `batch_candidate_median = 0`
+- current guarded path: `target_plan_reject_median = 0`
+- current guarded path: `saturation_guard_median = 3264062`
 
-This means the next implementation should move the saturation/no-migrate check
-earlier in the control path to reduce wasted candidate and target-plan work.
+The saturation/no-migrate check now happens before queue-summary construction.
+This makes W1 a clean boundary case: the algorithm records saturation pressure,
+does not build batches, and does not consume migration budget.
 
 ### W3 Heavy-Tail Is A Useful Negative Result
 
@@ -147,6 +161,31 @@ The rerun matches the stored summary and confirms the three main claims:
 1. W2 is a strong positive case for real queue-batch migration.
 2. W1 validates the no-migrate guard.
 3. W3 exposes sparse heavy-tail blocking as a boundary.
+
+## Diagnostic Instrumentation Closure
+
+The current code now emits the Phase-A diagnostic fields needed before DQB-v2:
+
+- short/long and mice/elephant SLO violation rates
+- migration work rate and migrated work
+- exact batch-size histogram
+- no-migrate reason counters
+- source queue depth/work summaries
+- destination virtual occupancy and target harm estimate
+- estimated summary, batch-estimation, and target-selection costs
+
+Focused diagnostic medians:
+
+| Scenario | batch candidates | selected batches | moved requests | migration work rate | saturation guards |
+|---|---:|---:|---:|---:|---:|
+| W2 burst rho=0.85 | 840591 | 1201 | 14446 | 0.0174885 | 0 |
+| W3 heavy-tail rho=0.85 | 1 | 1 | 8 | 0.00000333 | 0 |
+| W1 saturation rho=0.95 | 0 | 0 | 0 | 0 | 3264062 |
+
+This closes the immediate instrumentation loop. The remaining issue is not
+correctness but cost semantics: W2 target rejection counters are still counted
+per candidate-destination trial, so they are useful for simulator diagnosis but
+should not yet be presented as literal production control messages.
 
 ## Next Experiment Plan
 
