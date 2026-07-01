@@ -91,6 +91,10 @@ inline constexpr double RESCUE_EPSILON_US          = 2.0;
 inline constexpr int    RESCUE_THETA               = 0;
 inline constexpr double RESCUE_MIGRATION_COST_US   = 0.5;
 
+inline constexpr int SERVICE_ESTIMATE_ORACLE = 0;
+inline constexpr int SERVICE_ESTIMATE_MEAN = 1;
+inline constexpr int SERVICE_ESTIMATE_NOISY_ORACLE = 2;
+
 // Frozen W2 MMPP parameters.
 inline constexpr double W2_LAMBDA_BURST_FACTOR = 1.5;
 inline constexpr double W2_NORMAL_STAY_US      = 5000.0;
@@ -125,6 +129,8 @@ struct M0Config {
     double rescue_epsilon_us = RESCUE_EPSILON_US;
     int    rescue_theta = RESCUE_THETA;
     double rescue_migration_cost_us = RESCUE_MIGRATION_COST_US;
+    int    service_estimate_mode = SERVICE_ESTIMATE_ORACLE;
+    double service_estimate_noise_cv = 0.0;
 };
 
 // Heterogeneous cluster constants.

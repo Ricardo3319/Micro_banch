@@ -1,0 +1,6 @@
+benchmark,iterations,total_us,per_op_us,notes
+local_deque_push_pop,1000000,4770.2,0.0023851,single_thread_descriptor_queue_ops
+cross_thread_cv_handoff,50000,796147,15.9229,not_cpu_pinned_upper_bound_consumed_50000
+sim_sweep_low,0,0,0,descriptor_migration_lower_bound
+sim_sweep_default,0,0,0.5,current_rescuesched_default
+sim_sweep_high,0,0,5,stress_cost_for_sensitivity

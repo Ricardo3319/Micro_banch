@@ -135,9 +135,12 @@ void Simulator::configure(MethodType method, double rho, unsigned seed,
 
     // W2 localized burst init.
     hot_nodes_.clear();
+    hot_cores_.clear();
     last_burst_state_ = false;
     if (active_host_count_ == NUM_HOSTS && wl == WorkloadType::W2_MMPP_BIMODAL)
         refresh_hot_nodes();
+    if (is_intra_host_method() && wl == WorkloadType::W2_MMPP_BIMODAL)
+        refresh_hot_cores();
 
     // Clear event queue.
     while (!event_queue_.empty()) event_queue_.pop();
@@ -222,6 +225,24 @@ void Simulator::process_event(const Event& e) {
     }
 }
 
+double Simulator::estimate_service_time(double base_service_us) {
+    switch (m0_config_.service_estimate_mode) {
+        case SERVICE_ESTIMATE_MEAN:
+            return W3_MEAN_SERVICE_US;
+        case SERVICE_ESTIMATE_NOISY_ORACLE: {
+            double cv = std::max(0.0, m0_config_.service_estimate_noise_cv);
+            if (cv <= 0.0) return base_service_us;
+            double sigma = std::sqrt(std::log(1.0 + cv * cv));
+            double mu = -0.5 * sigma * sigma;
+            std::normal_distribution<double> noise(mu, sigma);
+            return std::max(0.1, base_service_us * std::exp(noise(rng_)));
+        }
+        case SERVICE_ESTIMATE_ORACLE:
+        default:
+            return base_service_us;
+    }
+}
+
 void Simulator::handle_task_generate(const Event& /*e*/) {
     // Schedule next generation.
     double gap;
@@ -243,11 +264,21 @@ void Simulator::handle_task_generate(const Event& /*e*/) {
     } else {
         t->base_service_time_us = bimodal_->next();
     }
-    t->expected_service_time_us = t->base_service_time_us;
+    t->expected_service_time_us = estimate_service_time(t->base_service_time_us);
     total_generated_work_us_ += t->expected_service_time_us;
     t->slo_target_us = t->slo_for_service();
 
     if (is_intra_host_method()) {
+        if (workload_type_ == WorkloadType::W2_MMPP_BIMODAL && mmpp_) {
+            if (mmpp_->is_burst()) {
+                if (!last_burst_state_) {
+                    refresh_hot_cores();
+                    last_burst_state_ = true;
+                }
+            } else if (last_burst_state_) {
+                last_burst_state_ = false;
+            }
+        }
         enqueue_task_on_random_core(t);
         return;
     }
@@ -308,8 +339,21 @@ void Simulator::enqueue_task_on_core(Task* task, int host, int core_id, double n
 }
 
 void Simulator::enqueue_task_on_random_core(Task* task) {
-    std::uniform_int_distribution<int> core_dist(0, CORES_PER_HOST - 1);
-    enqueue_task_on_core(task, 0, core_dist(rng_), now_us_);
+    int core_id = -1;
+    if (workload_type_ == WorkloadType::W2_MMPP_BIMODAL
+        && mmpp_ && mmpp_->is_burst() && !hot_cores_.empty()) {
+        std::uniform_real_distribution<double> u(0.0, 1.0);
+        if (u(rng_) < HOT_DISPATCH_PROB) {
+            std::uniform_int_distribution<int> hd(
+                0, static_cast<int>(hot_cores_.size()) - 1);
+            core_id = hot_cores_[hd(rng_)];
+        }
+    }
+    if (core_id < 0) {
+        std::uniform_int_distribution<int> core_dist(0, CORES_PER_HOST - 1);
+        core_id = core_dist(rng_);
+    }
+    enqueue_task_on_core(task, 0, core_id, now_us_);
 }
 
 void Simulator::refresh_hot_nodes() {
@@ -319,6 +363,14 @@ void Simulator::refresh_hot_nodes() {
     std::iota(all.begin(), all.end(), 0);
     std::shuffle(all.begin(), all.end(), rng_);
     std::copy_n(all.begin(), HOT_NODE_COUNT, hot_nodes_.begin());
+}
+
+void Simulator::refresh_hot_cores() {
+    hot_cores_.resize(HOT_CORE_COUNT);
+    std::vector<int> all(CORES_PER_HOST);
+    std::iota(all.begin(), all.end(), 0);
+    std::shuffle(all.begin(), all.end(), rng_);
+    std::copy_n(all.begin(), HOT_CORE_COUNT, hot_cores_.begin());
 }
 
 void Simulator::handle_task_arrive(const Event& e) {
@@ -443,12 +495,41 @@ bool Simulator::move_rescue_task_intra_host(int host, int src_core_id, int dst_c
     Node& node = nodes_[host];
     Core& src_core = node.cores[src_core_id];
     Core& dst_core = node.cores[dst_core_id];
+    uint64_t rescue_migration_id = ++migration_batch_id_counter_;
+
+    auto deadline_abs = [](const Task* t) {
+        return t ? t->generate_time_us + t->slo_target_us : 0.0;
+    };
+
+    uint64_t watched_target_tasks = 0;
+    double target_prefix_work_us = 0.0;
+    if (!dst_core.idle && dst_core.running)
+        target_prefix_work_us = std::max(0.0, dst_core.finish_time_us - now_us_);
+    for (Task* cur = dst_core.wait_queue.begin(); cur; cur = cur->next) {
+        double work_us = cur->expected_service_time_us / dst_core.capacity + T_host_us;
+        double completion_abs_us = now_us_ + target_prefix_work_us + work_us;
+        if (completion_abs_us <= deadline_abs(cur)) {
+            cur->target_harm_watch_active = true;
+            cur->target_harm_watch_recorded = metrics_.recording;
+            cur->target_harm_watch_migration_id = rescue_migration_id;
+            cur->target_harm_counterfactual_latency_us =
+                completion_abs_us - cur->generate_time_us;
+            ++watched_target_tasks;
+        }
+        target_prefix_work_us += work_us;
+    }
+    metrics_.on_rescue_target_harm_watch(watched_target_tasks);
 
     src_core.remove_waiting(task);
+    task->target_harm_watch_active = false;
+    task->target_harm_watch_recorded = false;
+    task->target_harm_watch_migration_id = 0;
+    task->target_harm_counterfactual_latency_us = 0.0;
     task->intra_moved = true;
     task->rescue_intra_moved = true;
     task->rescue_intra_recorded = metrics_.recording;
     task->rescue_predicted_harmful = predicted_harmful;
+    task->rescue_migration_id = rescue_migration_id;
     task->src_host = host;
     task->src_core = src_core_id;
     task->assigned_host = host;
@@ -814,6 +895,15 @@ void Simulator::handle_task_finish(const Event& e) {
         metrics_.on_rescue_finish(
             t->estimated_local_latency_us, latency_us, t->slo_target_us);
     }
+    if (t->target_harm_watch_active && t->target_harm_watch_recorded
+        && t->target_harm_counterfactual_latency_us <= t->slo_target_us
+        && latency_us > t->slo_target_us) {
+        metrics_.on_rescue_target_induced_miss(
+            t->target_harm_watch_migration_id);
+    }
+    t->target_harm_watch_active = false;
+    t->target_harm_watch_recorded = false;
+    t->target_harm_watch_migration_id = 0;
 
     core.running = nullptr;
     core.idle = true;

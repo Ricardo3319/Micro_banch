@@ -55,6 +55,7 @@ private:
     // Helpers.
     void start_execution(Core& c, double now_us);
     int  dispatch_task(double service_est_us);
+    double estimate_service_time(double base_service_us);
     double compute_exec_time(double base_service_us, double capacity) const;
     bool is_intra_host_method() const;
     void enqueue_task_on_core(Task* task, int host, int core, double now_us);
@@ -128,9 +129,12 @@ private:
 
     // W2 localized burst: hot node subset that absorbs extra burst traffic.
     std::vector<int> hot_nodes_;
+    std::vector<int> hot_cores_;
     bool last_burst_state_ = false;
     void refresh_hot_nodes();
+    void refresh_hot_cores();
     static constexpr int HOT_NODE_COUNT = 16; // 25% of 64 nodes
+    static constexpr int HOT_CORE_COUNT = 4;  // 25% of 16 cores
     static constexpr double HOT_DISPATCH_PROB = 0.5; // P(forced to hot node) during burst
 };
 

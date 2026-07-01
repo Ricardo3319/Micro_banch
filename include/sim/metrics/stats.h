@@ -5,6 +5,7 @@
 #include <array>
 #include <sstream>
 #include <string>
+#include <unordered_set>
 
 namespace sim {
 
@@ -53,6 +54,10 @@ struct MetricsCollector {
     uint64_t unsaved_migration_count = 0;
     uint64_t beneficial_migration_count = 0;
     uint64_t harmful_migration_count = 0;
+    uint64_t predicted_target_unsafe_accept_count = 0;
+    uint64_t target_harm_watch_count = 0;
+    uint64_t harmful_actual_count = 0;
+    uint64_t target_induced_miss_actual = 0;
     double intra_moved_work_us = 0.0;
     double migrated_work_us = 0.0;
     uint64_t batch_candidate_count = 0;
@@ -85,6 +90,7 @@ struct MetricsCollector {
     uint64_t source_queue_depth_sum = 0;
     uint64_t source_queue_samples = 0;
     std::array<uint64_t, DQB_MAX_TASKS_PER_BATCH + 2> exact_batch_size_hist{};
+    std::unordered_set<uint64_t> harmful_actual_migration_ids;
     uint64_t warmup_remaining  = 0;
     bool     recording         = false;
 
@@ -102,6 +108,8 @@ struct MetricsCollector {
         target_unsafe_reject_count = remote_infeasible_reject_count = 0;
         needless_migration_count = unsaved_migration_count = 0;
         beneficial_migration_count = harmful_migration_count = 0;
+        predicted_target_unsafe_accept_count = target_harm_watch_count = 0;
+        harmful_actual_count = target_induced_miss_actual = 0;
         intra_moved_work_us = 0.0;
         short_finished = short_slo_violations = 0;
         long_finished = long_slo_violations = 0;
@@ -125,6 +133,7 @@ struct MetricsCollector {
         source_queue_depth_sum = 0;
         source_queue_samples = 0;
         exact_batch_size_hist.fill(0);
+        harmful_actual_migration_ids.clear();
     }
 
     void on_task_finish(double latency_us, double slo_us, double service_us) {
@@ -235,7 +244,7 @@ struct MetricsCollector {
         ++intra_move_count;
         rescue_moved_work_us += work_us;
         intra_moved_work_us += work_us;
-        if (predicted_harmful) ++harmful_migration_count;
+        if (predicted_harmful) ++predicted_target_unsafe_accept_count;
     }
 
     void on_rescue_finish(double predicted_local_latency_us,
@@ -248,6 +257,20 @@ struct MetricsCollector {
             ++beneficial_migration_count;
         } else {
             ++unsaved_migration_count;
+        }
+    }
+
+    void on_rescue_target_harm_watch(uint64_t watched_tasks) {
+        if (!recording) return;
+        target_harm_watch_count += watched_tasks;
+    }
+
+    void on_rescue_target_induced_miss(uint64_t migration_id) {
+        if (!recording || migration_id == 0) return;
+        ++target_induced_miss_actual;
+        if (harmful_actual_migration_ids.insert(migration_id).second) {
+            ++harmful_actual_count;
+            ++harmful_migration_count;
         }
     }
 
@@ -376,11 +399,15 @@ struct MetricsCollector {
         if (rescue_success_count == 0) return 0.0;
         uint64_t useless = needless_migration_count
                           + unsaved_migration_count
-                          + harmful_migration_count;
+                          + harmful_actual_count;
         return static_cast<double>(useless) / rescue_success_count;
     }
     double rescue_per_migration() const {
         return beneficial_migration_ratio();
+    }
+    double harmful_actual_ratio() const {
+        return rescue_success_count > 0
+            ? static_cast<double>(harmful_actual_count) / rescue_success_count : 0.0;
     }
     double avg_destination_virtual_occupancy_us() const {
         return destination_virtual_occupancy_samples > 0
