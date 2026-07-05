@@ -20,6 +20,7 @@ struct Task {
     bool    proactive_intra_recorded = false;
     bool    rescue_intra_moved = false;
     bool    rescue_intra_recorded = false;
+    bool    rescue_relief_moved = false;
     bool    rescue_predicted_harmful = false;
     bool    target_harm_watch_active = false;
     bool    target_harm_watch_recorded = false;

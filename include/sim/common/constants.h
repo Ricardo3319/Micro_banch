@@ -94,6 +94,12 @@ inline constexpr double RESCUE_MIGRATION_COST_US   = 0.5;
 inline constexpr int SERVICE_ESTIMATE_ORACLE = 0;
 inline constexpr int SERVICE_ESTIMATE_MEAN = 1;
 inline constexpr int SERVICE_ESTIMATE_NOISY_ORACLE = 2;
+inline constexpr int SERVICE_ESTIMATE_CLASS_MEAN = 3;
+inline constexpr int SERVICE_ESTIMATE_EWMA = 4;
+inline constexpr int SERVICE_ESTIMATE_QUANTILE_GUARD = 5;
+
+inline constexpr int RESCUE_TARGET_INSERT_APPEND_TAIL = 0;
+inline constexpr int RESCUE_TARGET_INSERT_HEAD_STRESS = 1;
 
 // Frozen W2 MMPP parameters.
 inline constexpr double W2_LAMBDA_BURST_FACTOR = 1.5;
@@ -131,6 +137,13 @@ struct M0Config {
     double rescue_migration_cost_us = RESCUE_MIGRATION_COST_US;
     int    service_estimate_mode = SERVICE_ESTIMATE_ORACLE;
     double service_estimate_noise_cv = 0.0;
+    double service_estimate_ewma_alpha = 0.05;
+    int    rescue_target_insert_policy = RESCUE_TARGET_INSERT_APPEND_TAIL;
+    int    w2_hot_core_count = 4;
+    double w2_hot_dispatch_prob = 0.5;
+    double rescue_hybrid_pressure_ratio = 1.25;
+    double rescue_hybrid_min_gain_us = 5.0;
+    int    rescue_hybrid_max_relief_per_check = 1;
 };
 
 // Heterogeneous cluster constants.

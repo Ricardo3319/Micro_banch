@@ -58,6 +58,11 @@ struct MetricsCollector {
     uint64_t target_harm_watch_count = 0;
     uint64_t harmful_actual_count = 0;
     uint64_t target_induced_miss_actual = 0;
+    uint64_t relief_attempt_count = 0;
+    uint64_t relief_success_count = 0;
+    uint64_t relief_beneficial_count = 0;
+    uint64_t relief_useless_count = 0;
+    double relief_moved_work_us = 0.0;
     double intra_moved_work_us = 0.0;
     double migrated_work_us = 0.0;
     uint64_t batch_candidate_count = 0;
@@ -110,6 +115,9 @@ struct MetricsCollector {
         beneficial_migration_count = harmful_migration_count = 0;
         predicted_target_unsafe_accept_count = target_harm_watch_count = 0;
         harmful_actual_count = target_induced_miss_actual = 0;
+        relief_attempt_count = relief_success_count = 0;
+        relief_beneficial_count = relief_useless_count = 0;
+        relief_moved_work_us = 0.0;
         intra_moved_work_us = 0.0;
         short_finished = short_slo_violations = 0;
         long_finished = long_slo_violations = 0;
@@ -238,19 +246,36 @@ struct MetricsCollector {
         ++target_unsafe_reject_count;
     }
 
-    void on_rescue_success(double work_us, bool predicted_harmful) {
+    void on_relief_attempt() {
+        if (!recording) return;
+        ++relief_attempt_count;
+    }
+
+    void on_rescue_success(double work_us, bool predicted_harmful, bool relief = false) {
         if (!recording) return;
         ++rescue_success_count;
         ++intra_move_count;
         rescue_moved_work_us += work_us;
         intra_moved_work_us += work_us;
         if (predicted_harmful) ++predicted_target_unsafe_accept_count;
+        if (relief) {
+            ++relief_success_count;
+            relief_moved_work_us += work_us;
+        }
     }
 
     void on_rescue_finish(double predicted_local_latency_us,
                           double actual_latency_us,
-                          double slo_us) {
+                          double slo_us,
+                          bool relief = false) {
         if (!recording) return;
+        if (relief) {
+            if (actual_latency_us + 1e-9 < predicted_local_latency_us) {
+                ++relief_beneficial_count;
+            } else {
+                ++relief_useless_count;
+            }
+        }
         if (predicted_local_latency_us <= slo_us) {
             ++needless_migration_count;
         } else if (actual_latency_us <= slo_us) {
@@ -404,6 +429,14 @@ struct MetricsCollector {
     }
     double rescue_per_migration() const {
         return beneficial_migration_ratio();
+    }
+    double relief_beneficial_migration_ratio() const {
+        return relief_success_count > 0
+            ? static_cast<double>(relief_beneficial_count) / relief_success_count : 0.0;
+    }
+    double relief_useless_migration_ratio() const {
+        return relief_success_count > 0
+            ? static_cast<double>(relief_useless_count) / relief_success_count : 0.0;
     }
     double harmful_actual_ratio() const {
         return rescue_success_count > 0

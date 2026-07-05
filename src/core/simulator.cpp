@@ -15,7 +15,8 @@ bool Simulator::is_intra_host_method() const {
         || method_type_ == MethodType::M0_INTRA_HOST_PROACTIVE
         || method_type_ == MethodType::M1_RESCUE_SCHED
         || method_type_ == MethodType::M1_RESCUE_NO_TARGET_SAFETY
-        || method_type_ == MethodType::M1_RESCUE_NO_RESCUABLE;
+        || method_type_ == MethodType::M1_RESCUE_NO_RESCUABLE
+        || method_type_ == MethodType::M1_RESCUE_HYBRID;
 }
 
 Task* Simulator::alloc_task() {
@@ -41,7 +42,8 @@ void Simulator::configure(MethodType method, double rho, unsigned seed,
          || method == MethodType::M0_INTRA_HOST_PROACTIVE
          || method == MethodType::M1_RESCUE_SCHED
          || method == MethodType::M1_RESCUE_NO_TARGET_SAFETY
-         || method == MethodType::M1_RESCUE_NO_RESCUABLE)
+         || method == MethodType::M1_RESCUE_NO_RESCUABLE
+         || method == MethodType::M1_RESCUE_HYBRID)
             ? 1 : NUM_HOSTS;
     nodes_.resize(active_host_count_);
     node_capacities_.resize(active_host_count_);
@@ -74,6 +76,7 @@ void Simulator::configure(MethodType method, double rho, unsigned seed,
         case MethodType::M1_RESCUE_SCHED:
         case MethodType::M1_RESCUE_NO_TARGET_SAFETY:
         case MethodType::M1_RESCUE_NO_RESCUABLE:
+        case MethodType::M1_RESCUE_HYBRID:
             break; // local core scheduling only
         case MethodType::B1_POWER_OF_K:
             scheduler_ = std::make_unique<PowerOfKScheduler>(2);
@@ -129,6 +132,11 @@ void Simulator::configure(MethodType method, double rho, unsigned seed,
     b2_thresholds_set_ = false;
     migration_decisions_ = 0;
     migration_batch_id_counter_ = 0;
+    ewma_short_service_us_ = class_mean_service_estimate(BIMODAL_SHORT_US);
+    ewma_long_service_us_ = class_mean_service_estimate(BIMODAL_LONG_US);
+    quantile_short_service_us_ = std::max(
+        SLO_SHORT_SERVICE_THRESHOLD_US, ewma_short_service_us_ * 1.5);
+    quantile_long_service_us_ = std::max(BIMODAL_LONG_US, ewma_long_service_us_ * 1.5);
 
     // B0 global queue.
     global_queue_.clear();
@@ -174,7 +182,8 @@ void Simulator::configure(MethodType method, double rho, unsigned seed,
         schedule_event(chk);
     } else if (method == MethodType::M1_RESCUE_SCHED
                || method == MethodType::M1_RESCUE_NO_TARGET_SAFETY
-               || method == MethodType::M1_RESCUE_NO_RESCUABLE) {
+               || method == MethodType::M1_RESCUE_NO_RESCUABLE
+               || method == MethodType::M1_RESCUE_HYBRID) {
         Event chk;
         chk.timestamp_us = m0_config_.t_check_us;
         chk.type = EventType::CHECK_MIGRATION;
@@ -237,10 +246,44 @@ double Simulator::estimate_service_time(double base_service_us) {
             std::normal_distribution<double> noise(mu, sigma);
             return std::max(0.1, base_service_us * std::exp(noise(rng_)));
         }
+        case SERVICE_ESTIMATE_CLASS_MEAN:
+            return class_mean_service_estimate(base_service_us);
+        case SERVICE_ESTIMATE_EWMA:
+            return (base_service_us <= SLO_SHORT_SERVICE_THRESHOLD_US)
+                ? ewma_short_service_us_ : ewma_long_service_us_;
+        case SERVICE_ESTIMATE_QUANTILE_GUARD:
+            return (base_service_us <= SLO_SHORT_SERVICE_THRESHOLD_US)
+                ? quantile_short_service_us_ : quantile_long_service_us_;
         case SERVICE_ESTIMATE_ORACLE:
         default:
             return base_service_us;
     }
+}
+
+double Simulator::class_mean_service_estimate(double base_service_us) const {
+    bool short_class = base_service_us <= SLO_SHORT_SERVICE_THRESHOLD_US;
+    if (workload_type_ == WorkloadType::W3_POISSON_LOGNORMAL) {
+        return short_class ? 10.0 : 42.0;
+    }
+    return short_class ? BIMODAL_SHORT_US : BIMODAL_LONG_US;
+}
+
+void Simulator::update_service_estimator(double base_service_us) {
+    double alpha = std::min(1.0, std::max(0.001, m0_config_.service_estimate_ewma_alpha));
+    bool short_class = base_service_us <= SLO_SHORT_SERVICE_THRESHOLD_US;
+    double& ewma = short_class ? ewma_short_service_us_ : ewma_long_service_us_;
+    double& guard = short_class ? quantile_short_service_us_ : quantile_long_service_us_;
+    double floor_est = class_mean_service_estimate(base_service_us);
+
+    ewma = (1.0 - alpha) * ewma + alpha * base_service_us;
+
+    if (base_service_us > guard) {
+        guard = (1.0 - alpha) * guard + alpha * base_service_us;
+    } else {
+        double decay_alpha = alpha * 0.10;
+        guard = (1.0 - decay_alpha) * guard + decay_alpha * base_service_us;
+    }
+    guard = std::max(floor_est, guard);
 }
 
 void Simulator::handle_task_generate(const Event& /*e*/) {
@@ -299,7 +342,7 @@ void Simulator::handle_task_generate(const Event& /*e*/) {
             last_burst_state_ = true;
         }
         std::uniform_real_distribution<double> u(0.0, 1.0);
-        if (u(rng_) < HOT_DISPATCH_PROB) {
+        if (u(rng_) < m0_config_.w2_hot_dispatch_prob) {
             std::uniform_int_distribution<int> hd(0, static_cast<int>(hot_nodes_.size()) - 1);
             int a = hot_nodes_[hd(rng_)], b = hot_nodes_[hd(rng_)];
             dst = (stale_view_[a] <= stale_view_[b]) ? a : b;
@@ -343,7 +386,7 @@ void Simulator::enqueue_task_on_random_core(Task* task) {
     if (workload_type_ == WorkloadType::W2_MMPP_BIMODAL
         && mmpp_ && mmpp_->is_burst() && !hot_cores_.empty()) {
         std::uniform_real_distribution<double> u(0.0, 1.0);
-        if (u(rng_) < HOT_DISPATCH_PROB) {
+        if (u(rng_) < m0_config_.w2_hot_dispatch_prob) {
             std::uniform_int_distribution<int> hd(
                 0, static_cast<int>(hot_cores_.size()) - 1);
             core_id = hot_cores_[hd(rng_)];
@@ -366,11 +409,12 @@ void Simulator::refresh_hot_nodes() {
 }
 
 void Simulator::refresh_hot_cores() {
-    hot_cores_.resize(HOT_CORE_COUNT);
+    int hot_core_count = std::max(1, std::min(CORES_PER_HOST, m0_config_.w2_hot_core_count));
+    hot_cores_.resize(hot_core_count);
     std::vector<int> all(CORES_PER_HOST);
     std::iota(all.begin(), all.end(), 0);
     std::shuffle(all.begin(), all.end(), rng_);
-    std::copy_n(all.begin(), HOT_CORE_COUNT, hot_cores_.begin());
+    std::copy_n(all.begin(), hot_core_count, hot_cores_.begin());
 }
 
 void Simulator::handle_task_arrive(const Event& e) {
@@ -486,7 +530,8 @@ bool Simulator::move_rescue_task_intra_host(int host, int src_core_id, int dst_c
                                             double estimated_local_latency_us,
                                             double estimated_remote_latency_us,
                                             int predicted_target_delta_risk,
-                                            bool predicted_harmful) {
+                                            bool predicted_harmful,
+                                            bool relief) {
     if (!task || host < 0 || host >= static_cast<int>(nodes_.size())) return false;
     if (src_core_id < 0 || src_core_id >= CORES_PER_HOST) return false;
     if (dst_core_id < 0 || dst_core_id >= CORES_PER_HOST) return false;
@@ -528,6 +573,7 @@ bool Simulator::move_rescue_task_intra_host(int host, int src_core_id, int dst_c
     task->intra_moved = true;
     task->rescue_intra_moved = true;
     task->rescue_intra_recorded = metrics_.recording;
+    task->rescue_relief_moved = relief;
     task->rescue_predicted_harmful = predicted_harmful;
     task->rescue_migration_id = rescue_migration_id;
     task->src_host = host;
@@ -540,9 +586,13 @@ bool Simulator::move_rescue_task_intra_host(int host, int src_core_id, int dst_c
 
     double moved_work_us =
         task->expected_service_time_us / dst_core.capacity + T_host_us;
-    metrics_.on_rescue_success(moved_work_us, predicted_harmful);
+    metrics_.on_rescue_success(moved_work_us, predicted_harmful, relief);
 
-    dst_core.push_waiting(task);
+    if (m0_config_.rescue_target_insert_policy == RESCUE_TARGET_INSERT_HEAD_STRESS) {
+        dst_core.push_waiting_front(task);
+    } else {
+        dst_core.push_waiting(task);
+    }
     if (dst_core.idle) start_execution(dst_core, now_us_);
     return true;
 }
@@ -652,6 +702,8 @@ bool Simulator::run_rescue_sched_check(int host) {
         method_type_ == MethodType::M1_RESCUE_NO_TARGET_SAFETY;
     const bool no_rescuable =
         method_type_ == MethodType::M1_RESCUE_NO_RESCUABLE;
+    const bool hybrid =
+        method_type_ == MethodType::M1_RESCUE_HYBRID;
     const int scan_depth = std::max(1, m0_config_.rescue_scan_depth);
     const int max_candidates = std::max(1, m0_config_.rescue_k_candidates);
     const int target_count = std::max(1, m0_config_.rescue_h_targets);
@@ -837,7 +889,9 @@ bool Simulator::run_rescue_sched_check(int host) {
         }
     }
 
-    if (scored.empty()) return false;
+    if (scored.empty()) {
+        return hybrid ? run_hybrid_relief_check(host, budget) : false;
+    }
 
     std::sort(scored.begin(), scored.end(),
               [](const ScoredMove& a, const ScoredMove& b) {
@@ -864,13 +918,125 @@ bool Simulator::run_rescue_sched_check(int host) {
         if (move_rescue_task_intra_host(
                 host, move.cand.src_core, move.dst_core, move.cand.task,
                 move.cand.local_latency_us, move.remote_latency_us,
-                move.target_delta_risk, move.predicted_harmful)) {
+                move.target_delta_risk, move.predicted_harmful, false)) {
             source_used[move.cand.src_core] = true;
             ++moved;
         }
     }
 
-    return moved > 0;
+    if (moved > 0) return true;
+    return hybrid ? run_hybrid_relief_check(host, budget) : false;
+}
+
+bool Simulator::run_hybrid_relief_check(int host, int budget) {
+    metrics_.on_relief_attempt();
+    if (host < 0 || host >= static_cast<int>(nodes_.size())) return false;
+    if (workload_type_ != WorkloadType::W2_MMPP_BIMODAL) return false;
+    if (budget <= 0 || m0_config_.rescue_hybrid_max_relief_per_check <= 0) return false;
+
+    Node& node = nodes_[host];
+    double total_work_us = 0.0;
+    for (const auto& core : node.cores)
+        total_work_us += core.local_workload_us(now_us_);
+    double avg_work_us =
+        node.cores.empty() ? 0.0 : total_work_us / static_cast<double>(node.cores.size());
+    if (avg_work_us <= 0.0) return false;
+
+    auto deadline_abs = [](const Task* task) {
+        return task->generate_time_us + task->slo_target_us;
+    };
+    auto estimated_task_work = [](const Core& core, const Task* task) {
+        return task ? task->expected_service_time_us / core.capacity + T_host_us : 0.0;
+    };
+
+    struct ReliefMove {
+        Task* task = nullptr;
+        int src_core = -1;
+        int dst_core = -1;
+        double local_latency_us = 0.0;
+        double remote_latency_us = 0.0;
+        double score = 0.0;
+        bool predicted_harmful = false;
+    };
+
+    ReliefMove best;
+    double best_score = -std::numeric_limits<double>::infinity();
+    double pressure_ratio = std::max(1.0, m0_config_.rescue_hybrid_pressure_ratio);
+    int scan_depth = std::max(1, m0_config_.rescue_scan_depth / 2);
+
+    std::vector<double> core_work_us(CORES_PER_HOST, 0.0);
+    for (const auto& core : node.cores)
+        core_work_us[core.core_id] = core.local_workload_us(now_us_);
+
+    for (auto& src_core : node.cores) {
+        double src_work = core_work_us[src_core.core_id];
+        if (src_work < avg_work_us * pressure_ratio) continue;
+
+        double prefix_work_us = 0.0;
+        if (!src_core.idle && src_core.running)
+            prefix_work_us = std::max(0.0, src_core.finish_time_us - now_us_);
+
+        int depth = 0;
+        for (Task* cur = src_core.wait_queue.begin();
+             cur && depth < scan_depth;
+             cur = cur->next, ++depth) {
+            if (cur->intra_moved) {
+                prefix_work_us += estimated_task_work(src_core, cur);
+                continue;
+            }
+
+            double task_work_src = estimated_task_work(src_core, cur);
+            double local_completion_abs_us = now_us_ + prefix_work_us + task_work_src;
+            double local_latency_us = local_completion_abs_us - cur->generate_time_us;
+
+            for (const auto& dst_core : node.cores) {
+                if (dst_core.core_id == src_core.core_id) continue;
+                double dst_work = core_work_us[dst_core.core_id];
+                if (dst_work >= avg_work_us) continue;
+
+                double task_work_dst = estimated_task_work(dst_core, cur);
+                double remote_completion_abs_us =
+                    now_us_ + m0_config_.rescue_migration_cost_us
+                    + dst_work + task_work_dst;
+                if (remote_completion_abs_us + m0_config_.rescue_epsilon_us
+                    > deadline_abs(cur)) {
+                    continue;
+                }
+
+                double remote_latency_us =
+                    remote_completion_abs_us - cur->generate_time_us;
+                double latency_gain_us = local_latency_us - remote_latency_us;
+                double pressure_gain_us = src_work - dst_work - task_work_dst;
+                if (pressure_gain_us <= 0.0
+                    || latency_gain_us < m0_config_.rescue_hybrid_min_gain_us) {
+                    continue;
+                }
+
+                bool predicted_harmful = dst_work > avg_work_us * 0.80;
+                double score = latency_gain_us + 0.10 * pressure_gain_us;
+                if (score > best_score) {
+                    best_score = score;
+                    best.task = cur;
+                    best.src_core = src_core.core_id;
+                    best.dst_core = dst_core.core_id;
+                    best.local_latency_us = local_latency_us;
+                    best.remote_latency_us = remote_latency_us;
+                    best.score = score;
+                    best.predicted_harmful = predicted_harmful;
+                }
+            }
+
+            prefix_work_us += task_work_src;
+        }
+    }
+
+    if (!best.task) return false;
+    int relief_budget = std::min(budget, m0_config_.rescue_hybrid_max_relief_per_check);
+    if (relief_budget <= 0) return false;
+    return move_rescue_task_intra_host(
+        host, best.src_core, best.dst_core, best.task,
+        best.local_latency_us, best.remote_latency_us,
+        0, best.predicted_harmful, true);
 }
 
 void Simulator::handle_task_finish(const Event& e) {
@@ -881,6 +1047,7 @@ void Simulator::handle_task_finish(const Event& e) {
 
     double latency_us = now_us_ - t->generate_time_us;
     metrics_.on_task_finish(latency_us, t->slo_target_us, t->base_service_time_us);
+    update_service_estimator(t->base_service_time_us);
 
     // Check if migration was invalid: actual latency > estimated local latency.
     if (t->migrated) {
@@ -893,7 +1060,8 @@ void Simulator::handle_task_finish(const Event& e) {
     }
     if (t->rescue_intra_moved && t->rescue_intra_recorded) {
         metrics_.on_rescue_finish(
-            t->estimated_local_latency_us, latency_us, t->slo_target_us);
+            t->estimated_local_latency_us, latency_us, t->slo_target_us,
+            t->rescue_relief_moved);
     }
     if (t->target_harm_watch_active && t->target_harm_watch_recorded
         && t->target_harm_counterfactual_latency_us <= t->slo_target_us
@@ -974,7 +1142,8 @@ void Simulator::handle_check_migration(const Event& e) {
 
     } else if (method_type_ == MethodType::M1_RESCUE_SCHED
                || method_type_ == MethodType::M1_RESCUE_NO_TARGET_SAFETY
-               || method_type_ == MethodType::M1_RESCUE_NO_RESCUABLE) {
+               || method_type_ == MethodType::M1_RESCUE_NO_RESCUABLE
+               || method_type_ == MethodType::M1_RESCUE_HYBRID) {
         int host_idx = e.host_id;
         if (host_idx < 0 || host_idx >= static_cast<int>(nodes_.size())) return;
 

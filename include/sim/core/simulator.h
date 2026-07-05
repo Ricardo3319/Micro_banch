@@ -56,6 +56,8 @@ private:
     void start_execution(Core& c, double now_us);
     int  dispatch_task(double service_est_us);
     double estimate_service_time(double base_service_us);
+    double class_mean_service_estimate(double base_service_us) const;
+    void update_service_estimator(double base_service_us);
     double compute_exec_time(double base_service_us, double capacity) const;
     bool is_intra_host_method() const;
     void enqueue_task_on_core(Task* task, int host, int core, double now_us);
@@ -69,9 +71,11 @@ private:
                                      double estimated_local_latency_us,
                                      double estimated_remote_latency_us,
                                      int predicted_target_delta_risk,
-                                     bool predicted_harmful);
+                                     bool predicted_harmful,
+                                     bool relief = false);
     bool run_intra_proactive_check(int host);
     bool run_rescue_sched_check(int host);
+    bool run_hybrid_relief_check(int host, int budget);
     void try_b0_pull(int prefer_host = -1);
     int  find_b0_idle_host();
 
@@ -118,6 +122,10 @@ private:
     uint64_t migration_decisions_ = 0; // measured-window migrations scheduled immediately
     uint64_t migration_batch_id_counter_ = 0;
     double total_generated_work_us_ = 0.0;
+    double ewma_short_service_us_ = BIMODAL_SHORT_US;
+    double ewma_long_service_us_ = BIMODAL_LONG_US;
+    double quantile_short_service_us_ = SLO_SHORT_SERVICE_THRESHOLD_US;
+    double quantile_long_service_us_ = BIMODAL_LONG_US;
 
     // B0 global queue (Ideal-cFCFS).
     TaskQueue global_queue_;
@@ -134,8 +142,6 @@ private:
     void refresh_hot_nodes();
     void refresh_hot_cores();
     static constexpr int HOT_NODE_COUNT = 16; // 25% of 64 nodes
-    static constexpr int HOT_CORE_COUNT = 4;  // 25% of 16 cores
-    static constexpr double HOT_DISPATCH_PROB = 0.5; // P(forced to hot node) during burst
 };
 
 } // namespace sim

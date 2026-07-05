@@ -16,6 +16,15 @@ public:
         ++size_;
     }
 
+    void push_front(Task* t) {
+        t->prev = nullptr;
+        t->next = head_;
+        if (head_) head_->prev = t;
+        else       tail_ = t;
+        head_ = t;
+        ++size_;
+    }
+
     Task* pop_front() {
         if (!head_) return nullptr;
         Task* t = head_;
@@ -70,6 +79,12 @@ struct Core {
         if (!t) return;
         queued_work_us += queued_task_work_us(t);
         wait_queue.push_back(t);
+    }
+
+    void push_waiting_front(Task* t) {
+        if (!t) return;
+        queued_work_us += queued_task_work_us(t);
+        wait_queue.push_front(t);
     }
 
     Task* pop_waiting_front() {
