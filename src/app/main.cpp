@@ -6,6 +6,7 @@
 #include <fstream>
 #include <string>
 #include <iomanip>
+#include <cctype>
 #include <cstdlib>
 #include <vector>
 #include <algorithm>
@@ -13,9 +14,12 @@
 #include <chrono>
 #include <condition_variable>
 #include <deque>
+#include <filesystem>
 #include <mutex>
+#include <optional>
+#include <sstream>
+#include <stdexcept>
 #include <thread>
-#include <direct.h>
 
 static const char* method_name(sim::MethodType m) {
     switch (m) {
@@ -76,7 +80,229 @@ static void write_diag_value_suffix(std::ofstream& csv,
 }
 
 static void ensure_dir(const std::string& path) {
-    _mkdir(path.c_str());
+    if (path.empty()) return;
+    std::error_code ec;
+    std::filesystem::create_directories(std::filesystem::path(path), ec);
+    if (ec) {
+        std::cerr << "Cannot create directory " << path << ": "
+                  << ec.message() << "\n";
+    }
+}
+
+static void ensure_parent_dir(const std::string& path) {
+    std::filesystem::path p(path);
+    auto parent = p.parent_path();
+    if (!parent.empty()) ensure_dir(parent.string());
+}
+
+static std::string join_path(const std::string& base, const std::string& rel) {
+    return (std::filesystem::path(base) / std::filesystem::path(rel)).string();
+}
+
+static std::string trim_copy(const std::string& s) {
+    size_t first = 0;
+    while (first < s.size() && std::isspace(static_cast<unsigned char>(s[first]))) ++first;
+    size_t last = s.size();
+    while (last > first && std::isspace(static_cast<unsigned char>(s[last - 1]))) --last;
+    return s.substr(first, last - first);
+}
+
+static std::string lower_copy(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return s;
+}
+
+static bool ends_with(const std::string& s, const std::string& suffix) {
+    return s.size() >= suffix.size()
+        && s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
+
+static std::vector<std::string> split_list(std::string value) {
+    for (char& c : value) {
+        if (c == '[' || c == ']' || c == '"' || c == '\'') c = ' ';
+        if (c == ';') c = ',';
+    }
+    std::vector<std::string> out;
+    std::stringstream ss(value);
+    std::string item;
+    while (std::getline(ss, item, ',')) {
+        item = trim_copy(item);
+        if (!item.empty()) out.push_back(item);
+    }
+    return out;
+}
+
+static std::vector<double> parse_double_list(const std::string& value) {
+    std::vector<double> out;
+    for (const auto& item : split_list(value)) out.push_back(std::stod(item));
+    return out;
+}
+
+static std::vector<unsigned> parse_seed_list(const std::string& value) {
+    std::vector<unsigned> out;
+    for (const auto& item : split_list(value))
+        out.push_back(static_cast<unsigned>(std::stoul(item)));
+    return out;
+}
+
+static sim::WorkloadType parse_workload(const std::string& value) {
+    std::string v = lower_copy(value);
+    v.erase(std::remove_if(v.begin(), v.end(),
+                           [](char c) { return c == '_' || c == '-' || c == ' '; }),
+            v.end());
+    if (v == "w1" || v == "poissonbimodal" || v == "w1poissonbimodal")
+        return sim::WorkloadType::W1_POISSON_BIMODAL;
+    if (v == "w2" || v == "mmppbimodal" || v == "w2mmppbimodal")
+        return sim::WorkloadType::W2_MMPP_BIMODAL;
+    if (v == "w3" || v == "poissonlognormal" || v == "w3poissonlognormal")
+        return sim::WorkloadType::W3_POISSON_LOGNORMAL;
+    throw std::runtime_error("Unknown workload: " + value);
+}
+
+struct CliOptions {
+    std::string mode = "all";
+    std::string config_path;
+    std::string output_dir = "artifacts";
+    std::string output_path;
+    std::vector<double> rhos;
+    std::vector<unsigned> seeds;
+    std::optional<sim::WorkloadType> workload;
+    bool help = false;
+};
+
+static void apply_cli_option(CliOptions& opts,
+                             const std::string& raw_key,
+                             const std::string& raw_value) {
+    const std::string key = lower_copy(trim_copy(raw_key));
+    const std::string value = trim_copy(raw_value);
+    if (key == "mode") opts.mode = value;
+    else if (key == "output_dir" || key == "out_dir" || key == "out-dir") opts.output_dir = value;
+    else if (key == "output" || key == "output_path" || key == "output-path") opts.output_path = value;
+    else if (key == "rho" || key == "rhos") opts.rhos = parse_double_list(value);
+    else if (key == "seed" || key == "seeds") opts.seeds = parse_seed_list(value);
+    else if (key == "workload") opts.workload = parse_workload(value);
+    else if (key == "config") opts.config_path = value;
+    else throw std::runtime_error("Unknown option: " + raw_key);
+}
+
+static void apply_config_file(CliOptions& opts, const std::string& path) {
+    std::ifstream in(path);
+    if (!in.is_open()) throw std::runtime_error("Cannot open config: " + path);
+    opts.config_path = path;
+    std::string line;
+    while (std::getline(in, line)) {
+        const bool nested_yaml = !line.empty()
+            && std::isspace(static_cast<unsigned char>(line.front()));
+        size_t hash = line.find('#');
+        if (hash != std::string::npos) line = line.substr(0, hash);
+        line = trim_copy(line);
+        if (line.empty()) continue;
+        if (nested_yaml || line.front() == '-') continue;
+        size_t colon = line.find(':');
+        if (colon == std::string::npos)
+            throw std::runtime_error("Invalid config line: " + line);
+        std::string value = trim_copy(line.substr(colon + 1));
+        if (value.empty()) continue;
+        apply_cli_option(opts, line.substr(0, colon), value);
+    }
+}
+
+static std::string option_value(int& i, int argc, char** argv,
+                                const std::string& arg,
+                                const std::string& key) {
+    const std::string prefix = key + "=";
+    if (arg.rfind(prefix, 0) == 0) return arg.substr(prefix.size());
+    if (i + 1 >= argc) throw std::runtime_error("Missing value for " + key);
+    return argv[++i];
+}
+
+static CliOptions parse_cli(int argc, char** argv) {
+    CliOptions opts;
+
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--config" || arg.rfind("--config=", 0) == 0) {
+            apply_config_file(opts, option_value(i, argc, argv, arg, "--config"));
+        } else if (!arg.empty() && arg[0] != '-'
+                   && (ends_with(lower_copy(arg), ".yaml")
+                       || ends_with(lower_copy(arg), ".yml"))) {
+            apply_config_file(opts, arg);
+        }
+    }
+
+    bool positional_mode_set = false;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--config" || arg.rfind("--config=", 0) == 0) {
+            option_value(i, argc, argv, arg, "--config");
+        } else if (arg == "-h" || arg == "--help") {
+            opts.help = true;
+        } else if (arg == "--mode" || arg.rfind("--mode=", 0) == 0) {
+            opts.mode = option_value(i, argc, argv, arg, "--mode");
+        } else if (arg == "--rho" || arg.rfind("--rho=", 0) == 0) {
+            opts.rhos = parse_double_list(option_value(i, argc, argv, arg, "--rho"));
+        } else if (arg == "--seed" || arg.rfind("--seed=", 0) == 0) {
+            opts.seeds = parse_seed_list(option_value(i, argc, argv, arg, "--seed"));
+        } else if (arg == "--workload" || arg.rfind("--workload=", 0) == 0) {
+            opts.workload = parse_workload(option_value(i, argc, argv, arg, "--workload"));
+        } else if (arg == "--out-dir" || arg.rfind("--out-dir=", 0) == 0) {
+            opts.output_dir = option_value(i, argc, argv, arg, "--out-dir");
+        } else if (arg == "--output" || arg.rfind("--output=", 0) == 0) {
+            opts.output_path = option_value(i, argc, argv, arg, "--output");
+        } else if (!arg.empty() && arg[0] == '-') {
+            throw std::runtime_error("Unknown CLI option: " + arg);
+        } else if (ends_with(lower_copy(arg), ".yaml") || ends_with(lower_copy(arg), ".yml")) {
+            continue;
+        } else if (!positional_mode_set && opts.mode == "all") {
+            opts.mode = arg;
+            positional_mode_set = true;
+        } else {
+            throw std::runtime_error("Unexpected positional argument: " + arg);
+        }
+    }
+
+    if (opts.mode == "all" && !opts.output_path.empty())
+        throw std::runtime_error("--output is only valid for a single mode, not mode=all");
+    return opts;
+}
+
+static std::string artifact_path(const CliOptions& opts,
+                                 const std::string& rel_path) {
+    return opts.output_path.empty()
+        ? join_path(opts.output_dir, rel_path)
+        : opts.output_path;
+}
+
+static void ensure_artifact_dirs(const std::string& root) {
+    ensure_dir(root);
+    ensure_dir(join_path(root, "step-04b-sensitivity"));
+    ensure_dir(join_path(root, "step-04c-heterogeneous"));
+    ensure_dir(join_path(root, "step-06-aqb"));
+    ensure_dir(join_path(root, "step-08-dqb-batch"));
+    ensure_dir(join_path(root, "step-12-intra-host"));
+    ensure_dir(join_path(root, "step-13-intra-host-sweep"));
+    ensure_dir(join_path(root, "step-14-intra-check-period"));
+    ensure_dir(join_path(root, "step-15-rescuesched"));
+    ensure_dir(join_path(root, "step-17-rescuesched-closure"));
+    ensure_dir(join_path(root, "step-18-infocom-readiness"));
+}
+
+static void print_usage(const char* exe) {
+    std::cout
+        << "Usage: " << exe << " [mode] [options]\n\n"
+        << "RescueSched-focused options:\n"
+        << "  --mode MODE            e.g. rescue-main, rescue-smoke, rescue-w2-boundary\n"
+        << "  --config FILE.yaml     simple key:value config; CLI values override it\n"
+        << "  --workload W1|W2|W3    honored by rescue-main\n"
+        << "  --rho LIST             comma-separated rho list, honored by rescue-main\n"
+        << "  --seed LIST            comma-separated seed list, honored by rescue-main\n"
+        << "  --out-dir DIR          artifact root for default outputs\n"
+        << "  --output FILE.csv      explicit CSV path for a single mode\n\n"
+        << "Examples:\n"
+        << "  " << exe << " --mode rescue-smoke\n"
+        << "  " << exe << " --mode rescue-main --workload W3 --rho 0.85 --seed 11 --out-dir artifacts/dev\n"
+        << "  " << exe << " --config config/rescuesched.yaml --rho 0.70,0.85\n";
 }
 
 // ========== Experiment B: Parameter Sensitivity Scan ==========
@@ -1163,14 +1389,54 @@ static int run_rescue_w3_only(const std::string& csv_path) {
     return 0;
 }
 
-static int run_rescue_main(const std::string& csv_path) {
+static std::vector<unsigned> default_rescue_seeds(
+        const std::vector<unsigned>& configured) {
+    if (!configured.empty()) return configured;
+    std::vector<unsigned> seeds;
+    for (int si = 0; si < sim::SEED_COUNT; ++si) seeds.push_back(sim::SEEDS[si]);
+    return seeds;
+}
+
+static std::vector<double> default_rescue_rhos(
+        sim::WorkloadType wl,
+        const std::vector<double>& configured) {
+    if (!configured.empty()) return configured;
+    switch (wl) {
+        case sim::WorkloadType::W1_POISSON_BIMODAL:
+            return {0.85, 0.95};
+        case sim::WorkloadType::W2_MMPP_BIMODAL:
+            return {0.70, 0.85, 0.92};
+        case sim::WorkloadType::W3_POISSON_LOGNORMAL:
+            return {0.50, 0.70, 0.85, 0.92};
+    }
+    return {0.85};
+}
+
+static const char* rescue_main_scenario(sim::WorkloadType wl) {
+    switch (wl) {
+        case sim::WorkloadType::W1_POISSON_BIMODAL:
+            return "rescue_w1_cli_main";
+        case sim::WorkloadType::W2_MMPP_BIMODAL:
+            return "rescue_w2_cli_main";
+        case sim::WorkloadType::W3_POISSON_LOGNORMAL:
+            return "rescue_w3_heavytail_main";
+    }
+    return "rescue_cli_main";
+}
+
+static int run_rescue_main(const std::string& csv_path,
+                           sim::WorkloadType wl,
+                           const std::vector<double>& configured_rhos,
+                           const std::vector<unsigned>& configured_seeds) {
+    ensure_parent_dir(csv_path);
     std::ofstream csv(csv_path);
     if (!csv.is_open()) { std::cerr << "Cannot open " << csv_path << "\n"; return 1; }
     write_rescue_header(csv);
     csv.flush();
 
-    double rhos[] = {0.50, 0.70, 0.85, 0.92};
-    sim::MethodType methods[] = {
+    const std::vector<double> rhos = default_rescue_rhos(wl, configured_rhos);
+    const std::vector<unsigned> seeds = default_rescue_seeds(configured_seeds);
+    const std::vector<sim::MethodType> methods = {
         sim::MethodType::L0_RANDOM_CORE,
         sim::MethodType::L1_WORK_STEALING,
         sim::MethodType::M0_INTRA_HOST_PROACTIVE,
@@ -1178,20 +1444,19 @@ static int run_rescue_main(const std::string& csv_path) {
         sim::MethodType::M1_RESCUE_NO_TARGET_SAFETY
     };
 
-    const int total_runs = 4 * 5 * sim::SEED_COUNT;
+    const int total_runs = static_cast<int>(rhos.size() * methods.size() * seeds.size());
     int run_count = 0;
-    std::cout << "=== RescueSched Main: W3 rho sweep ===\n";
+    std::cout << "=== RescueSched Main: " << workload_name(wl)
+              << " rho/seed sweep ===\n";
     for (double rho : rhos) {
         for (auto method : methods) {
-            for (int si = 0; si < sim::SEED_COUNT; ++si) {
-                unsigned seed = sim::SEEDS[si];
+            for (unsigned seed : seeds) {
                 sim::Simulator eng;
                 sim::M0Config cfg;
-                eng.configure(method, rho, seed, sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                eng.configure(method, rho, seed, wl,
                               sim::ClusterProfile::HOMOGENEOUS, cfg);
                 eng.run();
-                write_rescue_row(csv, "rescue_w3_heavytail_main",
-                                 sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                write_rescue_row(csv, rescue_main_scenario(wl), wl,
                                  method, rho, seed, cfg, eng);
                 csv.flush();
                 ++run_count;
@@ -2017,328 +2282,327 @@ static int run_rescue_target_safety_stress(const std::string& csv_path) {
 }
 
 int main(int argc, char** argv) {
-    std::string mode = "all";
-    if (argc > 1) mode = argv[1];
+    CliOptions opts;
+    try {
+        opts = parse_cli(argc, argv);
+    } catch (const std::exception& e) {
+        std::cerr << "CLI error: " << e.what() << "\n\n";
+        print_usage(argv[0]);
+        return 2;
+    }
 
-    ensure_dir("artifacts");
-    ensure_dir("artifacts/step-04b-sensitivity");
-    ensure_dir("artifacts/step-04c-heterogeneous");
-    ensure_dir("artifacts/step-06-aqb");
-    ensure_dir("artifacts/step-08-dqb-batch");
-    ensure_dir("artifacts/step-12-intra-host");
-    ensure_dir("artifacts/step-13-intra-host-sweep");
-    ensure_dir("artifacts/step-14-intra-check-period");
-    ensure_dir("artifacts/step-15-rescuesched");
-    ensure_dir("artifacts/step-17-rescuesched-closure");
-    ensure_dir("artifacts/step-18-infocom-readiness");
+    if (opts.help) {
+        print_usage(argv[0]);
+        return 0;
+    }
 
-    int rc = 0;
+    const std::string mode = lower_copy(trim_copy(opts.mode));
+    ensure_artifact_dirs(opts.output_dir);
 
-    if (mode == "all" || mode == "sensitivity") {
-        rc = run_sensitivity("artifacts/step-04b-sensitivity/sensitivity_scan.csv");
+    auto run_csv = [&](const std::string& rel_path, auto runner) {
+        const std::string path = artifact_path(opts, rel_path);
+        ensure_parent_dir(path);
+        return runner(path);
+    };
+
+    if (mode == "all") {
+        int rc = run_csv(
+            "step-04b-sensitivity/sensitivity_scan.csv",
+            run_sensitivity);
         if (rc != 0) return rc;
-    }
-
-    if (mode == "all" || mode == "heterogeneous") {
-        rc = run_heterogeneous("artifacts/step-04c-heterogeneous/metrics_table.csv");
+        rc = run_csv(
+            "step-04c-heterogeneous/metrics_table.csv",
+            run_heterogeneous);
         if (rc != 0) return rc;
-    }
-
-    if (mode == "all" || mode == "regression") {
-        rc = run_regression();
-    }
-
-    if (mode == "aqb-smoke") {
-        rc = run_aqb_smoke();
-    }
-
-    if (mode == "intra-smoke") {
-        rc = run_intra_smoke();
-    }
-
-    if (mode == "intra-w3-only") {
-        rc = run_intra_w3_only("artifacts/step-12-intra-host/intra_w3_only.csv");
-    }
-
-    if (mode == "intra-w3-rho-050") {
-        rc = run_intra_focus(
-            "Intra-host W3 Focus: rho=0.50",
-            "intra_w3_heavytail",
-            sim::WorkloadType::W3_POISSON_LOGNORMAL,
-            0.50,
-            "artifacts/step-13-intra-host-sweep/intra_w3_rho_050.csv");
-    }
-
-    if (mode == "intra-w3-rho-070") {
-        rc = run_intra_focus(
-            "Intra-host W3 Focus: rho=0.70",
-            "intra_w3_heavytail",
-            sim::WorkloadType::W3_POISSON_LOGNORMAL,
-            0.70,
-            "artifacts/step-13-intra-host-sweep/intra_w3_rho_070.csv");
-    }
-
-    if (mode == "intra-w3-rho-085") {
-        rc = run_intra_focus(
-            "Intra-host W3 Focus: rho=0.85",
-            "intra_w3_heavytail",
-            sim::WorkloadType::W3_POISSON_LOGNORMAL,
-            0.85,
-            "artifacts/step-13-intra-host-sweep/intra_w3_rho_085.csv");
-    }
-
-    if (mode == "intra-w3-rho-092") {
-        rc = run_intra_focus(
-            "Intra-host W3 Focus: rho=0.92",
-            "intra_w3_heavytail",
-            sim::WorkloadType::W3_POISSON_LOGNORMAL,
-            0.92,
-            "artifacts/step-13-intra-host-sweep/intra_w3_rho_092.csv");
-    }
-
-    if (mode == "intra-w1-sanity") {
-        rc = run_intra_focus(
-            "Intra-host W1 Sanity: rho=0.85",
-            "intra_w1_bimodal_sanity",
-            sim::WorkloadType::W1_POISSON_BIMODAL,
-            0.85,
-            "artifacts/step-13-intra-host-sweep/intra_w1_sanity.csv");
-    }
-
-    if (mode == "intra-w1-high") {
-        rc = run_intra_focus(
-            "Intra-host W1 High Load: rho=0.95",
-            "intra_w1_high_load",
-            sim::WorkloadType::W1_POISSON_BIMODAL,
-            0.95,
-            "artifacts/step-13-intra-host-sweep/intra_w1_high_load.csv");
-    }
-
-    if (mode == "intra-w3-high") {
-        rc = run_intra_focus(
-            "Intra-host W3 High Load: rho=0.95",
-            "intra_w3_high_load",
-            sim::WorkloadType::W3_POISSON_LOGNORMAL,
-            0.95,
-            "artifacts/step-13-intra-host-sweep/intra_w3_high_load.csv");
-    }
-
-    if (mode == "intra-w3-092-check-sweep") {
-        rc = run_intra_check_period_sweep(
-            "Intra-host W3 rho=0.92 Check Period Sweep",
-            "intra_w3_heavytail_check_period",
-            sim::WorkloadType::W3_POISSON_LOGNORMAL,
-            0.92,
-            std::vector<double>{1.0, 2.0, 5.0},
-            "artifacts/step-14-intra-check-period/intra_w3_rho_092_check_sweep.csv");
-    }
-
-    if (mode == "intra-w3-092-check-1") {
-        rc = run_intra_check_period_sweep(
-            "Intra-host W3 rho=0.92 Check Period 1us",
-            "intra_w3_heavytail_check_period",
-            sim::WorkloadType::W3_POISSON_LOGNORMAL,
-            0.92,
-            std::vector<double>{1.0},
-            "artifacts/step-14-intra-check-period/intra_w3_rho_092_check_1us.csv");
-    }
-
-    if (mode == "intra-w3-092-check-2") {
-        rc = run_intra_check_period_sweep(
-            "Intra-host W3 rho=0.92 Check Period 2us",
-            "intra_w3_heavytail_check_period",
-            sim::WorkloadType::W3_POISSON_LOGNORMAL,
-            0.92,
-            std::vector<double>{2.0},
-            "artifacts/step-14-intra-check-period/intra_w3_rho_092_check_2us.csv");
-    }
-
-    if (mode == "intra-w3-092-check-5") {
-        rc = run_intra_check_period_sweep(
-            "Intra-host W3 rho=0.92 Check Period 5us",
-            "intra_w3_heavytail_check_period",
-            sim::WorkloadType::W3_POISSON_LOGNORMAL,
-            0.92,
-            std::vector<double>{5.0},
-            "artifacts/step-14-intra-check-period/intra_w3_rho_092_check_5us.csv");
-    }
-
-    if (mode == "intra-w1-095-check-sweep") {
-        rc = run_intra_check_period_sweep(
-            "Intra-host W1 rho=0.95 Check Period Sweep",
-            "intra_w1_bimodal_check_period",
-            sim::WorkloadType::W1_POISSON_BIMODAL,
-            0.95,
-            std::vector<double>{1.0, 2.0, 5.0},
-            "artifacts/step-14-intra-check-period/intra_w1_rho_095_check_sweep.csv");
-    }
-
-    if (mode == "intra-w1-095-check-1") {
-        rc = run_intra_check_period_sweep(
-            "Intra-host W1 rho=0.95 Check Period 1us",
-            "intra_w1_bimodal_check_period",
-            sim::WorkloadType::W1_POISSON_BIMODAL,
-            0.95,
-            std::vector<double>{1.0},
-            "artifacts/step-14-intra-check-period/intra_w1_rho_095_check_1us.csv");
-    }
-
-    if (mode == "intra-w1-095-check-2") {
-        rc = run_intra_check_period_sweep(
-            "Intra-host W1 rho=0.95 Check Period 2us",
-            "intra_w1_bimodal_check_period",
-            sim::WorkloadType::W1_POISSON_BIMODAL,
-            0.95,
-            std::vector<double>{2.0},
-            "artifacts/step-14-intra-check-period/intra_w1_rho_095_check_2us.csv");
-    }
-
-    if (mode == "intra-w1-095-check-5") {
-        rc = run_intra_check_period_sweep(
-            "Intra-host W1 rho=0.95 Check Period 5us",
-            "intra_w1_bimodal_check_period",
-            sim::WorkloadType::W1_POISSON_BIMODAL,
-            0.95,
-            std::vector<double>{5.0},
-            "artifacts/step-14-intra-check-period/intra_w1_rho_095_check_5us.csv");
-    }
-
-    if (mode == "intra-main") {
-        rc = run_intra_main("artifacts/step-12-intra-host/intra_main.csv");
-    }
-
-    if (mode == "rescue-smoke") {
-        rc = run_rescue_smoke();
-    }
-
-    if (mode == "rescue-w3-only") {
-        rc = run_rescue_w3_only(
-            "artifacts/step-15-rescuesched/rescue_w3_only.csv");
-    }
-
-    if (mode == "rescue-main") {
-        rc = run_rescue_main(
-            "artifacts/step-15-rescuesched/rescue_main.csv");
-    }
-
-    if (mode == "rescue-ablation") {
-        rc = run_rescue_ablation(
-            "artifacts/step-15-rescuesched/rescue_ablation.csv");
-    }
-
-    if (mode == "rescue-check-sweep") {
-        rc = run_rescue_check_sweep(
-            "artifacts/step-15-rescuesched/rescue_check_sweep.csv");
-    }
-
-    if (mode == "rescue-overload-sanity") {
-        rc = run_rescue_overload_sanity(
-            "artifacts/step-15-rescuesched/rescue_overload_sanity.csv");
-    }
-
-    if (mode == "rescue-w2-burst") {
-        rc = run_rescue_w2_burst(
-            "artifacts/step-17-rescuesched-closure/rescue_w2_burst.csv");
-    }
-
-    if (mode == "rescue-robustness-10seed") {
-        rc = run_rescue_robustness_10seed(
-            "artifacts/step-17-rescuesched-closure/rescue_robustness_10seed.csv");
-    }
-
-    if (mode == "rescue-cost-microbench") {
-        rc = run_rescue_cost_microbench(
-            "artifacts/step-17-rescuesched-closure/migration_cost_microbench.csv");
-    }
-
-    if (mode == "rescue-calibration") {
-        rc = run_rescue_calibration(
-            "artifacts/step-17-rescuesched-closure/rescue_calibration.csv");
-    }
-
-    if (mode == "rescue-estimator-main") {
-        rc = run_rescue_estimator_main(
-            "artifacts/step-18-infocom-readiness/rescue_estimator_main.csv");
-    }
-
-    if (mode == "rescue-estimator-w2") {
-        rc = run_rescue_estimator_w2(
-            "artifacts/step-18-infocom-readiness/rescue_estimator_w2.csv");
-    }
-
-    if (mode == "rescue-cost-calibration") {
-        rc = run_rescue_cost_calibration(
-            "artifacts/step-18-infocom-readiness/rescue_cost_calibration.csv",
-            "artifacts/step-18-infocom-readiness/migration_cost_microbench.csv");
-    }
-
-    if (mode == "rescue-w2-boundary") {
-        rc = run_rescue_w2_boundary(
-            "artifacts/step-18-infocom-readiness/rescue_w2_boundary.csv");
-    }
-
-    if (mode == "rescue-hybrid-smoke") {
-        rc = run_rescue_hybrid_smoke();
-    }
-
-    if (mode == "rescue-hybrid-main") {
-        rc = run_rescue_hybrid_main(
-            "artifacts/step-18-infocom-readiness/rescue_hybrid_main.csv");
-    }
-
-    if (mode == "rescue-target-safety-stress") {
-        rc = run_rescue_target_safety_stress(
-            "artifacts/step-18-infocom-readiness/rescue_target_safety_stress.csv");
-    }
-
-    if (mode == "aqb-eval") {
-        rc = run_aqb_eval("artifacts/step-06-aqb/aqb_eval.csv");
-    }
-
-    if (mode == "dqb-eval") {
-        rc = run_aqb_eval("artifacts/step-08-dqb-batch/dqb_eval.csv");
-    }
-
-    if (mode == "dqb-w2-only") {
-        rc = run_dqb_focus(
-            "DQB-PM Focused W2 Check",
-            "W2_burst_homo",
-            sim::WorkloadType::W2_MMPP_BIMODAL,
-            0.85,
-            "artifacts/step-08-dqb-batch/dqb_w2_only.csv");
-    }
-
-    if (mode == "dqb-w3-only") {
-        rc = run_dqb_focus(
-            "DQB-PM Focused W3 Check",
-            "W3_heavytail_homo",
-            sim::WorkloadType::W3_POISSON_LOGNORMAL,
-            0.85,
-            "artifacts/step-08-dqb-batch/dqb_w3_only.csv");
-    }
-
-    if (mode == "dqb-w1-only") {
-        rc = run_dqb_focus(
-            "DQB-PM Focused W1 Check",
-            "W1_saturation_homo",
-            sim::WorkloadType::W1_POISSON_BIMODAL,
-            0.95,
-            "artifacts/step-08-dqb-batch/dqb_w1_only.csv");
-    }
-
-    if (mode == "aqb-hetero") {
-        rc = run_aqb_heterogeneous("artifacts/step-06-aqb/aqb_heterogeneous.csv");
-    }
-
-    if (mode == "aqb-batch-sweep") {
-        rc = run_aqb_batch_sweep("artifacts/step-06-aqb/aqb_batch_sweep.csv");
-    }
-
-    if (mode == "aqb-extra") {
-        rc = run_aqb_heterogeneous("artifacts/step-06-aqb/aqb_heterogeneous.csv");
+        return run_regression();
+    } else if (mode == "sensitivity") {
+        return run_csv(
+            "step-04b-sensitivity/sensitivity_scan.csv",
+            run_sensitivity);
+    } else if (mode == "heterogeneous") {
+        return run_csv(
+            "step-04c-heterogeneous/metrics_table.csv",
+            run_heterogeneous);
+    } else if (mode == "regression") {
+        return run_regression();
+    } else if (mode == "aqb-smoke") {
+        return run_aqb_smoke();
+    } else if (mode == "intra-smoke") {
+        return run_intra_smoke();
+    } else if (mode == "intra-w3-only") {
+        return run_csv(
+            "step-12-intra-host/intra_w3_only.csv",
+            run_intra_w3_only);
+    } else if (mode == "intra-w3-rho-050") {
+        return run_csv(
+            "step-13-intra-host-sweep/intra_w3_rho_050.csv",
+            [&](const std::string& path) {
+                return run_intra_focus("Intra-host W3 Focus: rho=0.50",
+                                       "intra_w3_heavytail",
+                                       sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                                       0.50, path);
+            });
+    } else if (mode == "intra-w3-rho-070") {
+        return run_csv(
+            "step-13-intra-host-sweep/intra_w3_rho_070.csv",
+            [&](const std::string& path) {
+                return run_intra_focus("Intra-host W3 Focus: rho=0.70",
+                                       "intra_w3_heavytail",
+                                       sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                                       0.70, path);
+            });
+    } else if (mode == "intra-w3-rho-085") {
+        return run_csv(
+            "step-13-intra-host-sweep/intra_w3_rho_085.csv",
+            [&](const std::string& path) {
+                return run_intra_focus("Intra-host W3 Focus: rho=0.85",
+                                       "intra_w3_heavytail",
+                                       sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                                       0.85, path);
+            });
+    } else if (mode == "intra-w3-rho-092") {
+        return run_csv(
+            "step-13-intra-host-sweep/intra_w3_rho_092.csv",
+            [&](const std::string& path) {
+                return run_intra_focus("Intra-host W3 Focus: rho=0.92",
+                                       "intra_w3_heavytail",
+                                       sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                                       0.92, path);
+            });
+    } else if (mode == "intra-w1-sanity") {
+        return run_csv(
+            "step-13-intra-host-sweep/intra_w1_sanity.csv",
+            [&](const std::string& path) {
+                return run_intra_focus("Intra-host W1 Sanity: rho=0.85",
+                                       "intra_w1_bimodal_sanity",
+                                       sim::WorkloadType::W1_POISSON_BIMODAL,
+                                       0.85, path);
+            });
+    } else if (mode == "intra-w1-high") {
+        return run_csv(
+            "step-13-intra-host-sweep/intra_w1_high_load.csv",
+            [&](const std::string& path) {
+                return run_intra_focus("Intra-host W1 High Load: rho=0.95",
+                                       "intra_w1_high_load",
+                                       sim::WorkloadType::W1_POISSON_BIMODAL,
+                                       0.95, path);
+            });
+    } else if (mode == "intra-w3-high") {
+        return run_csv(
+            "step-13-intra-host-sweep/intra_w3_high_load.csv",
+            [&](const std::string& path) {
+                return run_intra_focus("Intra-host W3 High Load: rho=0.95",
+                                       "intra_w3_high_load",
+                                       sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                                       0.95, path);
+            });
+    } else if (mode == "intra-w3-092-check-sweep") {
+        return run_csv(
+            "step-14-intra-check-period/intra_w3_rho_092_check_sweep.csv",
+            [&](const std::string& path) {
+                return run_intra_check_period_sweep(
+                    "Intra-host W3 rho=0.92 Check Period Sweep",
+                    "intra_w3_heavytail_check_period",
+                    sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                    0.92, std::vector<double>{1.0, 2.0, 5.0}, path);
+            });
+    } else if (mode == "intra-w3-092-check-1") {
+        return run_csv(
+            "step-14-intra-check-period/intra_w3_rho_092_check_1us.csv",
+            [&](const std::string& path) {
+                return run_intra_check_period_sweep(
+                    "Intra-host W3 rho=0.92 Check Period 1us",
+                    "intra_w3_heavytail_check_period",
+                    sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                    0.92, std::vector<double>{1.0}, path);
+            });
+    } else if (mode == "intra-w3-092-check-2") {
+        return run_csv(
+            "step-14-intra-check-period/intra_w3_rho_092_check_2us.csv",
+            [&](const std::string& path) {
+                return run_intra_check_period_sweep(
+                    "Intra-host W3 rho=0.92 Check Period 2us",
+                    "intra_w3_heavytail_check_period",
+                    sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                    0.92, std::vector<double>{2.0}, path);
+            });
+    } else if (mode == "intra-w3-092-check-5") {
+        return run_csv(
+            "step-14-intra-check-period/intra_w3_rho_092_check_5us.csv",
+            [&](const std::string& path) {
+                return run_intra_check_period_sweep(
+                    "Intra-host W3 rho=0.92 Check Period 5us",
+                    "intra_w3_heavytail_check_period",
+                    sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                    0.92, std::vector<double>{5.0}, path);
+            });
+    } else if (mode == "intra-w1-095-check-sweep") {
+        return run_csv(
+            "step-14-intra-check-period/intra_w1_rho_095_check_sweep.csv",
+            [&](const std::string& path) {
+                return run_intra_check_period_sweep(
+                    "Intra-host W1 rho=0.95 Check Period Sweep",
+                    "intra_w1_bimodal_check_period",
+                    sim::WorkloadType::W1_POISSON_BIMODAL,
+                    0.95, std::vector<double>{1.0, 2.0, 5.0}, path);
+            });
+    } else if (mode == "intra-w1-095-check-1") {
+        return run_csv(
+            "step-14-intra-check-period/intra_w1_rho_095_check_1us.csv",
+            [&](const std::string& path) {
+                return run_intra_check_period_sweep(
+                    "Intra-host W1 rho=0.95 Check Period 1us",
+                    "intra_w1_bimodal_check_period",
+                    sim::WorkloadType::W1_POISSON_BIMODAL,
+                    0.95, std::vector<double>{1.0}, path);
+            });
+    } else if (mode == "intra-w1-095-check-2") {
+        return run_csv(
+            "step-14-intra-check-period/intra_w1_rho_095_check_2us.csv",
+            [&](const std::string& path) {
+                return run_intra_check_period_sweep(
+                    "Intra-host W1 rho=0.95 Check Period 2us",
+                    "intra_w1_bimodal_check_period",
+                    sim::WorkloadType::W1_POISSON_BIMODAL,
+                    0.95, std::vector<double>{2.0}, path);
+            });
+    } else if (mode == "intra-w1-095-check-5") {
+        return run_csv(
+            "step-14-intra-check-period/intra_w1_rho_095_check_5us.csv",
+            [&](const std::string& path) {
+                return run_intra_check_period_sweep(
+                    "Intra-host W1 rho=0.95 Check Period 5us",
+                    "intra_w1_bimodal_check_period",
+                    sim::WorkloadType::W1_POISSON_BIMODAL,
+                    0.95, std::vector<double>{5.0}, path);
+            });
+    } else if (mode == "intra-main") {
+        return run_csv("step-12-intra-host/intra_main.csv", run_intra_main);
+    } else if (mode == "rescue-smoke") {
+        return run_rescue_smoke();
+    } else if (mode == "rescue-w3-only") {
+        return run_csv(
+            "step-15-rescuesched/rescue_w3_only.csv",
+            run_rescue_w3_only);
+    } else if (mode == "rescue-main") {
+        return run_csv(
+            "step-15-rescuesched/rescue_main.csv",
+            [&](const std::string& path) {
+                return run_rescue_main(
+                    path,
+                    opts.workload.value_or(
+                        sim::WorkloadType::W3_POISSON_LOGNORMAL),
+                    opts.rhos, opts.seeds);
+            });
+    } else if (mode == "rescue-ablation") {
+        return run_csv(
+            "step-15-rescuesched/rescue_ablation.csv",
+            run_rescue_ablation);
+    } else if (mode == "rescue-check-sweep") {
+        return run_csv(
+            "step-15-rescuesched/rescue_check_sweep.csv",
+            run_rescue_check_sweep);
+    } else if (mode == "rescue-overload-sanity") {
+        return run_csv(
+            "step-15-rescuesched/rescue_overload_sanity.csv",
+            run_rescue_overload_sanity);
+    } else if (mode == "rescue-w2-burst") {
+        return run_csv(
+            "step-17-rescuesched-closure/rescue_w2_burst.csv",
+            run_rescue_w2_burst);
+    } else if (mode == "rescue-robustness-10seed") {
+        return run_csv(
+            "step-17-rescuesched-closure/rescue_robustness_10seed.csv",
+            run_rescue_robustness_10seed);
+    } else if (mode == "rescue-cost-microbench") {
+        return run_csv(
+            "step-17-rescuesched-closure/migration_cost_microbench.csv",
+            run_rescue_cost_microbench);
+    } else if (mode == "rescue-calibration") {
+        return run_csv(
+            "step-17-rescuesched-closure/rescue_calibration.csv",
+            run_rescue_calibration);
+    } else if (mode == "rescue-estimator-main") {
+        return run_csv(
+            "step-18-infocom-readiness/rescue_estimator_main.csv",
+            run_rescue_estimator_main);
+    } else if (mode == "rescue-estimator-w2") {
+        return run_csv(
+            "step-18-infocom-readiness/rescue_estimator_w2.csv",
+            run_rescue_estimator_w2);
+    } else if (mode == "rescue-cost-calibration") {
+        return run_csv(
+            "step-18-infocom-readiness/rescue_cost_calibration.csv",
+            [&](const std::string& path) {
+                return run_rescue_cost_calibration(
+                    path,
+                    join_path(opts.output_dir,
+                              "step-18-infocom-readiness/migration_cost_microbench.csv"));
+            });
+    } else if (mode == "rescue-w2-boundary") {
+        return run_csv(
+            "step-18-infocom-readiness/rescue_w2_boundary.csv",
+            run_rescue_w2_boundary);
+    } else if (mode == "rescue-hybrid-smoke") {
+        return run_rescue_hybrid_smoke();
+    } else if (mode == "rescue-hybrid-main") {
+        return run_csv(
+            "step-18-infocom-readiness/rescue_hybrid_main.csv",
+            run_rescue_hybrid_main);
+    } else if (mode == "rescue-target-safety-stress") {
+        return run_csv(
+            "step-18-infocom-readiness/rescue_target_safety_stress.csv",
+            run_rescue_target_safety_stress);
+    } else if (mode == "aqb-eval") {
+        return run_csv("step-06-aqb/aqb_eval.csv", run_aqb_eval);
+    } else if (mode == "dqb-eval") {
+        return run_csv("step-08-dqb-batch/dqb_eval.csv", run_aqb_eval);
+    } else if (mode == "dqb-w2-only") {
+        return run_csv(
+            "step-08-dqb-batch/dqb_w2_only.csv",
+            [&](const std::string& path) {
+                return run_dqb_focus("DQB-PM Focused W2 Check",
+                                     "W2_burst_homo",
+                                     sim::WorkloadType::W2_MMPP_BIMODAL,
+                                     0.85, path);
+            });
+    } else if (mode == "dqb-w3-only") {
+        return run_csv(
+            "step-08-dqb-batch/dqb_w3_only.csv",
+            [&](const std::string& path) {
+                return run_dqb_focus("DQB-PM Focused W3 Check",
+                                     "W3_heavytail_homo",
+                                     sim::WorkloadType::W3_POISSON_LOGNORMAL,
+                                     0.85, path);
+            });
+    } else if (mode == "dqb-w1-only") {
+        return run_csv(
+            "step-08-dqb-batch/dqb_w1_only.csv",
+            [&](const std::string& path) {
+                return run_dqb_focus("DQB-PM Focused W1 Check",
+                                     "W1_saturation_homo",
+                                     sim::WorkloadType::W1_POISSON_BIMODAL,
+                                     0.95, path);
+            });
+    } else if (mode == "aqb-hetero") {
+        return run_csv(
+            "step-06-aqb/aqb_heterogeneous.csv",
+            run_aqb_heterogeneous);
+    } else if (mode == "aqb-batch-sweep") {
+        return run_csv(
+            "step-06-aqb/aqb_batch_sweep.csv",
+            run_aqb_batch_sweep);
+    } else if (mode == "aqb-extra") {
+        int rc = run_csv(
+            "step-06-aqb/aqb_heterogeneous.csv",
+            run_aqb_heterogeneous);
         if (rc != 0) return rc;
-        rc = run_aqb_batch_sweep("artifacts/step-06-aqb/aqb_batch_sweep.csv");
+        return run_csv(
+            "step-06-aqb/aqb_batch_sweep.csv",
+            run_aqb_batch_sweep);
     }
 
-    return rc;
+    std::cerr << "Unknown mode: " << opts.mode << "\n\n";
+    print_usage(argv[0]);
+    return 2;
 }

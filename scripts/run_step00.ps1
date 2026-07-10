@@ -42,4 +42,7 @@ if (-not (Test-Path $exePath)) {
     throw "Built binary not found at '$exePath'."
 }
 
-& $exePath "config/default.yaml"
+ctest --test-dir $BuildDir --output-on-failure
+if ($LASTEXITCODE -ne 0) {
+    throw "CTest step-00 gate failed."
+}
