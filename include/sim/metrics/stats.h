@@ -1,5 +1,6 @@
 #pragma once
 #include "sim/common/constants.h"
+#include "sim/common/types.h"
 #include "sim/metrics/histogram.h"
 #include <cstdint>
 #include <array>
@@ -144,7 +145,8 @@ struct MetricsCollector {
         harmful_actual_migration_ids.clear();
     }
 
-    void on_task_finish(double latency_us, double slo_us, double service_us) {
+    void on_task_finish(double latency_us, double slo_us, double service_us,
+                        RpcMethod method) {
         if (warmup_remaining > 0) { --warmup_remaining; return; }
         if (!recording) recording = true;
         latency_hist.record(latency_us);
@@ -152,7 +154,7 @@ struct MetricsCollector {
         bool violated = latency_us > slo_us;
         if (violated) ++slo_violations;
 
-        if (service_us <= SLO_SHORT_SERVICE_THRESHOLD_US) {
+        if (method == RpcMethod::SHORT_RPC) {
             ++short_finished;
             ++mice_finished;
             if (violated) {

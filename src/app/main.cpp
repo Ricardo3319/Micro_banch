@@ -165,6 +165,7 @@ struct CliOptions {
     std::string config_path;
     std::string output_dir = "artifacts";
     std::string output_path;
+    std::string trace_output_path;
     std::vector<double> rhos;
     std::vector<unsigned> seeds;
     std::optional<sim::WorkloadType> workload;
@@ -179,6 +180,7 @@ static void apply_cli_option(CliOptions& opts,
     if (key == "mode") opts.mode = value;
     else if (key == "output_dir" || key == "out_dir" || key == "out-dir") opts.output_dir = value;
     else if (key == "output" || key == "output_path" || key == "output-path") opts.output_path = value;
+    else if (key == "trace_out" || key == "trace-out") opts.trace_output_path = value;
     else if (key == "rho" || key == "rhos") opts.rhos = parse_double_list(value);
     else if (key == "seed" || key == "seeds") opts.seeds = parse_seed_list(value);
     else if (key == "workload") opts.workload = parse_workload(value);
@@ -250,6 +252,8 @@ static CliOptions parse_cli(int argc, char** argv) {
             opts.output_dir = option_value(i, argc, argv, arg, "--out-dir");
         } else if (arg == "--output" || arg.rfind("--output=", 0) == 0) {
             opts.output_path = option_value(i, argc, argv, arg, "--output");
+        } else if (arg == "--trace-out" || arg.rfind("--trace-out=", 0) == 0) {
+            opts.trace_output_path = option_value(i, argc, argv, arg, "--trace-out");
         } else if (!arg.empty() && arg[0] == '-') {
             throw std::runtime_error("Unknown CLI option: " + arg);
         } else if (ends_with(lower_copy(arg), ".yaml") || ends_with(lower_copy(arg), ".yml")) {
@@ -299,10 +303,12 @@ static void print_usage(const char* exe) {
         << "  --seed LIST            comma-separated seed list, honored by rescue-main\n"
         << "  --out-dir DIR          artifact root for default outputs\n"
         << "  --output FILE.csv      explicit CSV path for a single mode\n\n"
+        << "  --trace-out FILE.csv   export the generated policy-independent trace\n\n"
         << "Examples:\n"
         << "  " << exe << " --mode rescue-smoke\n"
         << "  " << exe << " --mode rescue-main --workload W3 --rho 0.85 --seed 11 --out-dir artifacts/dev\n"
-        << "  " << exe << " --config config/rescuesched.yaml --rho 0.70,0.85\n";
+        << "  " << exe << " --config config/rescuesched.yaml --rho 0.70,0.85\n"
+        << "  " << exe << " --mode trace-generate --trace-out artifacts/trace.csv\n";
 }
 
 // ========== Experiment B: Parameter Sensitivity Scan ==========
@@ -1299,6 +1305,21 @@ static int run_intra_main(const std::string& csv_path) {
     return 0;
 }
 
+static std::shared_ptr<const sim::WorkloadTrace> make_shared_trace(
+        sim::WorkloadType workload, double rho, unsigned seed,
+        const sim::M0Config& cfg) {
+    sim::TraceConfig trace_cfg;
+    trace_cfg.workload = workload;
+    trace_cfg.rho = rho;
+    trace_cfg.seed = seed;
+    trace_cfg.core_count = sim::CORES_PER_HOST;
+    trace_cfg.effective_core_capacity = sim::CORES_PER_HOST;
+    trace_cfg.w2_hot_core_count = cfg.w2_hot_core_count;
+    trace_cfg.w2_hot_dispatch_prob = cfg.w2_hot_dispatch_prob;
+    return std::make_shared<const sim::WorkloadTrace>(
+        sim::WorkloadTrace::generate(trace_cfg));
+}
+
 static int run_rescue_smoke() {
     std::cout << "=== RescueSched Smoke: W3 rho=0.85 seed=11 ===\n";
     sim::MethodType methods[] = {
@@ -1308,12 +1329,15 @@ static int run_rescue_smoke() {
         sim::MethodType::M1_RESCUE_NO_TARGET_SAFETY
     };
 
+    sim::M0Config shared_cfg;
+    auto trace = make_shared_trace(
+        sim::WorkloadType::W3_POISSON_LOGNORMAL, 0.85, 11, shared_cfg);
     bool ok = true;
     for (auto method : methods) {
         sim::Simulator eng;
         sim::M0Config cfg;
         eng.configure(method, 0.85, 11, sim::WorkloadType::W3_POISSON_LOGNORMAL,
-                      sim::ClusterProfile::HOMOGENEOUS, cfg);
+                      sim::ClusterProfile::HOMOGENEOUS, cfg, trace);
         eng.run();
         const auto& m = eng.metrics();
         uint64_t gen = eng.total_generated();
@@ -1361,13 +1385,16 @@ static int run_rescue_w3_only(const std::string& csv_path) {
     const int total_runs = 5 * sim::SEED_COUNT;
     int run_count = 0;
     std::cout << "=== RescueSched W3 Focus: rho=0.85 ===\n";
-    for (auto method : methods) {
-        for (int si = 0; si < sim::SEED_COUNT; ++si) {
-            unsigned seed = sim::SEEDS[si];
+    for (int si = 0; si < sim::SEED_COUNT; ++si) {
+        unsigned seed = sim::SEEDS[si];
+        sim::M0Config shared_cfg;
+        auto trace = make_shared_trace(
+            sim::WorkloadType::W3_POISSON_LOGNORMAL, 0.85, seed, shared_cfg);
+        for (auto method : methods) {
             sim::Simulator eng;
             sim::M0Config cfg;
             eng.configure(method, 0.85, seed, sim::WorkloadType::W3_POISSON_LOGNORMAL,
-                          sim::ClusterProfile::HOMOGENEOUS, cfg);
+                          sim::ClusterProfile::HOMOGENEOUS, cfg, trace);
             eng.run();
             write_rescue_row(csv, "rescue_w3_heavytail_focus",
                              sim::WorkloadType::W3_POISSON_LOGNORMAL,
@@ -1449,12 +1476,14 @@ static int run_rescue_main(const std::string& csv_path,
     std::cout << "=== RescueSched Main: " << workload_name(wl)
               << " rho/seed sweep ===\n";
     for (double rho : rhos) {
-        for (auto method : methods) {
-            for (unsigned seed : seeds) {
+        for (unsigned seed : seeds) {
+            sim::M0Config shared_cfg;
+            auto trace = make_shared_trace(wl, rho, seed, shared_cfg);
+            for (auto method : methods) {
                 sim::Simulator eng;
                 sim::M0Config cfg;
                 eng.configure(method, rho, seed, wl,
-                              sim::ClusterProfile::HOMOGENEOUS, cfg);
+                              sim::ClusterProfile::HOMOGENEOUS, cfg, trace);
                 eng.run();
                 write_rescue_row(csv, rescue_main_scenario(wl), wl,
                                  method, rho, seed, cfg, eng);
@@ -2304,6 +2333,27 @@ int main(int argc, char** argv) {
         ensure_parent_dir(path);
         return runner(path);
     };
+
+    if (mode == "trace-generate") {
+        if (opts.trace_output_path.empty()) {
+            std::cerr << "trace-generate requires --trace-out FILE.csv\n";
+            return 2;
+        }
+        sim::M0Config cfg;
+        const auto workload = opts.workload.value_or(
+            sim::WorkloadType::W3_POISSON_LOGNORMAL);
+        const double rho = opts.rhos.empty() ? 0.85 : opts.rhos.front();
+        const unsigned seed = opts.seeds.empty() ? 11U : opts.seeds.front();
+        auto trace = make_shared_trace(workload, rho, seed, cfg);
+        if (!trace->write_csv(opts.trace_output_path)) {
+            std::cerr << "Cannot write trace: " << opts.trace_output_path << "\n";
+            return 1;
+        }
+        std::cout << "Trace " << trace->version() << " sha256="
+                  << trace->sha256() << " requests=" << trace->entries().size()
+                  << " -> " << opts.trace_output_path << "\n";
+        return 0;
+    }
 
     if (mode == "all") {
         int rc = run_csv(

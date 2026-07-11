@@ -9,9 +9,14 @@ struct Task {
     TaskId  id            = 0;
     double  generate_time_us = 0.0;
     double  arrive_time_us   = 0.0;
+    RpcMethod rpc_method     = RpcMethod::SHORT_RPC;
     double  base_service_time_us = 0.0;
     double  expected_service_time_us = 0.0; // EWMA or known E
-    double  slo_target_us = 0.0;
+    double  deadline_budget_us = 0.0;
+    int     initial_core = -1;
+    bool    arrival_burst = false;
+    bool    measurement_eligible = false;
+    bool    migration_in_flight = false;
     int     assigned_host = -1;
     int     assigned_core = -1;
     bool    migrated      = false;
@@ -41,9 +46,8 @@ struct Task {
     Task*   prev = nullptr;
     Task*   next = nullptr;
 
-    double slo_for_service() const {
-        return (base_service_time_us <= SLO_SHORT_SERVICE_THRESHOLD_US)
-            ? SLO_SHORT_US : SLO_LONG_US;
+    double deadline_abs_us() const {
+        return generate_time_us + deadline_budget_us;
     }
 };
 

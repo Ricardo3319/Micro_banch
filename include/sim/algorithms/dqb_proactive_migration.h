@@ -440,7 +440,7 @@ private:
             item.exec_src_us = item.service_us / core.capacity + T_host_us;
             item.age_us = now_us - cur->generate_time_us;
             item.prefix_work_us = prefix_work_us;
-            item.slo_us = cur->slo_target_us;
+            item.slo_us = cur->deadline_budget_us;
             item.is_short = is_short(item.service_us);
             item.is_elephant = is_elephant(item.service_us);
 

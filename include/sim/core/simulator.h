@@ -7,6 +7,7 @@
 #include "sim/model/task.h"
 #include "sim/metrics/stats.h"
 #include "sim/workloads/generators.h"
+#include "sim/workloads/trace.h"
 #include "sim/algorithms/scheduler.h"
 #include "sim/algorithms/host_power_of_k.h"
 #include "sim/algorithms/host_reactive_migration.h"
@@ -19,6 +20,7 @@
 #include <memory>
 #include <random>
 #include <functional>
+#include <optional>
 
 namespace sim {
 
@@ -28,13 +30,16 @@ public:
     void configure(MethodType method, double rho, unsigned seed,
                    WorkloadType wl = WorkloadType::W2_MMPP_BIMODAL,
                    ClusterProfile profile = ClusterProfile::HOMOGENEOUS,
-                   const M0Config& m0cfg = M0Config{});
+                   const M0Config& m0cfg = M0Config{},
+                   std::shared_ptr<const WorkloadTrace> trace = nullptr);
     int  run();   // returns 0 on success
 
     // Result accessors (valid after run()).
     const MetricsCollector& metrics() const { return metrics_; }
     uint64_t total_generated() const { return task_id_counter_; }
     double total_generated_work_us() const { return total_generated_work_us_; }
+    const WorkloadTrace& workload_trace() const { return *trace_; }
+    const std::string& trace_sha256() const { return trace_->sha256(); }
 
     // Effective cluster capacity (for heterogeneous rho computation).
     static double compute_effective_capacity(ClusterProfile profile);
@@ -47,6 +52,7 @@ private:
     // Event handlers.
     void handle_task_generate(const Event& e);
     void handle_task_arrive(const Event& e);
+    void handle_task_migration_arrive(const Event& e);
     void handle_task_execute(int host, int core);
     void handle_task_finish(const Event& e);
     void handle_sync_load(const Event& e);
@@ -55,9 +61,9 @@ private:
     // Helpers.
     void start_execution(Core& c, double now_us);
     int  dispatch_task(double service_est_us);
-    double estimate_service_time(double base_service_us);
-    double class_mean_service_estimate(double base_service_us) const;
-    void update_service_estimator(double base_service_us);
+    double estimate_service_time(RpcMethod method, double base_service_us);
+    double class_mean_service_estimate(RpcMethod method) const;
+    void update_service_estimator(RpcMethod method, double base_service_us);
     double compute_exec_time(double base_service_us, double capacity) const;
     bool is_intra_host_method() const;
     void enqueue_task_on_core(Task* task, int host, int core, double now_us);
@@ -97,12 +103,10 @@ private:
 
     // Workload.
     std::mt19937_64 rng_;
+    std::mt19937_64 estimator_rng_;
+    std::shared_ptr<const WorkloadTrace> trace_;
+    size_t trace_index_ = 0;
     WorkloadType workload_type_ = WorkloadType::W2_MMPP_BIMODAL;
-    std::unique_ptr<MMPPArrival>  mmpp_;
-    std::unique_ptr<PoissonArrival> poisson_;
-    std::unique_ptr<BimodalService> bimodal_;
-    std::unique_ptr<LognormalService> lognormal_;
-
     // Scheduling.
     MethodType method_type_ = MethodType::B1_POWER_OF_K;
     std::unique_ptr<IScheduler> scheduler_;

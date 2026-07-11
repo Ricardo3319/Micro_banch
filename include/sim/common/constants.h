@@ -135,7 +135,7 @@ struct M0Config {
     double rescue_epsilon_us = RESCUE_EPSILON_US;
     int    rescue_theta = RESCUE_THETA;
     double rescue_migration_cost_us = RESCUE_MIGRATION_COST_US;
-    int    service_estimate_mode = SERVICE_ESTIMATE_ORACLE;
+    int    service_estimate_mode = SERVICE_ESTIMATE_EWMA;
     double service_estimate_noise_cv = 0.0;
     double service_estimate_ewma_alpha = 0.05;
     int    rescue_target_insert_policy = RESCUE_TARGET_INSERT_APPEND_TAIL;

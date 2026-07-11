@@ -5,13 +5,19 @@ namespace sim {
 
 using TaskId = uint64_t;
 
+enum class RpcMethod : int {
+    SHORT_RPC = 0,
+    LONG_RPC = 1
+};
+
 enum class EventType : int {
     TASK_FINISH    = 0,   // highest priority at same ts
     TASK_ARRIVE    = 1,
-    TASK_EXECUTE   = 2,
-    TASK_GENERATE  = 3,   // lowest priority at same ts
-    SYNC_LOAD      = 4,
-    CHECK_MIGRATION = 5
+    TASK_MIGRATION_ARRIVE = 2,
+    TASK_EXECUTE   = 3,
+    TASK_GENERATE  = 4,
+    SYNC_LOAD      = 5,
+    CHECK_MIGRATION = 6
 };
 
 enum class MethodType {

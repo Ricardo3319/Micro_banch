@@ -4,8 +4,18 @@
 #include <numeric>
 #include <cmath>
 #include <limits>
+#include <stdexcept>
 
 namespace sim {
+
+namespace {
+uint64_t splitmix_seed(uint64_t value) {
+    value += 0x9e3779b97f4a7c15ULL;
+    value = (value ^ (value >> 30U)) * 0xbf58476d1ce4e5b9ULL;
+    value = (value ^ (value >> 27U)) * 0x94d049bb133111ebULL;
+    return value ^ (value >> 31U);
+}
+}
 
 Simulator::Simulator() = default;
 
@@ -28,12 +38,14 @@ Task* Simulator::alloc_task() {
 
 void Simulator::configure(MethodType method, double rho, unsigned seed,
                           WorkloadType wl, ClusterProfile profile,
-                          const M0Config& m0cfg) {
+                          const M0Config& m0cfg,
+                          std::shared_ptr<const WorkloadTrace> supplied_trace) {
     method_type_ = method;
     workload_type_ = wl;
     cluster_profile_ = profile;
     m0_config_ = m0cfg;
-    rng_.seed(seed);
+    rng_.seed(splitmix_seed(static_cast<uint64_t>(seed) ^ 0x434f4e54524f4cULL));
+    estimator_rng_.seed(splitmix_seed(static_cast<uint64_t>(seed) ^ 0x455354494d415445ULL));
 
     // Init nodes with capacity based on cluster profile.
     active_host_count_ =
@@ -101,26 +113,27 @@ void Simulator::configure(MethodType method, double rho, unsigned seed,
     dqb_sched_.set_config(m0cfg);
     dqb_sched_.reset();
 
-    // Workload.
-    // lambda_global = rho * effective_capacity / E[S]
-    double mean_service_us = 24.0; // same for W1/W2 bimodal and W3 lognormal
-    double lambda_global = rho * effective_capacity_ / mean_service_us; // requests/us
-    mmpp_.reset();
-    poisson_.reset();
-    bimodal_.reset();
-    lognormal_.reset();
-    if (wl == WorkloadType::W3_POISSON_LOGNORMAL) {
-        poisson_ = std::make_unique<PoissonArrival>(lambda_global, rng_);
-        lognormal_ = std::make_unique<LognormalService>(
-            W3_LOGNORMAL_MU, W3_LOGNORMAL_SIGMA, rng_);
-    } else {
-        bimodal_ = std::make_unique<BimodalService>(rng_);
-        if (wl == WorkloadType::W1_POISSON_BIMODAL) {
-            poisson_ = std::make_unique<PoissonArrival>(lambda_global, rng_);
-        } else {
-            mmpp_ = std::make_unique<MMPPArrival>(lambda_global, rng_);
+    // Policy-independent workload trace. Legacy callers receive the same
+    // deterministic trace that paper runners can explicitly share.
+    if (supplied_trace) {
+        if (supplied_trace->config().workload != wl
+            || std::abs(supplied_trace->config().rho - rho) > 1e-12
+            || supplied_trace->config().seed != seed) {
+            throw std::invalid_argument("supplied trace does not match workload/rho/seed");
         }
+        trace_ = std::move(supplied_trace);
+    } else {
+        TraceConfig trace_config;
+        trace_config.workload = wl;
+        trace_config.rho = rho;
+        trace_config.seed = seed;
+        trace_config.core_count = CORES_PER_HOST;
+        trace_config.effective_core_capacity = effective_capacity_;
+        trace_config.w2_hot_core_count = m0cfg.w2_hot_core_count;
+        trace_config.w2_hot_dispatch_prob = m0cfg.w2_hot_dispatch_prob;
+        trace_ = std::make_shared<WorkloadTrace>(WorkloadTrace::generate(trace_config));
     }
+    trace_index_ = 0;
 
     // Metrics.
     measurement_target_ = MEASUREMENT_REQUESTS;
@@ -132,8 +145,8 @@ void Simulator::configure(MethodType method, double rho, unsigned seed,
     b2_thresholds_set_ = false;
     migration_decisions_ = 0;
     migration_batch_id_counter_ = 0;
-    ewma_short_service_us_ = class_mean_service_estimate(BIMODAL_SHORT_US);
-    ewma_long_service_us_ = class_mean_service_estimate(BIMODAL_LONG_US);
+    ewma_short_service_us_ = class_mean_service_estimate(RpcMethod::SHORT_RPC);
+    ewma_long_service_us_ = class_mean_service_estimate(RpcMethod::LONG_RPC);
     quantile_short_service_us_ = std::max(
         SLO_SHORT_SERVICE_THRESHOLD_US, ewma_short_service_us_ * 1.5);
     quantile_long_service_us_ = std::max(BIMODAL_LONG_US, ewma_long_service_us_ * 1.5);
@@ -154,10 +167,12 @@ void Simulator::configure(MethodType method, double rho, unsigned seed,
     while (!event_queue_.empty()) event_queue_.pop();
 
     // Seed initial events.
-    Event gen;
-    gen.timestamp_us = 0.0;
-    gen.type = EventType::TASK_GENERATE;
-    schedule_event(gen);
+    if (trace_ && !trace_->entries().empty()) {
+        Event gen;
+        gen.timestamp_us = trace_->entries().front().generate_time_us;
+        gen.type = EventType::TASK_GENERATE;
+        schedule_event(gen);
+    }
 
     // Periodic SYNC_LOAD (not needed for B0).
     if (method != MethodType::B0_IDEAL_CFCFS && !is_intra_host_method()) {
@@ -227,6 +242,7 @@ void Simulator::process_event(const Event& e) {
     switch (e.type) {
         case EventType::TASK_GENERATE:    handle_task_generate(e); break;
         case EventType::TASK_ARRIVE:      handle_task_arrive(e);   break;
+        case EventType::TASK_MIGRATION_ARRIVE: handle_task_migration_arrive(e); break;
         case EventType::TASK_EXECUTE:     /* not queued directly */ break;
         case EventType::TASK_FINISH:      handle_task_finish(e);   break;
         case EventType::SYNC_LOAD:        handle_sync_load(e);     break;
@@ -234,7 +250,7 @@ void Simulator::process_event(const Event& e) {
     }
 }
 
-double Simulator::estimate_service_time(double base_service_us) {
+double Simulator::estimate_service_time(RpcMethod method, double base_service_us) {
     switch (m0_config_.service_estimate_mode) {
         case SERVICE_ESTIMATE_MEAN:
             return W3_MEAN_SERVICE_US;
@@ -244,15 +260,15 @@ double Simulator::estimate_service_time(double base_service_us) {
             double sigma = std::sqrt(std::log(1.0 + cv * cv));
             double mu = -0.5 * sigma * sigma;
             std::normal_distribution<double> noise(mu, sigma);
-            return std::max(0.1, base_service_us * std::exp(noise(rng_)));
+            return std::max(0.1, base_service_us * std::exp(noise(estimator_rng_)));
         }
         case SERVICE_ESTIMATE_CLASS_MEAN:
-            return class_mean_service_estimate(base_service_us);
+            return class_mean_service_estimate(method);
         case SERVICE_ESTIMATE_EWMA:
-            return (base_service_us <= SLO_SHORT_SERVICE_THRESHOLD_US)
+            return (method == RpcMethod::SHORT_RPC)
                 ? ewma_short_service_us_ : ewma_long_service_us_;
         case SERVICE_ESTIMATE_QUANTILE_GUARD:
-            return (base_service_us <= SLO_SHORT_SERVICE_THRESHOLD_US)
+            return (method == RpcMethod::SHORT_RPC)
                 ? quantile_short_service_us_ : quantile_long_service_us_;
         case SERVICE_ESTIMATE_ORACLE:
         default:
@@ -260,20 +276,20 @@ double Simulator::estimate_service_time(double base_service_us) {
     }
 }
 
-double Simulator::class_mean_service_estimate(double base_service_us) const {
-    bool short_class = base_service_us <= SLO_SHORT_SERVICE_THRESHOLD_US;
+double Simulator::class_mean_service_estimate(RpcMethod method) const {
+    bool short_class = method == RpcMethod::SHORT_RPC;
     if (workload_type_ == WorkloadType::W3_POISSON_LOGNORMAL) {
         return short_class ? 10.0 : 42.0;
     }
     return short_class ? BIMODAL_SHORT_US : BIMODAL_LONG_US;
 }
 
-void Simulator::update_service_estimator(double base_service_us) {
+void Simulator::update_service_estimator(RpcMethod method, double base_service_us) {
     double alpha = std::min(1.0, std::max(0.001, m0_config_.service_estimate_ewma_alpha));
-    bool short_class = base_service_us <= SLO_SHORT_SERVICE_THRESHOLD_US;
+    bool short_class = method == RpcMethod::SHORT_RPC;
     double& ewma = short_class ? ewma_short_service_us_ : ewma_long_service_us_;
     double& guard = short_class ? quantile_short_service_us_ : quantile_long_service_us_;
-    double floor_est = class_mean_service_estimate(base_service_us);
+    double floor_est = class_mean_service_estimate(method);
 
     ewma = (1.0 - alpha) * ewma + alpha * base_service_us;
 
@@ -287,41 +303,30 @@ void Simulator::update_service_estimator(double base_service_us) {
 }
 
 void Simulator::handle_task_generate(const Event& /*e*/) {
-    // Schedule next generation.
-    double gap;
-    if (workload_type_ == WorkloadType::W1_POISSON_BIMODAL
-        || workload_type_ == WorkloadType::W3_POISSON_LOGNORMAL)
-        gap = poisson_->next_interarrival();
-    else
-        gap = mmpp_->next_interarrival(now_us_);
-    Event next_gen;
-    next_gen.timestamp_us = now_us_ + gap;
-    next_gen.type = EventType::TASK_GENERATE;
-    schedule_event(next_gen);
-
-    // Generate a task.
-    Task* t = alloc_task();
-    t->generate_time_us = now_us_;
-    if (workload_type_ == WorkloadType::W3_POISSON_LOGNORMAL) {
-        t->base_service_time_us = lognormal_->next();
-    } else {
-        t->base_service_time_us = bimodal_->next();
+    if (!trace_ || trace_index_ >= trace_->entries().size()) return;
+    const WorkloadTraceEntry& entry = trace_->entries()[trace_index_++];
+    if (trace_index_ < trace_->entries().size()) {
+        Event next_gen;
+        next_gen.timestamp_us = trace_->entries()[trace_index_].generate_time_us;
+        next_gen.type = EventType::TASK_GENERATE;
+        schedule_event(next_gen);
     }
-    t->expected_service_time_us = estimate_service_time(t->base_service_time_us);
+
+    Task* t = alloc_task();
+    if (t->id != entry.id) throw std::logic_error("trace/task id mismatch");
+    t->generate_time_us = entry.generate_time_us;
+    t->rpc_method = entry.rpc_method;
+    t->base_service_time_us = entry.service_time_us;
+    t->deadline_budget_us = entry.deadline_budget_us;
+    t->initial_core = entry.initial_core;
+    t->arrival_burst = entry.burst;
+    t->measurement_eligible =
+        entry.id > static_cast<uint64_t>(trace_->config().warmup_requests);
+    t->expected_service_time_us = estimate_service_time(
+        t->rpc_method, t->base_service_time_us);
     total_generated_work_us_ += t->expected_service_time_us;
-    t->slo_target_us = t->slo_for_service();
 
     if (is_intra_host_method()) {
-        if (workload_type_ == WorkloadType::W2_MMPP_BIMODAL && mmpp_) {
-            if (mmpp_->is_burst()) {
-                if (!last_burst_state_) {
-                    refresh_hot_cores();
-                    last_burst_state_ = true;
-                }
-            } else if (last_burst_state_) {
-                last_burst_state_ = false;
-            }
-        }
         enqueue_task_on_random_core(t);
         return;
     }
@@ -336,7 +341,7 @@ void Simulator::handle_task_generate(const Event& /*e*/) {
     // B1/B2/M0: dispatch to a host.
     int dst;
     if (workload_type_ == WorkloadType::W2_MMPP_BIMODAL
-        && mmpp_ && mmpp_->is_burst() && !hot_nodes_.empty()) {
+        && t->arrival_burst && !hot_nodes_.empty()) {
         if (!last_burst_state_) {
             refresh_hot_nodes();
             last_burst_state_ = true;
@@ -382,20 +387,9 @@ void Simulator::enqueue_task_on_core(Task* task, int host, int core_id, double n
 }
 
 void Simulator::enqueue_task_on_random_core(Task* task) {
-    int core_id = -1;
-    if (workload_type_ == WorkloadType::W2_MMPP_BIMODAL
-        && mmpp_ && mmpp_->is_burst() && !hot_cores_.empty()) {
-        std::uniform_real_distribution<double> u(0.0, 1.0);
-        if (u(rng_) < m0_config_.w2_hot_dispatch_prob) {
-            std::uniform_int_distribution<int> hd(
-                0, static_cast<int>(hot_cores_.size()) - 1);
-            core_id = hot_cores_[hd(rng_)];
-        }
-    }
-    if (core_id < 0) {
-        std::uniform_int_distribution<int> core_dist(0, CORES_PER_HOST - 1);
-        core_id = core_dist(rng_);
-    }
+    int core_id = task ? task->initial_core : -1;
+    if (core_id < 0 || core_id >= CORES_PER_HOST)
+        throw std::logic_error("trace initial core is out of range");
     enqueue_task_on_core(task, 0, core_id, now_us_);
 }
 
@@ -461,6 +455,15 @@ void Simulator::handle_task_arrive(const Event& e) {
     } else {
         core.push_waiting(t);
     }
+}
+
+void Simulator::handle_task_migration_arrive(const Event& e) {
+    Task* task = nullptr;
+    if (e.task_id > 0 && e.task_id <= task_pool_.size())
+        task = task_pool_[e.task_id - 1].get();
+    if (!task || !task->migration_in_flight) return;
+    task->migration_in_flight = false;
+    enqueue_task_on_core(task, e.host_id, e.core_id, now_us_);
 }
 
 void Simulator::handle_task_execute(int host, int core_id) {
@@ -543,7 +546,7 @@ bool Simulator::move_rescue_task_intra_host(int host, int src_core_id, int dst_c
     uint64_t rescue_migration_id = ++migration_batch_id_counter_;
 
     auto deadline_abs = [](const Task* t) {
-        return t ? t->generate_time_us + t->slo_target_us : 0.0;
+        return t ? t->deadline_abs_us() : 0.0;
     };
 
     uint64_t watched_target_tasks = 0;
@@ -653,7 +656,7 @@ bool Simulator::run_intra_proactive_check(int host) {
             double local_latency_us = age_us + prefix_work_us + exec_src_us;
 
             if (!cur->proactive_intra_moved
-                && local_latency_us > cur->slo_target_us * m0_config_.alpha) {
+                && local_latency_us > cur->deadline_budget_us * m0_config_.alpha) {
                 int dst_core_id = -1;
                 double dst_work_us = std::numeric_limits<double>::infinity();
                 for (const auto& dst_core : node.cores) {
@@ -739,7 +742,7 @@ bool Simulator::run_rescue_sched_check(int host) {
     };
 
     auto deadline_abs = [](const Task* task) {
-        return task->generate_time_us + task->slo_target_us;
+        return task->deadline_abs_us();
     };
 
     auto estimate_risk_before = [&](const Core& core) {
@@ -943,7 +946,7 @@ bool Simulator::run_hybrid_relief_check(int host, int budget) {
     if (avg_work_us <= 0.0) return false;
 
     auto deadline_abs = [](const Task* task) {
-        return task->generate_time_us + task->slo_target_us;
+        return task->deadline_abs_us();
     };
     auto estimated_task_work = [](const Core& core, const Task* task) {
         return task ? task->expected_service_time_us / core.capacity + T_host_us : 0.0;
@@ -1046,8 +1049,9 @@ void Simulator::handle_task_finish(const Event& e) {
     if (!t || t->id != e.task_id) return; // stale finish event after migration
 
     double latency_us = now_us_ - t->generate_time_us;
-    metrics_.on_task_finish(latency_us, t->slo_target_us, t->base_service_time_us);
-    update_service_estimator(t->base_service_time_us);
+    metrics_.on_task_finish(latency_us, t->deadline_budget_us,
+                            t->base_service_time_us, t->rpc_method);
+    update_service_estimator(t->rpc_method, t->base_service_time_us);
 
     // Check if migration was invalid: actual latency > estimated local latency.
     if (t->migrated) {
@@ -1060,12 +1064,12 @@ void Simulator::handle_task_finish(const Event& e) {
     }
     if (t->rescue_intra_moved && t->rescue_intra_recorded) {
         metrics_.on_rescue_finish(
-            t->estimated_local_latency_us, latency_us, t->slo_target_us,
+            t->estimated_local_latency_us, latency_us, t->deadline_budget_us,
             t->rescue_relief_moved);
     }
     if (t->target_harm_watch_active && t->target_harm_watch_recorded
-        && t->target_harm_counterfactual_latency_us <= t->slo_target_us
-        && latency_us > t->slo_target_us) {
+        && t->target_harm_counterfactual_latency_us <= t->deadline_budget_us
+        && latency_us > t->deadline_budget_us) {
         metrics_.on_rescue_target_induced_miss(
             t->target_harm_watch_migration_id);
     }

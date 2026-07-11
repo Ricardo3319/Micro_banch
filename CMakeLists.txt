@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(sim_core
     src/core/simulator.cpp
+    src/core/workload_trace.cpp
 )
 
 target_include_directories(sim_core PUBLIC

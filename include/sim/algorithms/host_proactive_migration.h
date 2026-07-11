@@ -89,7 +89,7 @@ public:
             double local_total_us = t_elapsed_us + cumulative_wait_us;
 
             // (1) Risk constraint (runtime alpha).
-            if (local_total_us > cur->slo_target_us * cfg_.alpha) {
+            if (local_total_us > cur->deadline_budget_us * cfg_.alpha) {
                 int src_qlen = src_node.local_total_queue_len();
                 int best_dst = find_best_remote(src_node.node_id, stale_view, src_qlen, rng);
                 if (best_dst >= 0) {
@@ -144,8 +144,8 @@ public:
             double local_exec_us = cur->expected_service_time_us / core.capacity + T_host_us;
             double t_elapsed_us = now_us - cur->generate_time_us;
             double local_total_us = t_elapsed_us + cumulative_wait_us + local_exec_us;
-            double risk = cur->slo_target_us > 0.0
-                ? local_total_us / cur->slo_target_us : 0.0;
+            double risk = cur->deadline_budget_us > 0.0
+                ? local_total_us / cur->deadline_budget_us : 0.0;
             double urgency = risk - cfg_.alpha;
             if (!cur->migrated && urgency > 0.0) {
                 AqbCandidate cand;
