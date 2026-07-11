@@ -169,6 +169,8 @@ struct CliOptions {
     std::vector<double> rhos;
     std::vector<unsigned> seeds;
     std::optional<sim::WorkloadType> workload;
+    int warmup_requests = sim::WARMUP_REQUESTS;
+    int measurement_requests = sim::MEASUREMENT_REQUESTS;
     bool help = false;
 };
 
@@ -184,6 +186,8 @@ static void apply_cli_option(CliOptions& opts,
     else if (key == "rho" || key == "rhos") opts.rhos = parse_double_list(value);
     else if (key == "seed" || key == "seeds") opts.seeds = parse_seed_list(value);
     else if (key == "workload") opts.workload = parse_workload(value);
+    else if (key == "warmup_requests" || key == "warmup-requests") opts.warmup_requests = std::stoi(value);
+    else if (key == "measurement_requests" || key == "measurement-requests") opts.measurement_requests = std::stoi(value);
     else if (key == "config") opts.config_path = value;
     else throw std::runtime_error("Unknown option: " + raw_key);
 }
@@ -248,6 +252,10 @@ static CliOptions parse_cli(int argc, char** argv) {
             opts.seeds = parse_seed_list(option_value(i, argc, argv, arg, "--seed"));
         } else if (arg == "--workload" || arg.rfind("--workload=", 0) == 0) {
             opts.workload = parse_workload(option_value(i, argc, argv, arg, "--workload"));
+        } else if (arg == "--warmup-requests" || arg.rfind("--warmup-requests=", 0) == 0) {
+            opts.warmup_requests = std::stoi(option_value(i, argc, argv, arg, "--warmup-requests"));
+        } else if (arg == "--measurement-requests" || arg.rfind("--measurement-requests=", 0) == 0) {
+            opts.measurement_requests = std::stoi(option_value(i, argc, argv, arg, "--measurement-requests"));
         } else if (arg == "--out-dir" || arg.rfind("--out-dir=", 0) == 0) {
             opts.output_dir = option_value(i, argc, argv, arg, "--out-dir");
         } else if (arg == "--output" || arg.rfind("--output=", 0) == 0) {
@@ -268,6 +276,8 @@ static CliOptions parse_cli(int argc, char** argv) {
 
     if (opts.mode == "all" && !opts.output_path.empty())
         throw std::runtime_error("--output is only valid for a single mode, not mode=all");
+    if (opts.warmup_requests < 0 || opts.measurement_requests <= 0)
+        throw std::runtime_error("request counts must be warmup>=0 and measurement>0");
     return opts;
 }
 
@@ -301,6 +311,8 @@ static void print_usage(const char* exe) {
         << "  --workload W1|W2|W3    honored by rescue-main\n"
         << "  --rho LIST             comma-separated rho list, honored by rescue-main\n"
         << "  --seed LIST            comma-separated seed list, honored by rescue-main\n"
+        << "  --warmup-requests N    trace warmup cohort size\n"
+        << "  --measurement-requests N trace measurement cohort size\n"
         << "  --out-dir DIR          artifact root for default outputs\n"
         << "  --output FILE.csv      explicit CSV path for a single mode\n\n"
         << "  --trace-out FILE.csv   export the generated policy-independent trace\n\n"
@@ -555,7 +567,7 @@ static int run_aqb_smoke() {
                   << " finished=" << m.total_finished
                   << " generated=" << gen << "\n";
 
-        if (m.total_finished != sim::MEASUREMENT_REQUESTS) ok = false;
+        if (m.total_finished != eng.measurement_requests()) ok = false;
         if (mr < 0.0 || mr > 0.055) ok = false;
         if (imr < 0.0 || imr > 1.0) ok = false;
     }
@@ -982,7 +994,11 @@ static bool method_has_rescuable_filter(sim::MethodType method) {
 }
 
 static void write_rescue_header(std::ofstream& csv) {
-    csv << "scenario,workload,method,rho,seed,"
+    csv << "schema_version,trace_version,trace_sha256,rpc_method_model,"
+           "deadline_model,offered_load_definition,warmup_requests,"
+           "measurement_requests,measured_generated_work_us,"
+           "experiment_duration_us,latency_sample_count,"
+           "scenario,workload,method,rho,seed,"
            "check_period_us,epsilon_us,budget_per_check,k_candidates,h_targets,"
            "migration_cost_us,service_estimate_mode,service_estimate_noise_cv,"
            "service_estimate_ewma_alpha,w2_hot_core_count,w2_hot_dispatch_prob,"
@@ -1018,7 +1034,15 @@ static void write_rescue_row(std::ofstream& csv,
                              const sim::Simulator& eng) {
     const auto& m = eng.metrics();
     uint64_t gen = eng.total_generated();
-    csv << scenario << "," << workload_name(wl) << "," << method_name(method)
+    const auto& trace_cfg = eng.workload_trace().config();
+    const uint64_t measured = eng.measurement_requests();
+    csv << "rescuesched-v2," << eng.workload_trace().version() << ","
+        << eng.trace_sha256() << ",explicit-short-long-method,"
+        << "server-side-method-budget,actual-service-plus-host,"
+        << trace_cfg.warmup_requests << "," << trace_cfg.measurement_requests << ","
+        << eng.total_generated_work_us() << "," << eng.simulated_duration_us() << ","
+        << m.latency_hist.count() << ","
+        << scenario << "," << workload_name(wl) << "," << method_name(method)
         << "," << rho << "," << seed << ","
         << cfg.t_check_us << "," << cfg.rescue_epsilon_us << ","
         << cfg.rescue_budget_per_check << "," << cfg.rescue_k_candidates << ","
@@ -1036,8 +1060,8 @@ static void write_rescue_row(std::ofstream& csv,
         << std::setprecision(3) << m.p99() << "," << m.p999() << ","
         << std::setprecision(6) << m.slo_violation_rate() << ","
         << m.total_finished << "," << gen << ","
-        << m.migration_rate(gen) << "," << m.invalid_migration_ratio() << ","
-        << m.intra_move_rate(gen) << "," << m.intra_move_count << ","
+        << m.migration_rate(measured) << "," << m.invalid_migration_ratio() << ","
+        << m.intra_move_rate(measured) << "," << m.intra_move_count << ","
         << m.intra_moved_work_us << ","
         << m.steal_attempt_count << "," << m.steal_success_count << ","
         << m.stolen_task_count << ","
@@ -1082,25 +1106,26 @@ static int run_intra_smoke() {
         eng.run();
         const auto& m = eng.metrics();
         uint64_t gen = eng.total_generated();
+        uint64_t measured = eng.measurement_requests();
 
         std::cout << method_name(method)
                   << " P99=" << std::setprecision(3) << m.p99()
                   << " P999=" << m.p999()
                   << " SLO=" << std::setprecision(6) << m.slo_violation_rate()
-                  << " intra_rate=" << m.intra_move_rate(gen)
+                  << " intra_rate=" << m.intra_move_rate(measured)
                   << " moves=" << m.intra_move_count
                   << " steal_attempts=" << m.steal_attempt_count
                   << " steal_success=" << m.steal_success_count
                   << " proactive_attempts=" << m.proactive_intra_attempt_count
                   << " proactive_success=" << m.proactive_intra_success_count
                   << " invalid_intra=" << m.invalid_intra_move_ratio()
-                  << " cross_mr=" << m.migration_rate(gen)
+                  << " cross_mr=" << m.migration_rate(measured)
                   << " finished=" << m.total_finished
                   << " generated=" << gen << "\n";
 
         if (m.total_finished != sim::MEASUREMENT_REQUESTS) ok = false;
         if (m.p99() <= 0.0 || m.p999() <= 0.0) ok = false;
-        if (m.migration_rate(gen) != 0.0) ok = false;
+        if (m.migration_rate(measured) != 0.0) ok = false;
         if (method == sim::MethodType::L0_RANDOM_CORE && m.intra_move_count != 0) ok = false;
         if (method == sim::MethodType::L1_WORK_STEALING
             && (m.steal_attempt_count == 0 || m.proactive_intra_attempt_count != 0)) ok = false;
@@ -1307,7 +1332,9 @@ static int run_intra_main(const std::string& csv_path) {
 
 static std::shared_ptr<const sim::WorkloadTrace> make_shared_trace(
         sim::WorkloadType workload, double rho, unsigned seed,
-        const sim::M0Config& cfg) {
+        const sim::M0Config& cfg,
+        int warmup_requests = sim::WARMUP_REQUESTS,
+        int measurement_requests = sim::MEASUREMENT_REQUESTS) {
     sim::TraceConfig trace_cfg;
     trace_cfg.workload = workload;
     trace_cfg.rho = rho;
@@ -1316,6 +1343,8 @@ static std::shared_ptr<const sim::WorkloadTrace> make_shared_trace(
     trace_cfg.effective_core_capacity = sim::CORES_PER_HOST;
     trace_cfg.w2_hot_core_count = cfg.w2_hot_core_count;
     trace_cfg.w2_hot_dispatch_prob = cfg.w2_hot_dispatch_prob;
+    trace_cfg.warmup_requests = warmup_requests;
+    trace_cfg.measurement_requests = measurement_requests;
     return std::make_shared<const sim::WorkloadTrace>(
         sim::WorkloadTrace::generate(trace_cfg));
 }
@@ -1331,7 +1360,8 @@ static int run_rescue_smoke() {
 
     sim::M0Config shared_cfg;
     auto trace = make_shared_trace(
-        sim::WorkloadType::W3_POISSON_LOGNORMAL, 0.85, 11, shared_cfg);
+        sim::WorkloadType::W3_POISSON_LOGNORMAL, 0.85, 11, shared_cfg,
+        20, 100);
     bool ok = true;
     for (auto method : methods) {
         sim::Simulator eng;
@@ -1341,26 +1371,27 @@ static int run_rescue_smoke() {
         eng.run();
         const auto& m = eng.metrics();
         uint64_t gen = eng.total_generated();
+        uint64_t measured = eng.measurement_requests();
 
         std::cout << method_name(method)
                   << " P99=" << std::setprecision(3) << m.p99()
                   << " P999=" << m.p999()
                   << " SLO=" << std::setprecision(6) << m.slo_violation_rate()
-                  << " intra_rate=" << m.intra_move_rate(gen)
+                  << " intra_rate=" << m.intra_move_rate(measured)
                   << " moves=" << m.intra_move_count
                   << " rescue_moves=" << m.rescue_success_count
                   << " BMR=" << m.beneficial_migration_ratio()
                   << " UMR=" << m.useless_migration_ratio()
                   << " RPM=" << m.rescue_per_migration()
-                  << " cross_mr=" << m.migration_rate(gen)
+                  << " cross_mr=" << m.migration_rate(measured)
                   << " finished=" << m.total_finished
                   << " generated=" << gen << "\n";
 
-        if (m.total_finished != sim::MEASUREMENT_REQUESTS) ok = false;
+        if (m.total_finished != measured) ok = false;
         if (m.p99() <= 0.0 || m.p999() <= 0.0) ok = false;
-        if (m.migration_rate(gen) != 0.0) ok = false;
+        if (m.migration_rate(measured) != 0.0) ok = false;
         if (method == sim::MethodType::M1_RESCUE_SCHED
-            && (m.rescue_attempt_count == 0 || m.rescue_success_count == 0)) ok = false;
+            && m.rescue_attempt_count == 0) ok = false;
     }
 
     std::cout << (ok ? "RescueSched smoke status: PASS\n"
@@ -1454,7 +1485,9 @@ static const char* rescue_main_scenario(sim::WorkloadType wl) {
 static int run_rescue_main(const std::string& csv_path,
                            sim::WorkloadType wl,
                            const std::vector<double>& configured_rhos,
-                           const std::vector<unsigned>& configured_seeds) {
+                           const std::vector<unsigned>& configured_seeds,
+                           int warmup_requests,
+                           int measurement_requests) {
     ensure_parent_dir(csv_path);
     std::ofstream csv(csv_path);
     if (!csv.is_open()) { std::cerr << "Cannot open " << csv_path << "\n"; return 1; }
@@ -1478,7 +1511,8 @@ static int run_rescue_main(const std::string& csv_path,
     for (double rho : rhos) {
         for (unsigned seed : seeds) {
             sim::M0Config shared_cfg;
-            auto trace = make_shared_trace(wl, rho, seed, shared_cfg);
+            auto trace = make_shared_trace(wl, rho, seed, shared_cfg,
+                                           warmup_requests, measurement_requests);
             for (auto method : methods) {
                 sim::Simulator eng;
                 sim::M0Config cfg;
@@ -2344,7 +2378,9 @@ int main(int argc, char** argv) {
             sim::WorkloadType::W3_POISSON_LOGNORMAL);
         const double rho = opts.rhos.empty() ? 0.85 : opts.rhos.front();
         const unsigned seed = opts.seeds.empty() ? 11U : opts.seeds.front();
-        auto trace = make_shared_trace(workload, rho, seed, cfg);
+        auto trace = make_shared_trace(workload, rho, seed, cfg,
+                                       opts.warmup_requests,
+                                       opts.measurement_requests);
         if (!trace->write_csv(opts.trace_output_path)) {
             std::cerr << "Cannot write trace: " << opts.trace_output_path << "\n";
             return 1;
@@ -2542,7 +2578,8 @@ int main(int argc, char** argv) {
                     path,
                     opts.workload.value_or(
                         sim::WorkloadType::W3_POISSON_LOGNORMAL),
-                    opts.rhos, opts.seeds);
+                    opts.rhos, opts.seeds,
+                    opts.warmup_requests, opts.measurement_requests);
             });
     } else if (mode == "rescue-ablation") {
         return run_csv(

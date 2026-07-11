@@ -37,7 +37,11 @@ public:
     // Result accessors (valid after run()).
     const MetricsCollector& metrics() const { return metrics_; }
     uint64_t total_generated() const { return task_id_counter_; }
+    uint64_t measurement_requests() const {
+        return trace_ ? static_cast<uint64_t>(trace_->config().measurement_requests) : 0;
+    }
     double total_generated_work_us() const { return total_generated_work_us_; }
+    double simulated_duration_us() const { return now_us_; }
     const WorkloadTrace& workload_trace() const { return *trace_; }
     const std::string& trace_sha256() const { return trace_->sha256(); }
 

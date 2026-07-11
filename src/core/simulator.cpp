@@ -136,8 +136,8 @@ void Simulator::configure(MethodType method, double rho, unsigned seed,
     trace_index_ = 0;
 
     // Metrics.
-    measurement_target_ = MEASUREMENT_REQUESTS;
-    metrics_.init(WARMUP_REQUESTS);
+    measurement_target_ = trace_->config().measurement_requests;
+    metrics_.init(measurement_target_);
     task_id_counter_ = 0;
     total_generated_work_us_ = 0.0;
     task_pool_.clear();
@@ -322,9 +322,11 @@ void Simulator::handle_task_generate(const Event& /*e*/) {
     t->arrival_burst = entry.burst;
     t->measurement_eligible =
         entry.id > static_cast<uint64_t>(trace_->config().warmup_requests);
+    if (t->measurement_eligible && !metrics_.recording) metrics_.start_recording();
     t->expected_service_time_us = estimate_service_time(
         t->rpc_method, t->base_service_time_us);
-    total_generated_work_us_ += t->expected_service_time_us;
+    if (t->measurement_eligible)
+        total_generated_work_us_ += t->base_service_time_us + T_host_us;
 
     if (is_intra_host_method()) {
         enqueue_task_on_random_core(t);
@@ -461,9 +463,27 @@ void Simulator::handle_task_migration_arrive(const Event& e) {
     Task* task = nullptr;
     if (e.task_id > 0 && e.task_id <= task_pool_.size())
         task = task_pool_[e.task_id - 1].get();
-    if (!task || !task->migration_in_flight) return;
+    if (!task || !task->migration_in_flight
+        || task->assigned_host != e.host_id || task->assigned_core != e.core_id)
+        return;
+    if (task->pending_reserved_work_us > 0.0) {
+        incoming_reservation_[e.host_id] = std::max(
+            0.0, incoming_reservation_[e.host_id] - task->pending_reserved_work_us);
+        incoming_core_reservation_[e.host_id][e.core_id] = std::max(
+            0.0, incoming_core_reservation_[e.host_id][e.core_id]
+                   - task->pending_reserved_work_us);
+    }
+    task->pending_reserved_work_us = 0.0;
+    task->reserved_dst_host = -1;
+    task->reserved_dst_core = -1;
     task->migration_in_flight = false;
-    enqueue_task_on_core(task, e.host_id, e.core_id, now_us_);
+    task->arrive_time_us = now_us_;
+    Core& destination = nodes_[e.host_id].cores[e.core_id];
+    if (m0_config_.rescue_target_insert_policy == RESCUE_TARGET_INSERT_HEAD_STRESS)
+        destination.push_waiting_front(task);
+    else
+        destination.push_waiting(task);
+    if (destination.idle) start_execution(destination, now_us_);
 }
 
 void Simulator::handle_task_execute(int host, int core_id) {
@@ -496,7 +516,8 @@ bool Simulator::move_waiting_task_intra_host(int host, int src_core_id, int dst_
                                              Task* task,
                                              double estimated_local_latency_us,
                                              bool proactive) {
-    if (!task || host < 0 || host >= static_cast<int>(nodes_.size())) return false;
+    if (!task || task->migration_in_flight
+        || host < 0 || host >= static_cast<int>(nodes_.size())) return false;
     if (src_core_id < 0 || src_core_id >= CORES_PER_HOST) return false;
     if (dst_core_id < 0 || dst_core_id >= CORES_PER_HOST) return false;
     if (src_core_id == dst_core_id) return false;
@@ -517,10 +538,10 @@ bool Simulator::move_waiting_task_intra_host(int host, int src_core_id, int dst_
     if (proactive) {
         task->estimated_local_latency_us = estimated_local_latency_us;
         task->proactive_intra_moved = true;
-        task->proactive_intra_recorded = metrics_.recording;
-        metrics_.on_proactive_intra_success(moved_work_us);
+        task->proactive_intra_recorded = task->measurement_eligible;
+        metrics_.on_proactive_intra_success(moved_work_us, task->measurement_eligible);
     } else {
-        metrics_.on_steal_success(moved_work_us);
+        metrics_.on_steal_success(moved_work_us, task->measurement_eligible);
     }
 
     dst_core.push_waiting(task);
@@ -535,7 +556,8 @@ bool Simulator::move_rescue_task_intra_host(int host, int src_core_id, int dst_c
                                             int predicted_target_delta_risk,
                                             bool predicted_harmful,
                                             bool relief) {
-    if (!task || host < 0 || host >= static_cast<int>(nodes_.size())) return false;
+    if (!task || task->migration_in_flight
+        || host < 0 || host >= static_cast<int>(nodes_.size())) return false;
     if (src_core_id < 0 || src_core_id >= CORES_PER_HOST) return false;
     if (dst_core_id < 0 || dst_core_id >= CORES_PER_HOST) return false;
     if (src_core_id == dst_core_id) return false;
@@ -558,7 +580,7 @@ bool Simulator::move_rescue_task_intra_host(int host, int src_core_id, int dst_c
         double completion_abs_us = now_us_ + target_prefix_work_us + work_us;
         if (completion_abs_us <= deadline_abs(cur)) {
             cur->target_harm_watch_active = true;
-            cur->target_harm_watch_recorded = metrics_.recording;
+            cur->target_harm_watch_recorded = cur->measurement_eligible;
             cur->target_harm_watch_migration_id = rescue_migration_id;
             cur->target_harm_counterfactual_latency_us =
                 completion_abs_us - cur->generate_time_us;
@@ -575,7 +597,7 @@ bool Simulator::move_rescue_task_intra_host(int host, int src_core_id, int dst_c
     task->target_harm_counterfactual_latency_us = 0.0;
     task->intra_moved = true;
     task->rescue_intra_moved = true;
-    task->rescue_intra_recorded = metrics_.recording;
+    task->rescue_intra_recorded = task->measurement_eligible;
     task->rescue_relief_moved = relief;
     task->rescue_predicted_harmful = predicted_harmful;
     task->rescue_migration_id = rescue_migration_id;
@@ -583,20 +605,28 @@ bool Simulator::move_rescue_task_intra_host(int host, int src_core_id, int dst_c
     task->src_core = src_core_id;
     task->assigned_host = host;
     task->assigned_core = dst_core_id;
+    task->migration_in_flight = true;
     task->estimated_local_latency_us = estimated_local_latency_us;
     task->rescue_predicted_remote_latency_us = estimated_remote_latency_us;
     task->rescue_predicted_target_delta_risk = predicted_target_delta_risk;
 
     double moved_work_us =
         task->expected_service_time_us / dst_core.capacity + T_host_us;
-    metrics_.on_rescue_success(moved_work_us, predicted_harmful, relief);
+    task->pending_reserved_work_us = moved_work_us;
+    task->reserved_dst_host = host;
+    task->reserved_dst_core = dst_core_id;
+    incoming_reservation_[host] += moved_work_us;
+    incoming_core_reservation_[host][dst_core_id] += moved_work_us;
+    metrics_.on_rescue_success(moved_work_us, predicted_harmful, relief,
+                               task->measurement_eligible);
 
-    if (m0_config_.rescue_target_insert_policy == RESCUE_TARGET_INSERT_HEAD_STRESS) {
-        dst_core.push_waiting_front(task);
-    } else {
-        dst_core.push_waiting(task);
-    }
-    if (dst_core.idle) start_execution(dst_core, now_us_);
+    Event arrival;
+    arrival.timestamp_us = now_us_ + std::max(0.0, m0_config_.rescue_migration_cost_us);
+    arrival.type = EventType::TASK_MIGRATION_ARRIVE;
+    arrival.host_id = host;
+    arrival.core_id = dst_core_id;
+    arrival.task_id = task->id;
+    schedule_event(arrival);
     return true;
 }
 
@@ -767,7 +797,8 @@ bool Simulator::run_rescue_sched_check(int host) {
     targets.reserve(node.cores.size());
     double total_work_us = 0.0;
     for (const auto& core : node.cores) {
-        double work_us = core.local_workload_us(now_us_);
+        double work_us = core.local_workload_us(now_us_)
+                       + incoming_core_reservation_[host][core.core_id];
         total_work_us += work_us;
         targets.push_back(TargetSummary{
             core.core_id,
@@ -918,9 +949,25 @@ bool Simulator::run_rescue_sched_check(int host) {
         if (source_used[move.cand.src_core]) continue;
         if (!task_is_waiting_on_source(move)) continue;
 
+        const Core& destination = node.cores[move.dst_core];
+        double remote_work_us = estimated_task_work(destination, move.cand.task);
+        double current_target_work_us = destination.local_workload_us(now_us_)
+            + incoming_core_reservation_[host][move.dst_core];
+        double current_remote_completion_abs_us = now_us_
+            + m0_config_.rescue_migration_cost_us
+            + current_target_work_us + remote_work_us;
+        if (!no_rescuable
+            && current_remote_completion_abs_us + m0_config_.rescue_epsilon_us
+                > deadline_abs(move.cand.task)) {
+            metrics_.on_rescue_remote_infeasible_reject();
+            continue;
+        }
+        double current_remote_latency_us =
+            current_remote_completion_abs_us - move.cand.task->generate_time_us;
+
         if (move_rescue_task_intra_host(
                 host, move.cand.src_core, move.dst_core, move.cand.task,
-                move.cand.local_latency_us, move.remote_latency_us,
+                move.cand.local_latency_us, current_remote_latency_us,
                 move.target_delta_risk, move.predicted_harmful, false)) {
             source_used[move.cand.src_core] = true;
             ++moved;
@@ -940,7 +987,8 @@ bool Simulator::run_hybrid_relief_check(int host, int budget) {
     Node& node = nodes_[host];
     double total_work_us = 0.0;
     for (const auto& core : node.cores)
-        total_work_us += core.local_workload_us(now_us_);
+        total_work_us += core.local_workload_us(now_us_)
+                       + incoming_core_reservation_[host][core.core_id];
     double avg_work_us =
         node.cores.empty() ? 0.0 : total_work_us / static_cast<double>(node.cores.size());
     if (avg_work_us <= 0.0) return false;
@@ -969,7 +1017,8 @@ bool Simulator::run_hybrid_relief_check(int host, int budget) {
 
     std::vector<double> core_work_us(CORES_PER_HOST, 0.0);
     for (const auto& core : node.cores)
-        core_work_us[core.core_id] = core.local_workload_us(now_us_);
+        core_work_us[core.core_id] = core.local_workload_us(now_us_)
+            + incoming_core_reservation_[host][core.core_id];
 
     for (auto& src_core : node.cores) {
         double src_work = core_work_us[src_core.core_id];
@@ -1046,11 +1095,12 @@ void Simulator::handle_task_finish(const Event& e) {
     Node& node = nodes_[e.host_id];
     Core& core = node.cores[e.core_id];
     Task* t = core.running;
-    if (!t || t->id != e.task_id) return; // stale finish event after migration
+    if (!t || t->id != e.task_id) return;
 
     double latency_us = now_us_ - t->generate_time_us;
     metrics_.on_task_finish(latency_us, t->deadline_budget_us,
-                            t->base_service_time_us, t->rpc_method);
+                            t->base_service_time_us, t->rpc_method,
+                            t->measurement_eligible);
     update_service_estimator(t->rpc_method, t->base_service_time_us);
 
     // Check if migration was invalid: actual latency > estimated local latency.

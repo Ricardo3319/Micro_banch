@@ -97,13 +97,14 @@ struct MetricsCollector {
     uint64_t source_queue_samples = 0;
     std::array<uint64_t, DQB_MAX_TASKS_PER_BATCH + 2> exact_batch_size_hist{};
     std::unordered_set<uint64_t> harmful_actual_migration_ids;
-    uint64_t warmup_remaining  = 0;
+    uint64_t measurement_target = 0;
     bool     recording         = false;
 
-    void init(int warmup) {
-        warmup_remaining = warmup;
+    void init(int measurement_requests) {
+        measurement_target = static_cast<uint64_t>(measurement_requests);
         recording = false;
         latency_hist.reset();
+        latency_hist.reserve(measurement_target);
         total_finished = slo_violations = total_migrations = invalid_migrations = 0;
         intra_move_count = invalid_intra_moves = 0;
         steal_attempt_count = steal_success_count = stolen_task_count = 0;
@@ -145,10 +146,11 @@ struct MetricsCollector {
         harmful_actual_migration_ids.clear();
     }
 
+    void start_recording() { recording = true; }
+
     void on_task_finish(double latency_us, double slo_us, double service_us,
-                        RpcMethod method) {
-        if (warmup_remaining > 0) { --warmup_remaining; return; }
-        if (!recording) recording = true;
+                        RpcMethod method, bool measurement_eligible) {
+        if (!measurement_eligible) return;
         latency_hist.record(latency_us);
         ++total_finished;
         bool violated = latency_us > slo_us;
@@ -188,8 +190,8 @@ struct MetricsCollector {
         ++steal_attempt_count;
     }
 
-    void on_steal_success(double work_us) {
-        if (!recording) return;
+    void on_steal_success(double work_us, bool measurement_eligible) {
+        if (!measurement_eligible) return;
         ++steal_success_count;
         ++stolen_task_count;
         ++intra_move_count;
@@ -201,8 +203,8 @@ struct MetricsCollector {
         ++proactive_intra_attempt_count;
     }
 
-    void on_proactive_intra_success(double work_us) {
-        if (!recording) return;
+    void on_proactive_intra_success(double work_us, bool measurement_eligible) {
+        if (!measurement_eligible) return;
         ++proactive_intra_success_count;
         ++intra_move_count;
         intra_moved_work_us += work_us;
@@ -253,8 +255,9 @@ struct MetricsCollector {
         ++relief_attempt_count;
     }
 
-    void on_rescue_success(double work_us, bool predicted_harmful, bool relief = false) {
-        if (!recording) return;
+    void on_rescue_success(double work_us, bool predicted_harmful, bool relief,
+                           bool measurement_eligible) {
+        if (!measurement_eligible) return;
         ++rescue_success_count;
         ++intra_move_count;
         rescue_moved_work_us += work_us;
