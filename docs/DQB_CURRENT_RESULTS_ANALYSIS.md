@@ -1,5 +1,9 @@
 # DQB Current Experimental Results Analysis
 
+> **Legacy result record.** RescueSched is the sole current paper line. These
+> historical DQB results use earlier semantics and are not valid evidence for
+> the RescueSched submission.
+
 Date: 2026-05-08
 
 ## Update Log

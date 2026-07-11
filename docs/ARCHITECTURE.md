@@ -1,73 +1,60 @@
-# Architecture
+# RescueSched Architecture
 
 ## Purpose
 
-This repository is a C++ discrete-event simulator for microsecond-scale RPC
-queue repair. The current research target is `M2_DQB_PM`
-(Distribution-aware Queue-Batch Proactive Migration).
+The current research target is `M1_RESCUE_SCHED`, a single-host multicore RPC
+queue-repair policy. Each worker core owns a non-preemptive FIFO queue. A queued
+request descriptor may move between cores; a running request may not move.
 
-The next planned evaluation target is `DQB-v2`, documented in
-`docs/DQB_V2_EXPERIMENT_METHOD.md`. DQB-v2 keeps `M2_DQB_PM` as the v1
-implementation reference and evaluates a prior-calibrated distribution-batch
-design: workload priors plus local queue summaries form the control-plane batch
-descriptor, while per-request events remain the simulator statistics unit.
+The paper path contains three layers:
 
-`M0_Proactive` and `M1_AQB_PM` are retained as baselines:
+1. a policy-independent workload trace;
+2. per-core FIFO execution and bounded queue inspection;
+3. request-level local-miss/remote-meet migration decisions.
 
-- `M0_Proactive`: single-task predictive migration.
-- `M1_AQB_PM`: task-candidate scoring with batched selection.
-- `M2_DQB_PM`: distribution-aware queue-batch migration.
+`L0_RANDOM_CORE`, `L1_WORK_STEALING`, and `M0_INTRA_HOST_PROACTIVE` are the
+intra-host comparison methods. AQB/DQB host-level migration code remains
+available as legacy history but is outside the RescueSched paper path.
 
-## Module Boundaries
+## Module boundaries
 
-- `src/app`: experiment entry points and CSV export.
-- `src/core`: event loop, event handlers, migration commit, and stale views.
-- `include/sim/model`: task, event, node, core, and intrusive queue models.
-- `include/sim/algorithms`: host-level scheduling and migration policies.
-- `include/sim/workloads`: W1/W2/W3 arrival and service-time generators.
-- `include/sim/metrics`: latency, migration, and batch diagnostics.
-- `config`: frozen constants snapshots.
-- `artifacts`: experiment outputs.
+- `src/app`: RescueSched experiment entry points and versioned CSV export.
+- `src/core`: event loop, FIFO execution, estimator updates, and migration.
+- `include/sim/model`: requests, events, cores, nodes, and intrusive queues.
+- `include/sim/workloads`: versioned trace generation and service models.
+- `include/sim/metrics`: measurement-cohort latency and migration statistics.
+- `include/sim/algorithms`: current baselines plus legacy host-level methods.
+- `artifacts`: immutable historical output and new schema-versioned runs.
 
-Planning artifacts for the DQB-v2 study are emitted under
-`artifacts/step-09-dqb-v2-plan/` by
-`scripts/emit_dqb_v2_experiment_plan.py`. These artifacts define the planned
-scenario matrix, ablations, metrics schema, figure plan, and acceptance
-criteria; they do not run simulations.
-
-The current DQB-v1 result interpretation and the next diagnostic experiment
-closure are summarized in `docs/DQB_CURRENT_RESULTS_ANALYSIS.md` and
-`artifacts/step-10-dqb-closed-loop/summary.md`.
-
-## DQB-PM Data Path
+## RescueSched data path
 
 ```text
-Core wait queue
-  -> fixed-size QueueSummary
-  -> contiguous batch regions
-  -> QueueBatchCandidate
-  -> FIFO region expansion under task/work caps
-  -> optional W3 host-level fragment aggregation
-  -> target virtual-core batch placement estimate
-  -> incoming host/core reservation update
-  -> whole-batch commit or no-migrate
-  -> per-request forwarding events
+Versioned workload trace
+  -> initial per-core FIFO placement
+  -> bounded source scan
+  -> local deadline-miss prediction
+  -> bounded target scan
+  -> remote deadline-feasibility prediction
+  -> migration budget and target reservation
+  -> descriptor handoff delay
+  -> target FIFO arrival
+  -> request completion and cohort accounting
 ```
 
-The online control path must not sort or score the full task queue. A task is
-still the execution and statistics unit, but the migration control unit is a
-queue batch or distribution region.
+## Invariants
 
-## Core Constraints
+- Time is measured in microseconds.
+- A request carries an observable RPC method and an explicit server-side
+  deadline budget; hidden service time never selects the estimator bucket.
+- Workload, routing, estimator, and control randomness use independent streams.
+- All methods compared at one workload/rho/seed consume the same trace.
+- Migration cost is paid as elapsed simulated time, not only as a score penalty.
+- In-flight descriptors are absent from both queues and cannot migrate twice.
+- Target reservations are visible to later decisions in the same control epoch.
+- Warmup requests do not enter paper metrics; all measurement requests drain.
 
-- Time unit is `us`.
-- Same-timestamp event order: `TASK_FINISH > TASK_ARRIVE > TASK_GENERATE`.
-- Cross-host realtime queue reads are disallowed.
-- Remote decisions use stale workload plus `incoming_reservation`.
-- DQB target feasibility uses virtual core slots derived from stale workload and
-  scheduled incoming core reservations.
-- W3 can aggregate multiple blocked fragments from different local cores into
-  one host-level batch before destination scoring.
-- W1 saturation uses a strict guard that can force `M2_DQB_PM` into full
-  no-migrate mode.
-- Waiting request metadata can migrate; running execution state cannot.
+## Legacy boundary
+
+DQB/AQB documents, scripts, modes, and historical artifacts are retained for
+reproducibility. They are not current architecture specifications and must not
+be mixed with RescueSched result schemas or paper claims.

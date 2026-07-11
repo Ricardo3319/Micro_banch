@@ -1,5 +1,9 @@
 # DQB-v2 Experiment Method
 
+> **Archived plan.** DQB-v2 is not the current implementation or submission
+> target. RescueSched is the sole paper line; this plan is retained only as
+> research history.
+
 ## Purpose
 
 This document fixes the evaluation method for `DQB-v2`, a prior-calibrated

@@ -1,5 +1,9 @@
 # DQB Batch-Aware Algorithm History
 
+> **Legacy research history.** RescueSched is the sole current paper line.
+> This document is retained for reproducibility and must not be cited as current
+> architecture, current evidence, or a planned RescueSched experiment.
+
 ## Motivation
 
 The early DQB path showed that queue summaries were safer than per-task sorting
