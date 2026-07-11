@@ -1,5 +1,22 @@
 # Artifact and Figure Provenance
 
+## RescueSched validity-v2 outputs (2026-07-12)
+
+Corrected runs are written under
+`artifacts/step-19-rescuesched-validity-v2/`. They use schema
+`rescuesched-v2`, record the workload-trace SHA-256, and use task-ID-based
+warmup and measurement cohorts. They must not overwrite or be pooled with Step
+15, 17, or 18 CSV files, which remain historical evidence under older
+semantics.
+
+Validate new output with:
+
+```powershell
+python tests/integration/validate_rescue_csv_schema.py <v2.csv>
+```
+
+Historical analysis requires the explicit `--allow-legacy` switch.
+
 This file binds each existing figure family to its input CSVs, generation
 script, command, and run metadata that must be recorded when regenerating.
 

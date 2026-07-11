@@ -1,20 +1,34 @@
 import csv
 import math
 import statistics
+import sys
 from collections import defaultdict
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-STEP15 = ROOT / "artifacts" / "step-15-rescuesched"
-STEP18 = ROOT / "artifacts" / "step-18-infocom-readiness"
+ALLOW_LEGACY = "--allow-legacy" in sys.argv
+STEP15 = ROOT / "artifacts" / (
+    "step-15-rescuesched" if ALLOW_LEGACY else "step-19-rescuesched-validity-v2"
+)
+STEP18 = ROOT / "artifacts" / (
+    "step-18-infocom-readiness" if ALLOW_LEGACY
+    else "step-19-rescuesched-validity-v2"
+)
 
 
 def read_csv(path):
     if not path.exists():
         return []
     with path.open(newline="", encoding="utf-8") as f:
-        return list(csv.DictReader(f))
+        rows = list(csv.DictReader(f))
+    if rows and not ALLOW_LEGACY:
+        versions = {row.get("schema_version", "") for row in rows}
+        if versions != {"rescuesched-v2"}:
+            raise ValueError(
+                f"{path} is not strict rescuesched-v2; use --allow-legacy explicitly"
+            )
+    return rows
 
 
 def f(row, key, default=0.0):

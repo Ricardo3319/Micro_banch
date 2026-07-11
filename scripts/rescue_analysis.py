@@ -2,21 +2,35 @@ import csv
 import math
 import os
 import statistics
+import sys
 from collections import defaultdict
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "artifacts" / "step-15-rescuesched"
+ALLOW_LEGACY = "--allow-legacy" in sys.argv
+SRC = ROOT / "artifacts" / (
+    "step-15-rescuesched" if ALLOW_LEGACY else "step-19-rescuesched-validity-v2"
+)
 OUT = ROOT / "artifacts" / "step-16-rescuesched-readiness"
 FIG = OUT / "figures"
-SRC17 = ROOT / "artifacts" / "step-17-rescuesched-closure"
+SRC17 = ROOT / "artifacts" / (
+    "step-17-rescuesched-closure" if ALLOW_LEGACY
+    else "step-19-rescuesched-validity-v2"
+)
 FIG17 = SRC17 / "figures"
 
 
 def read_csv(path):
     with path.open(newline="", encoding="utf-8") as f:
-        return list(csv.DictReader(f))
+        rows = list(csv.DictReader(f))
+    if rows and not ALLOW_LEGACY:
+        versions = {row.get("schema_version", "") for row in rows}
+        if versions != {"rescuesched-v2"}:
+            raise ValueError(
+                f"{path} is not strict rescuesched-v2; use --allow-legacy explicitly"
+            )
+    return rows
 
 
 def read_optional_csv(path):

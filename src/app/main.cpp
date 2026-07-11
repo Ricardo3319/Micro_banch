@@ -300,6 +300,7 @@ static void ensure_artifact_dirs(const std::string& root) {
     ensure_dir(join_path(root, "step-15-rescuesched"));
     ensure_dir(join_path(root, "step-17-rescuesched-closure"));
     ensure_dir(join_path(root, "step-18-infocom-readiness"));
+    ensure_dir(join_path(root, "step-19-rescuesched-validity-v2"));
 }
 
 static void print_usage(const char* exe) {
@@ -2568,11 +2569,11 @@ int main(int argc, char** argv) {
         return run_rescue_smoke();
     } else if (mode == "rescue-w3-only") {
         return run_csv(
-            "step-15-rescuesched/rescue_w3_only.csv",
+            "step-19-rescuesched-validity-v2/rescue_w3_only.csv",
             run_rescue_w3_only);
     } else if (mode == "rescue-main") {
         return run_csv(
-            "step-15-rescuesched/rescue_main.csv",
+            "step-19-rescuesched-validity-v2/rescue_main_v2.csv",
             [&](const std::string& path) {
                 return run_rescue_main(
                     path,
@@ -2583,62 +2584,62 @@ int main(int argc, char** argv) {
             });
     } else if (mode == "rescue-ablation") {
         return run_csv(
-            "step-15-rescuesched/rescue_ablation.csv",
+            "step-19-rescuesched-validity-v2/rescue_ablation.csv",
             run_rescue_ablation);
     } else if (mode == "rescue-check-sweep") {
         return run_csv(
-            "step-15-rescuesched/rescue_check_sweep.csv",
+            "step-19-rescuesched-validity-v2/rescue_check_sweep.csv",
             run_rescue_check_sweep);
     } else if (mode == "rescue-overload-sanity") {
         return run_csv(
-            "step-15-rescuesched/rescue_overload_sanity.csv",
+            "step-19-rescuesched-validity-v2/rescue_overload_sanity.csv",
             run_rescue_overload_sanity);
     } else if (mode == "rescue-w2-burst") {
         return run_csv(
-            "step-17-rescuesched-closure/rescue_w2_burst.csv",
+            "step-19-rescuesched-validity-v2/rescue_w2_burst.csv",
             run_rescue_w2_burst);
     } else if (mode == "rescue-robustness-10seed") {
         return run_csv(
-            "step-17-rescuesched-closure/rescue_robustness_10seed.csv",
+            "step-19-rescuesched-validity-v2/rescue_robustness_10seed.csv",
             run_rescue_robustness_10seed);
     } else if (mode == "rescue-cost-microbench") {
         return run_csv(
-            "step-17-rescuesched-closure/migration_cost_microbench.csv",
+            "step-19-rescuesched-validity-v2/migration_cost_microbench.csv",
             run_rescue_cost_microbench);
     } else if (mode == "rescue-calibration") {
         return run_csv(
-            "step-17-rescuesched-closure/rescue_calibration.csv",
+            "step-19-rescuesched-validity-v2/rescue_calibration.csv",
             run_rescue_calibration);
     } else if (mode == "rescue-estimator-main") {
         return run_csv(
-            "step-18-infocom-readiness/rescue_estimator_main.csv",
+            "step-19-rescuesched-validity-v2/rescue_estimator_main.csv",
             run_rescue_estimator_main);
     } else if (mode == "rescue-estimator-w2") {
         return run_csv(
-            "step-18-infocom-readiness/rescue_estimator_w2.csv",
+            "step-19-rescuesched-validity-v2/rescue_estimator_w2.csv",
             run_rescue_estimator_w2);
     } else if (mode == "rescue-cost-calibration") {
         return run_csv(
-            "step-18-infocom-readiness/rescue_cost_calibration.csv",
+            "step-19-rescuesched-validity-v2/rescue_cost_calibration.csv",
             [&](const std::string& path) {
                 return run_rescue_cost_calibration(
                     path,
                     join_path(opts.output_dir,
-                              "step-18-infocom-readiness/migration_cost_microbench.csv"));
+                              "step-19-rescuesched-validity-v2/migration_cost_microbench.csv"));
             });
     } else if (mode == "rescue-w2-boundary") {
         return run_csv(
-            "step-18-infocom-readiness/rescue_w2_boundary.csv",
+            "step-19-rescuesched-validity-v2/rescue_w2_boundary.csv",
             run_rescue_w2_boundary);
     } else if (mode == "rescue-hybrid-smoke") {
         return run_rescue_hybrid_smoke();
     } else if (mode == "rescue-hybrid-main") {
         return run_csv(
-            "step-18-infocom-readiness/rescue_hybrid_main.csv",
+            "step-19-rescuesched-validity-v2/rescue_hybrid_main.csv",
             run_rescue_hybrid_main);
     } else if (mode == "rescue-target-safety-stress") {
         return run_csv(
-            "step-18-infocom-readiness/rescue_target_safety_stress.csv",
+            "step-19-rescuesched-validity-v2/rescue_target_safety_stress.csv",
             run_rescue_target_safety_stress);
     } else if (mode == "aqb-eval") {
         return run_csv("step-06-aqb/aqb_eval.csv", run_aqb_eval);
