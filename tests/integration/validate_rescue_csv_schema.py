@@ -38,6 +38,11 @@ REQUIRED_COLUMNS = [
     "migration_rate",
     "intra_move_rate",
     "rescue_success_count",
+    "migration_handoff_count",
+    "avg_migration_handoff_us",
+    "max_migration_handoff_us",
+    "max_rescue_commits_per_check",
+    "max_target_reservation_work_us",
 ]
 
 

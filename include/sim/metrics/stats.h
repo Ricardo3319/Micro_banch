@@ -3,6 +3,7 @@
 #include "sim/common/types.h"
 #include "sim/metrics/histogram.h"
 #include <cstdint>
+#include <algorithm>
 #include <array>
 #include <sstream>
 #include <string>
@@ -48,6 +49,11 @@ struct MetricsCollector {
     uint64_t remote_feasible_count = 0;
     uint64_t target_safe_count = 0;
     uint64_t rescue_success_count = 0;
+    uint64_t migration_handoff_count = 0;
+    double migration_handoff_sum_us = 0.0;
+    double migration_handoff_max_us = 0.0;
+    uint64_t max_rescue_commits_per_check = 0;
+    double max_target_reservation_work_us = 0.0;
     double rescue_moved_work_us = 0.0;
     uint64_t target_unsafe_reject_count = 0;
     uint64_t remote_infeasible_reject_count = 0;
@@ -111,6 +117,10 @@ struct MetricsCollector {
         proactive_intra_attempt_count = proactive_intra_success_count = 0;
         rescue_attempt_count = rescue_candidate_count = locally_doomed_count = 0;
         remote_feasible_count = target_safe_count = rescue_success_count = 0;
+        migration_handoff_count = 0;
+        migration_handoff_sum_us = migration_handoff_max_us = 0.0;
+        max_rescue_commits_per_check = 0;
+        max_target_reservation_work_us = 0.0;
         rescue_moved_work_us = 0.0;
         target_unsafe_reject_count = remote_infeasible_reject_count = 0;
         needless_migration_count = unsaved_migration_count = 0;
@@ -267,6 +277,30 @@ struct MetricsCollector {
             ++relief_success_count;
             relief_moved_work_us += work_us;
         }
+    }
+
+    void on_rescue_handoff(double latency_us, bool measurement_eligible) {
+        if (!measurement_eligible) return;
+        ++migration_handoff_count;
+        migration_handoff_sum_us += latency_us;
+        migration_handoff_max_us = std::max(migration_handoff_max_us, latency_us);
+    }
+
+    void on_rescue_check_commits(uint64_t commits) {
+        if (!recording) return;
+        max_rescue_commits_per_check = std::max(max_rescue_commits_per_check, commits);
+    }
+
+    void on_target_reservation(double work_us, bool measurement_eligible) {
+        if (!measurement_eligible) return;
+        max_target_reservation_work_us = std::max(
+            max_target_reservation_work_us, work_us);
+    }
+
+    double average_migration_handoff_us() const {
+        return migration_handoff_count > 0
+            ? migration_handoff_sum_us / static_cast<double>(migration_handoff_count)
+            : 0.0;
     }
 
     void on_rescue_finish(double predicted_local_latency_us,

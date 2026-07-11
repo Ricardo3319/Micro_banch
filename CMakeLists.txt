@@ -25,8 +25,14 @@ add_executable(simulator
 
 target_link_libraries(simulator PRIVATE sim_core)
 
+add_executable(simulator_validity_tests
+    tests/unit/simulator_validity_tests.cpp
+)
+target_link_libraries(simulator_validity_tests PRIVATE sim_core)
+
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(simulator PRIVATE -O2)
+    target_compile_options(simulator_validity_tests PRIVATE -O2)
 endif()
 
 enable_testing()
@@ -47,15 +53,50 @@ set_tests_properties(rescue_smoke_deterministic PROPERTIES
     PASS_REGULAR_EXPRESSION "RescueSched smoke status: PASS"
 )
 
+add_test(NAME simulator_validity
+    COMMAND $<TARGET_FILE:simulator_validity_tests>
+)
+set_tests_properties(simulator_validity PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_test(NAME rescue_v2_generate_a
+    COMMAND $<TARGET_FILE:simulator>
+            --mode rescue-main --workload W3 --rho 0.85 --seed 11
+            --warmup-requests 20 --measurement-requests 100
+            --output ${CMAKE_CURRENT_BINARY_DIR}/rescue_v2_a.csv
+)
+add_test(NAME rescue_v2_generate_b
+    COMMAND $<TARGET_FILE:simulator>
+            --mode rescue-main --workload W3 --rho 0.85 --seed 11
+            --warmup-requests 20 --measurement-requests 100
+            --output ${CMAKE_CURRENT_BINARY_DIR}/rescue_v2_b.csv
+)
+set_tests_properties(rescue_v2_generate_a rescue_v2_generate_b PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    FIXTURES_SETUP rescue_v2_csv
+)
+
 find_package(Python3 COMPONENTS Interpreter)
 if(Python3_Interpreter_FOUND)
     add_test(NAME rescue_csv_schema
         COMMAND ${Python3_EXECUTABLE}
                 ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration/validate_rescue_csv_schema.py
-                ${CMAKE_CURRENT_SOURCE_DIR}/artifacts/step-15-rescuesched/rescue_main.csv
-                ${CMAKE_CURRENT_SOURCE_DIR}/artifacts/step-18-infocom-readiness/rescue_estimator_main.csv
+                ${CMAKE_CURRENT_BINARY_DIR}/rescue_v2_a.csv
+                ${CMAKE_CURRENT_BINARY_DIR}/rescue_v2_b.csv
     )
     set_tests_properties(rescue_csv_schema PROPERTIES
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        FIXTURES_REQUIRED rescue_v2_csv
     )
 endif()
+
+add_test(NAME rescue_v2_reproducible
+    COMMAND ${CMAKE_COMMAND} -E compare_files
+            ${CMAKE_CURRENT_BINARY_DIR}/rescue_v2_a.csv
+            ${CMAKE_CURRENT_BINARY_DIR}/rescue_v2_b.csv
+)
+set_tests_properties(rescue_v2_reproducible PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    FIXTURES_REQUIRED rescue_v2_csv
+)

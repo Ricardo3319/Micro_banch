@@ -53,5 +53,6 @@ private:
 
 const char* rpc_method_name(RpcMethod method);
 double rpc_deadline_budget_us(RpcMethod method);
+std::string sha256_hex(const std::string& bytes);
 
 } // namespace sim

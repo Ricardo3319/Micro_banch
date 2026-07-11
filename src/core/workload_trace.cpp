@@ -140,6 +140,12 @@ double rpc_deadline_budget_us(RpcMethod method) {
     return method == RpcMethod::SHORT_RPC ? SLO_SHORT_US : SLO_LONG_US;
 }
 
+std::string sha256_hex(const std::string& bytes) {
+    Sha256 hash;
+    hash.update(bytes.data(), bytes.size());
+    return hash.finish();
+}
+
 WorkloadTrace WorkloadTrace::generate(const TraceConfig& input) {
     if (input.core_count <= 0 || input.warmup_requests < 0 || input.measurement_requests <= 0)
         throw std::invalid_argument("invalid trace request/core counts");

@@ -1,5 +1,17 @@
 # 06 Test Record
 
+## 2026-07-12 RescueSched validity-v2 gate
+
+Release configuration completed successfully. CTest passed 7/7: CLI help,
+small deterministic RescueSched smoke, C++ simulator validity tests, two
+independent v2 CSV generations, strict schema validation, and byte-for-byte
+reproducibility. Generated test files live only under `build/`.
+
+The validity test covers trace SHA-256, W3 conditional method distribution,
+method-keyed estimator isolation, W1/W2/W3 offered-load calibration, paid
+migration handoff and reservation accounting, measurement-cohort drain, and
+unclipped percentiles above 10 ms.
+
 更新时间：2026-07-06
 
 本文档用于持续记录构建、仿真、schema、分析脚本和物理机实验测试。未执行的测试必须标记为【待测试】，不得补写结果。

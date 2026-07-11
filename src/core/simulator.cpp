@@ -477,6 +477,8 @@ void Simulator::handle_task_migration_arrive(const Event& e) {
     task->reserved_dst_host = -1;
     task->reserved_dst_core = -1;
     task->migration_in_flight = false;
+    metrics_.on_rescue_handoff(now_us_ - task->migration_start_us,
+                               task->measurement_eligible);
     task->arrive_time_us = now_us_;
     Core& destination = nodes_[e.host_id].cores[e.core_id];
     if (m0_config_.rescue_target_insert_policy == RESCUE_TARGET_INSERT_HEAD_STRESS)
@@ -606,6 +608,7 @@ bool Simulator::move_rescue_task_intra_host(int host, int src_core_id, int dst_c
     task->assigned_host = host;
     task->assigned_core = dst_core_id;
     task->migration_in_flight = true;
+    task->migration_start_us = now_us_;
     task->estimated_local_latency_us = estimated_local_latency_us;
     task->rescue_predicted_remote_latency_us = estimated_remote_latency_us;
     task->rescue_predicted_target_delta_risk = predicted_target_delta_risk;
@@ -617,6 +620,8 @@ bool Simulator::move_rescue_task_intra_host(int host, int src_core_id, int dst_c
     task->reserved_dst_core = dst_core_id;
     incoming_reservation_[host] += moved_work_us;
     incoming_core_reservation_[host][dst_core_id] += moved_work_us;
+    metrics_.on_target_reservation(
+        incoming_core_reservation_[host][dst_core_id], task->measurement_eligible);
     metrics_.on_rescue_success(moved_work_us, predicted_harmful, relief,
                                task->measurement_eligible);
 
@@ -974,6 +979,7 @@ bool Simulator::run_rescue_sched_check(int host) {
         }
     }
 
+    metrics_.on_rescue_check_commits(static_cast<uint64_t>(moved));
     if (moved > 0) return true;
     return hybrid ? run_hybrid_relief_check(host, budget) : false;
 }

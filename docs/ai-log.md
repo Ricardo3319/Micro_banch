@@ -16,6 +16,13 @@
   `Use of AI Disclosure` section.
 - Current paper line: RescueSched only. AQB/DQB code and artifacts are retained
   as legacy history and are excluded from current evidence.
+- Implemented validation: explicit RPC methods and deadlines, method-keyed
+  estimators, policy-independent SHA-256 traces, paid migration events, target
+  reservations, calibrated offered load, task-ID measurement cohorts, exact
+  percentiles, and strict CSV v2.
+- Automated verification: Release build plus seven CTest cases, including two
+  byte-identical independently generated result files. No historical CSV was
+  rewritten during validation.
 
 更新时间：2026-07-06
 

@@ -48,6 +48,8 @@ public:
     // Effective cluster capacity (for heterogeneous rho computation).
     static double compute_effective_capacity(ClusterProfile profile);
 
+    friend class SimulatorValidityTest;
+
 private:
     // Event loop.
     void schedule_event(Event e);

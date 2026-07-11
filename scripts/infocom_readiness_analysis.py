@@ -33,11 +33,15 @@ def read_csv(path):
 
 def f(row, key, default=0.0):
     try:
-        value = row.get(key, "")
-        if value == "":
-            return default
+        if key not in row or row.get(key, "") == "":
+            if ALLOW_LEGACY:
+                return default
+            raise KeyError(f"strict rescuesched-v2 row missing {key}")
+        value = row[key]
         return float(value)
     except (TypeError, ValueError):
+        if not ALLOW_LEGACY:
+            raise
         return default
 
 
