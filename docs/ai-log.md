@@ -1,5 +1,22 @@
 # AI Log
 
+## 2026-07-12 RescueSched validity milestone
+
+- AI system: OpenAI Codex, GPT-5 family.
+- Purpose: repository audit, paper-claim scoping, simulator refactoring,
+  deterministic trace design, tests, and documentation.
+- AI contribution: proposed and implemented changes under human-selected
+  requirements. It did not generate experimental observations or invent
+  citations.
+- Human validation required: inspect all model semantics, review every diff,
+  run the complete CTest suite, reproduce the versioned CSV twice, and approve
+  every paper claim and citation before submission.
+- Disclosure status: this work materially affects simulation software and
+  experimental methodology and therefore must be described in the paper's
+  `Use of AI Disclosure` section.
+- Current paper line: RescueSched only. AQB/DQB code and artifacts are retained
+  as legacy history and are excluded from current evidence.
+
 更新时间：2026-07-06
 
 本文档记录本次 AI 协作整理过程，便于后续审计哪些信息来自代码扫描、哪些是复现规划、哪些仍需人工确认。
