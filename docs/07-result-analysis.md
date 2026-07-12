@@ -1,5 +1,15 @@
 # 07 Result Analysis
 
+## 2026-07-12 corrected pilot status
+
+Strong paid baselines change the interpretation of RescueSched. Across both
+development and holdout pilots, polling work stealing wins at W3 rho 0.70.
+RescueSched shows a consistent candidate advantage at rho 0.90 over both
+polling work stealing and ALTO-style threshold migration while moving less work;
+the holdout rho 0.85 interval versus work stealing crosses zero. These runs use
+5,000 measurement requests and are directional only. The next gate is a W3
+full-size run before expanding the full W1/W2 boundary matrix.
+
 更新时间：2026-07-06
 
 本文档是后续实验结果分析模板。当前不填入新的实验结论，未运行的部分标记为【待测试】或【待确认】。

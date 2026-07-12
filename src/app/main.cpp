@@ -1522,8 +1522,7 @@ static int run_rescue_main(const std::string& csv_path,
         sim::MethodType::L0_RANDOM_CORE,
         sim::MethodType::L1_WORK_STEALING_POLLING,
         sim::MethodType::M0_ALTO_THRESHOLD,
-        sim::MethodType::M1_RESCUE_SCHED,
-        sim::MethodType::M1_RESCUE_NO_TARGET_SAFETY
+        sim::MethodType::M1_RESCUE_SCHED
     };
 
     const int total_runs = static_cast<int>(rhos.size() * methods.size() * seeds.size());
