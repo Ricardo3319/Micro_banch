@@ -23,6 +23,10 @@
 - Automated verification: Release build plus seven CTest cases, including two
   byte-identical independently generated result files. No historical CSV was
   rewritten during validation.
+- Corrected evaluation assistance: AI implemented the pre-registered runner and
+  paired-bootstrap analysis, then executed and summarized 280 full-size runs.
+  Raw CSVs and unrounded derived tables are retained; the human author must
+  independently inspect the analysis and approve every reported percentage.
 
 更新时间：2026-07-06
 

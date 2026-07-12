@@ -123,7 +123,10 @@ def main() -> int:
     comparison_fields = [
         "workload", "rho", "baseline", "paired_seeds",
         "mean_slo_reduction", "ci95_low", "ci95_high",
+        "relative_slo_reduction",
         "rescue_work_rate_median", "baseline_work_rate_median",
+        "relative_work_reduction", "p99_rescue_over_baseline",
+        "p999_rescue_over_baseline",
         "significant_rescue_win", "no_more_migrated_work",
     ]
     comparisons = []
@@ -137,6 +140,11 @@ def main() -> int:
             paired = []
             rescue_work = []
             baseline_work = []
+            baseline_slo = []
+            rescue_p99 = []
+            baseline_p99 = []
+            rescue_p999 = []
+            baseline_p999 = []
             for seed in seeds:
                 rescue = by_seed.get((workload, rho, "M1_RescueSched", seed))
                 other = by_seed.get((workload, rho, baseline, seed))
@@ -144,23 +152,41 @@ def main() -> int:
                     continue
                 paired.append(number(other, "slo_violation_rate")
                               - number(rescue, "slo_violation_rate"))
+                baseline_slo.append(number(other, "slo_violation_rate"))
                 rescue_work.append(number(rescue, "intra_moved_work_us")
                                    / number(rescue, "measured_generated_work_us"))
                 baseline_work.append(number(other, "intra_moved_work_us")
                                      / number(other, "measured_generated_work_us"))
+                rescue_p99.append(number(rescue, "P99_us"))
+                baseline_p99.append(number(other, "P99_us"))
+                rescue_p999.append(number(rescue, "P999_us"))
+                baseline_p999.append(number(other, "P999_us"))
             low, high = paired_bootstrap(paired)
             rescue_work_median = statistics.median(rescue_work) if rescue_work else 0.0
             baseline_work_median = statistics.median(baseline_work) if baseline_work else 0.0
+            mean_reduction = statistics.mean(paired) if paired else 0.0
+            mean_baseline_slo = statistics.mean(baseline_slo) if baseline_slo else 0.0
             comparisons.append({
                 "workload": workload,
                 "rho": rho,
                 "baseline": baseline,
                 "paired_seeds": len(paired),
-                "mean_slo_reduction": statistics.mean(paired) if paired else 0.0,
+                "mean_slo_reduction": mean_reduction,
                 "ci95_low": low,
                 "ci95_high": high,
+                "relative_slo_reduction":
+                    mean_reduction / mean_baseline_slo if mean_baseline_slo else 0.0,
                 "rescue_work_rate_median": rescue_work_median,
                 "baseline_work_rate_median": baseline_work_median,
+                "relative_work_reduction":
+                    1.0 - rescue_work_median / baseline_work_median
+                    if baseline_work_median else 0.0,
+                "p99_rescue_over_baseline":
+                    statistics.median(rescue_p99) / statistics.median(baseline_p99)
+                    if baseline_p99 and statistics.median(baseline_p99) else 0.0,
+                "p999_rescue_over_baseline":
+                    statistics.median(rescue_p999) / statistics.median(baseline_p999)
+                    if baseline_p999 and statistics.median(baseline_p999) else 0.0,
                 "significant_rescue_win": int(low > 0.0),
                 "no_more_migrated_work": int(rescue_work_median <= baseline_work_median + 1e-12),
             })

@@ -124,6 +124,32 @@ Outputs:
 The INFOCOM readiness script currently generates tables and summary text, not
 figure files.
 
+## Corrected Full Evaluation (Current Paper Evidence)
+
+The authoritative corrected experiment is stored under
+`artifacts/step-21-corrected-full/`. Its `manifest.md` records the code commit,
+configuration, seeds, commands, row counts, schema checks, and claim boundary.
+The inputs are `w1.csv`, `w2.csv`, and `w3.csv`; derived outputs are
+`summary.csv`, `paired_comparisons.csv`, and `go_no_go.md`.
+
+Generation and analysis commands:
+
+```powershell
+pwsh -File scripts/run_corrected_eval.ps1 -Tier full -Workload W3
+pwsh -File scripts/run_corrected_eval.ps1 -Tier full -Workload W1
+pwsh -File scripts/run_corrected_eval.ps1 -Tier full -Workload W2
+python scripts/corrected_eval_analysis.py --tier full --out-dir artifacts/step-21-corrected-full --inputs artifacts/step-21-corrected-full/w3.csv artifacts/step-21-corrected-full/w2.csv artifacts/step-21-corrected-full/w1.csv
+python scripts/corrected_eval_plots.py --input-dir artifacts/step-21-corrected-full --out-dir artifacts/step-21-corrected-full/figures
+```
+
+Current paper figures:
+
+| Figure outputs | Inputs |
+| --- | --- |
+| `figures/fig_w3_deadline_violation.{png,pdf}` | `w3.csv` |
+| `figures/fig_w3_migrated_work.{png,pdf}` | `w3.csv` |
+| `figures/fig_w2_deadline_tail_tradeoff.{png,pdf}` | `w2.csv` |
+
 ## Legacy Figures
 
 Generation command:

@@ -10,6 +10,19 @@ the holdout rho 0.85 interval versus work stealing crosses zero. These runs use
 5,000 measurement requests and are directional only. The next gate is a W3
 full-size run before expanding the full W1/W2 boundary matrix.
 
+## 2026-07-12 corrected full result
+
+The full matrix contains 280 runs with 200k warmup, 1M measurement requests,
+and ten seeds. The W3 gate passes at rho 0.85 and 0.90: RescueSched reduces
+deadline misses by roughly 15% and 17% relative to both strong baselines while
+moving less work. At rho 0.70 it loses decisively to polling work stealing.
+
+W1 also shows lower miss rates. W2 exposes the central limitation: lower miss
+rates coexist with much worse unconditional tails, reaching 6.6x--8.6x P99 and
+4.7x--8.8x P999 at rho 0.85. The paper story is therefore selective deadline
+rescue with explicit efficiency and applicability boundaries, not general tail
+latency reduction.
+
 更新时间：2026-07-06
 
 本文档是后续实验结果分析模板。当前不填入新的实验结论，未运行的部分标记为【待测试】或【待确认】。

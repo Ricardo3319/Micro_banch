@@ -54,3 +54,12 @@ introduction and related work.
 
 This contract remains authoritative until a dated revision explicitly replaces
 it. It does not pre-commit the paper to a positive result.
+
+## Evidence status after corrected full evaluation
+
+The pre-registered W3 gate passes at rho 0.85 and 0.90 using ten seeds, EWMA,
+paid handoff, polling work stealing, and ALTO-style threshold migration. The
+claim remains restricted to deadline misses at moderate/high load. W3 rho 0.70
+loses to polling work stealing, and W2 exhibits severe P99/P999 regressions even
+when deadline misses improve. The paper must present these boundaries and must
+not convert the gate result into a universal tail-latency claim.
