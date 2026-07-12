@@ -22,7 +22,9 @@ Simulator::Simulator() = default;
 bool Simulator::is_intra_host_method() const {
     return method_type_ == MethodType::L0_RANDOM_CORE
         || method_type_ == MethodType::L1_WORK_STEALING
+        || method_type_ == MethodType::L1_WORK_STEALING_POLLING
         || method_type_ == MethodType::M0_INTRA_HOST_PROACTIVE
+        || method_type_ == MethodType::M0_ALTO_THRESHOLD
         || method_type_ == MethodType::M1_RESCUE_SCHED
         || method_type_ == MethodType::M1_RESCUE_NO_TARGET_SAFETY
         || method_type_ == MethodType::M1_RESCUE_NO_RESCUABLE
@@ -51,7 +53,9 @@ void Simulator::configure(MethodType method, double rho, unsigned seed,
     active_host_count_ =
         (method == MethodType::L0_RANDOM_CORE
          || method == MethodType::L1_WORK_STEALING
+         || method == MethodType::L1_WORK_STEALING_POLLING
          || method == MethodType::M0_INTRA_HOST_PROACTIVE
+         || method == MethodType::M0_ALTO_THRESHOLD
          || method == MethodType::M1_RESCUE_SCHED
          || method == MethodType::M1_RESCUE_NO_TARGET_SAFETY
          || method == MethodType::M1_RESCUE_NO_RESCUABLE
@@ -84,7 +88,9 @@ void Simulator::configure(MethodType method, double rho, unsigned seed,
             break; // no scheduler needed
         case MethodType::L0_RANDOM_CORE:
         case MethodType::L1_WORK_STEALING:
+        case MethodType::L1_WORK_STEALING_POLLING:
         case MethodType::M0_INTRA_HOST_PROACTIVE:
+        case MethodType::M0_ALTO_THRESHOLD:
         case MethodType::M1_RESCUE_SCHED:
         case MethodType::M1_RESCUE_NO_TARGET_SAFETY:
         case MethodType::M1_RESCUE_NO_RESCUABLE:
@@ -189,7 +195,14 @@ void Simulator::configure(MethodType method, double rho, unsigned seed,
         chk.type = EventType::CHECK_MIGRATION;
         chk.host_id = -1;
         schedule_event(chk);
-    } else if (method == MethodType::M0_INTRA_HOST_PROACTIVE) {
+    } else if (method == MethodType::L1_WORK_STEALING_POLLING) {
+        Event chk;
+        chk.timestamp_us = m0_config_.work_steal_poll_us;
+        chk.type = EventType::CHECK_MIGRATION;
+        chk.host_id = 0;
+        schedule_event(chk);
+    } else if (method == MethodType::M0_INTRA_HOST_PROACTIVE
+               || method == MethodType::M0_ALTO_THRESHOLD) {
         Event chk;
         chk.timestamp_us = m0_config_.t_check_us;
         chk.type = EventType::CHECK_MIGRATION;
@@ -477,11 +490,16 @@ void Simulator::handle_task_migration_arrive(const Event& e) {
     task->reserved_dst_host = -1;
     task->reserved_dst_core = -1;
     task->migration_in_flight = false;
-    metrics_.on_rescue_handoff(now_us_ - task->migration_start_us,
-                               task->measurement_eligible);
+    const double handoff_us = now_us_ - task->migration_start_us;
+    if (task->descriptor_handoff_paid)
+        metrics_.on_descriptor_handoff(handoff_us, task->measurement_eligible);
+    if (task->rescue_intra_moved)
+        metrics_.on_rescue_handoff(handoff_us, task->measurement_eligible);
+    task->descriptor_handoff_paid = false;
     task->arrive_time_us = now_us_;
     Core& destination = nodes_[e.host_id].cores[e.core_id];
-    if (m0_config_.rescue_target_insert_policy == RESCUE_TARGET_INSERT_HEAD_STRESS)
+    if (task->rescue_intra_moved
+        && m0_config_.rescue_target_insert_policy == RESCUE_TARGET_INSERT_HEAD_STRESS)
         destination.push_waiting_front(task);
     else
         destination.push_waiting(task);
@@ -517,7 +535,8 @@ double Simulator::compute_exec_time(double base_service_us, double capacity) con
 bool Simulator::move_waiting_task_intra_host(int host, int src_core_id, int dst_core_id,
                                              Task* task,
                                              double estimated_local_latency_us,
-                                             bool proactive) {
+                                             bool proactive,
+                                             bool paid_handoff) {
     if (!task || task->migration_in_flight
         || host < 0 || host >= static_cast<int>(nodes_.size())) return false;
     if (src_core_id < 0 || src_core_id >= CORES_PER_HOST) return false;
@@ -546,8 +565,29 @@ bool Simulator::move_waiting_task_intra_host(int host, int src_core_id, int dst_
         metrics_.on_steal_success(moved_work_us, task->measurement_eligible);
     }
 
-    dst_core.push_waiting(task);
-    if (dst_core.idle) start_execution(dst_core, now_us_);
+    if (paid_handoff) {
+        task->migration_in_flight = true;
+        task->descriptor_handoff_paid = true;
+        task->migration_start_us = now_us_;
+        task->pending_reserved_work_us = moved_work_us;
+        task->reserved_dst_host = host;
+        task->reserved_dst_core = dst_core_id;
+        incoming_reservation_[host] += moved_work_us;
+        incoming_core_reservation_[host][dst_core_id] += moved_work_us;
+        metrics_.on_target_reservation(
+            incoming_core_reservation_[host][dst_core_id], task->measurement_eligible);
+        Event arrival;
+        arrival.timestamp_us = now_us_ + std::max(
+            0.0, m0_config_.rescue_migration_cost_us);
+        arrival.type = EventType::TASK_MIGRATION_ARRIVE;
+        arrival.host_id = host;
+        arrival.core_id = dst_core_id;
+        arrival.task_id = task->id;
+        schedule_event(arrival);
+    } else {
+        dst_core.push_waiting(task);
+        if (dst_core.idle) start_execution(dst_core, now_us_);
+    }
     return true;
 }
 
@@ -608,6 +648,7 @@ bool Simulator::move_rescue_task_intra_host(int host, int src_core_id, int dst_c
     task->assigned_host = host;
     task->assigned_core = dst_core_id;
     task->migration_in_flight = true;
+    task->descriptor_handoff_paid = true;
     task->migration_start_us = now_us_;
     task->estimated_local_latency_us = estimated_local_latency_us;
     task->rescue_predicted_remote_latency_us = estimated_remote_latency_us;
@@ -639,6 +680,7 @@ bool Simulator::steal_one_task(int host, int idle_core_id) {
     metrics_.on_steal_attempt();
     if (host < 0 || host >= static_cast<int>(nodes_.size())) return false;
     if (idle_core_id < 0 || idle_core_id >= CORES_PER_HOST) return false;
+    if (incoming_core_reservation_[host][idle_core_id] > 0.0) return false;
 
     Node& node = nodes_[host];
     int src_core_id = -1;
@@ -656,7 +698,104 @@ bool Simulator::steal_one_task(int host, int idle_core_id) {
     Task* task = node.cores[src_core_id].wait_queue.front();
     if (!task) return false;
     return move_waiting_task_intra_host(
-        host, src_core_id, idle_core_id, task, 0.0, false);
+        host, src_core_id, idle_core_id, task, 0.0, false,
+        method_type_ == MethodType::L1_WORK_STEALING_POLLING);
+}
+
+int Simulator::run_work_stealing_poll(int host) {
+    if (host < 0 || host >= static_cast<int>(nodes_.size())) return 0;
+    Node& node = nodes_[host];
+    uint64_t idle_cores = 0;
+    for (const auto& core : node.cores)
+        if (core.idle && incoming_core_reservation_[host][core.core_id] <= 0.0)
+            ++idle_cores;
+    metrics_.on_steal_poll(idle_cores);
+
+    int moved = 0;
+    const int limit = std::max(1, m0_config_.work_steal_max_per_poll);
+    for (auto& core : node.cores) {
+        if (moved >= limit) break;
+        if (!core.idle || incoming_core_reservation_[host][core.core_id] > 0.0)
+            continue;
+        if (steal_one_task(host, core.core_id)) ++moved;
+    }
+    return moved;
+}
+
+bool Simulator::run_alto_threshold_check(int host) {
+    metrics_.on_proactive_intra_attempt();
+    if (host < 0 || host >= static_cast<int>(nodes_.size())) return false;
+    Node& node = nodes_[host];
+    const int scan_depth = std::max(1, m0_config_.rescue_scan_depth);
+    const int max_candidates = std::max(1, m0_config_.rescue_k_candidates);
+    const int target_count = std::max(1, m0_config_.rescue_h_targets);
+
+    struct Target { int core; double work_us; };
+    std::vector<Target> targets;
+    for (const auto& core : node.cores) {
+        targets.push_back(Target{
+            core.core_id,
+            core.local_workload_us(now_us_)
+                + incoming_core_reservation_[host][core.core_id]
+        });
+    }
+    std::sort(targets.begin(), targets.end(),
+              [](const Target& a, const Target& b) { return a.work_us < b.work_us; });
+
+    Task* best_task = nullptr;
+    int best_src = -1;
+    int best_dst = -1;
+    double best_local_latency = 0.0;
+    double best_score = -std::numeric_limits<double>::infinity();
+
+    for (auto& source : node.cores) {
+        const double source_work = source.local_workload_us(now_us_);
+        if (source_work < m0_config_.alto_queue_threshold_us) continue;
+        double prefix_work_us = (!source.idle && source.running)
+            ? std::max(0.0, source.finish_time_us - now_us_) : 0.0;
+        int depth = 0;
+        int candidates = 0;
+        for (Task* task = source.wait_queue.begin();
+             task && depth < scan_depth && candidates < max_candidates;
+             task = task->next, ++depth) {
+            const double source_task_work =
+                task->expected_service_time_us / source.capacity + T_host_us;
+            const double local_completion_abs = now_us_ + prefix_work_us
+                                              + source_task_work;
+            if (!task->intra_moved && local_completion_abs > task->deadline_abs_us()) {
+                ++candidates;
+                int tried = 0;
+                for (const auto& target : targets) {
+                    if (target.core == source.core_id) continue;
+                    if (tried++ >= target_count) break;
+                    const Core& destination = node.cores[target.core];
+                    const double target_task_work =
+                        task->expected_service_time_us / destination.capacity + T_host_us;
+                    const double remote_completion_abs = now_us_
+                        + m0_config_.rescue_migration_cost_us
+                        + target.work_us + target_task_work;
+                    const double gain_us = local_completion_abs - remote_completion_abs;
+                    if (gain_us + 1e-9 < m0_config_.alto_min_gain_us) continue;
+                    const double lateness_us = std::max(
+                        0.0, local_completion_abs - task->deadline_abs_us());
+                    const double score = gain_us + 0.10 * lateness_us;
+                    if (score > best_score) {
+                        best_score = score;
+                        best_task = task;
+                        best_src = source.core_id;
+                        best_dst = target.core;
+                        best_local_latency =
+                            local_completion_abs - task->generate_time_us;
+                    }
+                }
+            }
+            prefix_work_us += source_task_work;
+        }
+    }
+
+    if (!best_task) return false;
+    return move_waiting_task_intra_host(
+        host, best_src, best_dst, best_task, best_local_latency, true, true);
 }
 
 bool Simulator::run_intra_proactive_check(int host) {
@@ -1139,7 +1278,8 @@ void Simulator::handle_task_finish(const Event& e) {
     // Pull next from queue.
     if (!core.wait_queue.empty()) {
         start_execution(core, now_us_);
-    } else if (method_type_ == MethodType::L1_WORK_STEALING) {
+    } else if (method_type_ == MethodType::L1_WORK_STEALING
+               || method_type_ == MethodType::L1_WORK_STEALING_POLLING) {
         steal_one_task(e.host_id, e.core_id);
     } else if (method_type_ == MethodType::B0_IDEAL_CFCFS) {
         try_b0_pull(e.host_id);
@@ -1184,13 +1324,32 @@ void Simulator::handle_check_migration(const Event& e) {
         return static_cast<int>(remaining);
     };
 
-    if (method_type_ == MethodType::M0_INTRA_HOST_PROACTIVE) {
+    if (method_type_ == MethodType::L1_WORK_STEALING_POLLING) {
+        int host_idx = e.host_id;
+        if (host_idx < 0 || host_idx >= static_cast<int>(nodes_.size())) return;
+        run_work_stealing_poll(host_idx);
+
+        Event next_chk;
+        next_chk.timestamp_us = now_us_ + std::max(
+            0.1, m0_config_.work_steal_poll_us);
+        next_chk.type = EventType::CHECK_MIGRATION;
+        next_chk.host_id = host_idx;
+        schedule_event(next_chk);
+
+    } else if (method_type_ == MethodType::M0_INTRA_HOST_PROACTIVE
+               || method_type_ == MethodType::M0_ALTO_THRESHOLD) {
         int host_idx = e.host_id;
         if (host_idx < 0 || host_idx >= static_cast<int>(nodes_.size())) return;
 
         int moved = 0;
-        while (moved < INTRA_MAX_MOVES_PER_CHECK) {
-            if (!run_intra_proactive_check(host_idx)) break;
+        const int move_limit = method_type_ == MethodType::M0_ALTO_THRESHOLD
+            ? std::max(1, m0_config_.rescue_budget_per_check)
+            : INTRA_MAX_MOVES_PER_CHECK;
+        while (moved < move_limit) {
+            bool success = method_type_ == MethodType::M0_ALTO_THRESHOLD
+                ? run_alto_threshold_check(host_idx)
+                : run_intra_proactive_check(host_idx);
+            if (!success) break;
             ++moved;
         }
 

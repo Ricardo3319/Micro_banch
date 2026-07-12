@@ -30,6 +30,8 @@ REQUIRED_COLUMNS = [
     "seed",
     "migration_cost_us",
     "service_estimate_mode",
+    "work_steal_poll_us",
+    "alto_queue_threshold_us",
     "P99_us",
     "P999_us",
     "slo_violation_rate",
@@ -43,6 +45,9 @@ REQUIRED_COLUMNS = [
     "max_migration_handoff_us",
     "max_rescue_commits_per_check",
     "max_target_reservation_work_us",
+    "descriptor_handoff_count",
+    "avg_descriptor_handoff_us",
+    "max_descriptor_handoff_us",
 ]
 
 

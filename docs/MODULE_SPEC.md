@@ -3,14 +3,17 @@
 ## Paper-line methods
 
 - `L0_RandomCore`: fixed initial per-core placement without queue repair.
-- `L1_WorkStealing`: idle-core pull baseline.
-- `M0_IntraHostProactive`: threshold-style proactive migration baseline.
+- `L1_WorkStealingPolling`: periodic idle-core pull with paid handoff.
+- `M0_AltoThreshold`: local-miss/no-worse threshold migration with paid handoff.
 - `M1_RescueSched`: local-miss/remote-meet descriptor migration.
 - `M1_RescueSched_NoTargetSafety` and `M1_RescueSched_NoRescuable`: diagnostic
   ablations only.
 
 Host-level `B0/B1/B2/M0`, AQB, and DQB modes remain implemented for historical
 reproduction but are not part of the current paper interface.
+
+`L1_WorkStealing` and `M0_IntraHostProactive` are retained as diagnostic legacy
+variants and are not used as the strong paper baselines.
 
 ## Required interfaces
 

@@ -41,6 +41,8 @@ struct MetricsCollector {
     uint64_t steal_attempt_count = 0;
     uint64_t steal_success_count = 0;
     uint64_t stolen_task_count = 0;
+    uint64_t steal_poll_count = 0;
+    uint64_t steal_idle_core_check_count = 0;
     uint64_t proactive_intra_attempt_count = 0;
     uint64_t proactive_intra_success_count = 0;
     uint64_t rescue_attempt_count = 0;
@@ -54,6 +56,9 @@ struct MetricsCollector {
     double migration_handoff_max_us = 0.0;
     uint64_t max_rescue_commits_per_check = 0;
     double max_target_reservation_work_us = 0.0;
+    uint64_t descriptor_handoff_count = 0;
+    double descriptor_handoff_sum_us = 0.0;
+    double descriptor_handoff_max_us = 0.0;
     double rescue_moved_work_us = 0.0;
     uint64_t target_unsafe_reject_count = 0;
     uint64_t remote_infeasible_reject_count = 0;
@@ -114,6 +119,7 @@ struct MetricsCollector {
         total_finished = slo_violations = total_migrations = invalid_migrations = 0;
         intra_move_count = invalid_intra_moves = 0;
         steal_attempt_count = steal_success_count = stolen_task_count = 0;
+        steal_poll_count = steal_idle_core_check_count = 0;
         proactive_intra_attempt_count = proactive_intra_success_count = 0;
         rescue_attempt_count = rescue_candidate_count = locally_doomed_count = 0;
         remote_feasible_count = target_safe_count = rescue_success_count = 0;
@@ -121,6 +127,8 @@ struct MetricsCollector {
         migration_handoff_sum_us = migration_handoff_max_us = 0.0;
         max_rescue_commits_per_check = 0;
         max_target_reservation_work_us = 0.0;
+        descriptor_handoff_count = 0;
+        descriptor_handoff_sum_us = descriptor_handoff_max_us = 0.0;
         rescue_moved_work_us = 0.0;
         target_unsafe_reject_count = remote_infeasible_reject_count = 0;
         needless_migration_count = unsaved_migration_count = 0;
@@ -198,6 +206,12 @@ struct MetricsCollector {
     void on_steal_attempt() {
         if (!recording) return;
         ++steal_attempt_count;
+    }
+
+    void on_steal_poll(uint64_t idle_cores) {
+        if (!recording) return;
+        ++steal_poll_count;
+        steal_idle_core_check_count += idle_cores;
     }
 
     void on_steal_success(double work_us, bool measurement_eligible) {
@@ -284,6 +298,19 @@ struct MetricsCollector {
         ++migration_handoff_count;
         migration_handoff_sum_us += latency_us;
         migration_handoff_max_us = std::max(migration_handoff_max_us, latency_us);
+    }
+
+    void on_descriptor_handoff(double latency_us, bool measurement_eligible) {
+        if (!measurement_eligible) return;
+        ++descriptor_handoff_count;
+        descriptor_handoff_sum_us += latency_us;
+        descriptor_handoff_max_us = std::max(descriptor_handoff_max_us, latency_us);
+    }
+
+    double average_descriptor_handoff_us() const {
+        return descriptor_handoff_count > 0
+            ? descriptor_handoff_sum_us / static_cast<double>(descriptor_handoff_count)
+            : 0.0;
     }
 
     void on_rescue_check_commits(uint64_t commits) {

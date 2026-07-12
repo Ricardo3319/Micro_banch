@@ -9,8 +9,9 @@ different core.
 ## Current paper line
 
 - Main method: `M1_RescueSched`.
-- Main baselines: `L0_RandomCore`, `L1_WorkStealing`, and
-  `M0_IntraHostProactive`.
+- Main baselines: `L0_RandomCore`, `L1_WorkStealingPolling`, and
+  `M0_AltoThreshold`. The latter two pay the same descriptor-handoff cost as
+  RescueSched.
 - Main workload: single-host W3 Poisson/lognormal, with W1/W2 used for boundary
   checks.
 - Primary outcome: deadline violation rate / SLO goodput. P99 and P999 are

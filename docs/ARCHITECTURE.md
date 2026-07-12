@@ -12,8 +12,9 @@ The paper path contains three layers:
 2. per-core FIFO execution and bounded queue inspection;
 3. request-level local-miss/remote-meet migration decisions.
 
-`L0_RANDOM_CORE`, `L1_WORK_STEALING`, and `M0_INTRA_HOST_PROACTIVE` are the
-intra-host comparison methods. AQB/DQB host-level migration code remains
+`L0_RANDOM_CORE`, `L1_WORK_STEALING_POLLING`, and `M0_ALTO_THRESHOLD` are the
+paper comparison methods. The one-shot work-stealing and immediate proactive
+modes remain diagnostics. AQB/DQB host-level migration code remains
 available as legacy history but is outside the RescueSched paper path.
 
 ## Module boundaries
@@ -49,6 +50,8 @@ Versioned workload trace
 - Workload, routing, estimator, and control randomness use independent streams.
 - All methods compared at one workload/rho/seed consume the same trace.
 - Migration cost is paid as elapsed simulated time, not only as a score penalty.
+- Strong work stealing, ALTO-style migration, and RescueSched pay the same
+  descriptor-handoff cost.
 - In-flight descriptors are absent from both queues and cannot migrate twice.
 - Target reservations are visible to later decisions in the same control epoch.
 - Warmup requests do not enter paper metrics; all measurement requests drain.

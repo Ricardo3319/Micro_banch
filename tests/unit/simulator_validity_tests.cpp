@@ -185,6 +185,40 @@ void test_measurement_cohort_and_delayed_migration() {
             "target reservation was not recorded");
 }
 
+void test_strong_baselines_pay_common_handoff() {
+    sim::TraceConfig config = trace_config(
+        sim::WorkloadType::W3_POISSON_LOGNORMAL, 11, 300);
+    config.warmup_requests = 20;
+    auto trace = std::make_shared<const sim::WorkloadTrace>(
+        sim::WorkloadTrace::generate(config));
+
+    for (sim::MethodType method : {
+             sim::MethodType::L1_WORK_STEALING_POLLING,
+             sim::MethodType::M0_ALTO_THRESHOLD}) {
+        sim::M0Config policy;
+        policy.rescue_migration_cost_us = 2.0;
+        sim::Simulator simulator;
+        simulator.configure(method, config.rho, config.seed, config.workload,
+                            sim::ClusterProfile::HOMOGENEOUS, policy, trace);
+        require(simulator.run() == 0, "strong baseline run failed");
+        const auto& metrics = simulator.metrics();
+        require(metrics.total_finished == 300, "strong baseline did not drain");
+        require(metrics.descriptor_handoff_count > 0,
+                "strong baseline performed no paid descriptor handoff");
+        require_near(metrics.average_descriptor_handoff_us(), 2.0, 1e-9,
+                     "strong baseline did not pay common handoff cost");
+        if (method == sim::MethodType::L1_WORK_STEALING_POLLING) {
+            require(metrics.steal_poll_count > 0, "polling work stealing never polled");
+            require(metrics.descriptor_handoff_count == metrics.steal_success_count,
+                    "work-steal handoff accounting mismatch");
+        } else {
+            require(metrics.descriptor_handoff_count
+                        == metrics.proactive_intra_success_count,
+                    "ALTO-style handoff accounting mismatch");
+        }
+    }
+}
+
 } // namespace
 
 int main() {
@@ -195,6 +229,7 @@ int main() {
         test_load_calibration();
         test_exact_percentile_above_ten_ms();
         test_measurement_cohort_and_delayed_migration();
+        test_strong_baselines_pay_common_handoff();
         std::cout << "simulator validity tests: PASS\n";
         return 0;
     } catch (const std::exception& error) {

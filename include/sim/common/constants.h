@@ -144,6 +144,10 @@ struct M0Config {
     double rescue_hybrid_pressure_ratio = 1.25;
     double rescue_hybrid_min_gain_us = 5.0;
     int    rescue_hybrid_max_relief_per_check = 1;
+    double work_steal_poll_us = 1.0;
+    int    work_steal_max_per_poll = CORES_PER_HOST;
+    double alto_queue_threshold_us = 40.0;
+    double alto_min_gain_us = 0.0;
 };
 
 // Heterogeneous cluster constants.

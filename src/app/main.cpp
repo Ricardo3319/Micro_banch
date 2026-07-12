@@ -26,9 +26,11 @@ static const char* method_name(sim::MethodType m) {
         case sim::MethodType::B0_IDEAL_CFCFS:          return "B0_IdealCFCFS";
         case sim::MethodType::L0_RANDOM_CORE:          return "L0_RandomCore";
         case sim::MethodType::L1_WORK_STEALING:        return "L1_WorkStealing";
+        case sim::MethodType::L1_WORK_STEALING_POLLING: return "L1_WorkStealingPolling";
         case sim::MethodType::B1_POWER_OF_K:           return "B1_PowerOf2";
         case sim::MethodType::B2_REACTIVE_MIGRATION:   return "B2_Reactive";
         case sim::MethodType::M0_INTRA_HOST_PROACTIVE: return "M0_IntraHostProactive";
+        case sim::MethodType::M0_ALTO_THRESHOLD:       return "M0_AltoThreshold";
         case sim::MethodType::M1_RESCUE_SCHED:         return "M1_RescueSched";
         case sim::MethodType::M1_RESCUE_NO_TARGET_SAFETY: return "M1_RescueSched_NoTargetSafety";
         case sim::MethodType::M1_RESCUE_NO_RESCUABLE:  return "M1_RescueSched_NoRescuable";
@@ -1004,11 +1006,14 @@ static void write_rescue_header(std::ofstream& csv) {
            "migration_cost_us,service_estimate_mode,service_estimate_noise_cv,"
            "service_estimate_ewma_alpha,w2_hot_core_count,w2_hot_dispatch_prob,"
            "target_insert_policy,hybrid_pressure_ratio,hybrid_min_gain_us,"
+           "work_steal_poll_us,work_steal_max_per_poll,"
+           "alto_queue_threshold_us,alto_min_gain_us,"
            "target_safety_enabled,rescuable_filter_enabled,"
            "P99_us,P999_us,slo_violation_rate,total_finished,total_generated,"
            "migration_rate,invalid_migration_ratio,"
            "intra_move_rate,intra_move_count,intra_moved_work_us,"
            "steal_attempt_count,steal_success_count,stolen_task_count,"
+           "steal_poll_count,steal_idle_core_check_count,"
            "proactive_intra_attempt_count,proactive_intra_success_count,"
            "invalid_intra_move_ratio,"
            "rescue_attempt_count,rescue_candidate_count,locally_doomed_count,"
@@ -1016,6 +1021,8 @@ static void write_rescue_header(std::ofstream& csv) {
            "migration_handoff_count,avg_migration_handoff_us,"
            "max_migration_handoff_us,max_rescue_commits_per_check,"
            "max_target_reservation_work_us,"
+           "descriptor_handoff_count,avg_descriptor_handoff_us,"
+           "max_descriptor_handoff_us,"
            "rescue_moved_work_us,target_unsafe_reject_count,"
            "remote_infeasible_reject_count,needless_migration_count,"
            "unsaved_migration_count,beneficial_migration_count,"
@@ -1059,6 +1066,8 @@ static void write_rescue_row(std::ofstream& csv,
         << target_insert_policy_name(cfg.rescue_target_insert_policy) << ","
         << cfg.rescue_hybrid_pressure_ratio << ","
         << cfg.rescue_hybrid_min_gain_us << ","
+        << cfg.work_steal_poll_us << "," << cfg.work_steal_max_per_poll << ","
+        << cfg.alto_queue_threshold_us << "," << cfg.alto_min_gain_us << ","
         << (method_has_target_safety(method) ? 1 : 0) << ","
         << (method_has_rescuable_filter(method) ? 1 : 0) << ","
         << std::setprecision(3) << m.p99() << "," << m.p999() << ","
@@ -1069,6 +1078,7 @@ static void write_rescue_row(std::ofstream& csv,
         << m.intra_moved_work_us << ","
         << m.steal_attempt_count << "," << m.steal_success_count << ","
         << m.stolen_task_count << ","
+        << m.steal_poll_count << "," << m.steal_idle_core_check_count << ","
         << m.proactive_intra_attempt_count << ","
         << m.proactive_intra_success_count << ","
         << m.invalid_intra_move_ratio() << ","
@@ -1080,6 +1090,9 @@ static void write_rescue_row(std::ofstream& csv,
         << m.migration_handoff_max_us << ","
         << m.max_rescue_commits_per_check << ","
         << m.max_target_reservation_work_us << ","
+        << m.descriptor_handoff_count << ","
+        << m.average_descriptor_handoff_us() << ","
+        << m.descriptor_handoff_max_us << ","
         << m.rescue_moved_work_us << "," << m.target_unsafe_reject_count << ","
         << m.remote_infeasible_reject_count << ","
         << m.needless_migration_count << "," << m.unsaved_migration_count << ","
@@ -1361,8 +1374,8 @@ static std::shared_ptr<const sim::WorkloadTrace> make_shared_trace(
 static int run_rescue_smoke() {
     std::cout << "=== RescueSched Smoke: W3 rho=0.85 seed=11 ===\n";
     sim::MethodType methods[] = {
-        sim::MethodType::L1_WORK_STEALING,
-        sim::MethodType::M0_INTRA_HOST_PROACTIVE,
+        sim::MethodType::L1_WORK_STEALING_POLLING,
+        sim::MethodType::M0_ALTO_THRESHOLD,
         sim::MethodType::M1_RESCUE_SCHED,
         sim::MethodType::M1_RESCUE_NO_TARGET_SAFETY
     };
@@ -1416,8 +1429,8 @@ static int run_rescue_w3_only(const std::string& csv_path) {
 
     sim::MethodType methods[] = {
         sim::MethodType::L0_RANDOM_CORE,
-        sim::MethodType::L1_WORK_STEALING,
-        sim::MethodType::M0_INTRA_HOST_PROACTIVE,
+        sim::MethodType::L1_WORK_STEALING_POLLING,
+        sim::MethodType::M0_ALTO_THRESHOLD,
         sim::MethodType::M1_RESCUE_SCHED,
         sim::MethodType::M1_RESCUE_NO_TARGET_SAFETY
     };
@@ -1507,8 +1520,8 @@ static int run_rescue_main(const std::string& csv_path,
     const std::vector<unsigned> seeds = default_rescue_seeds(configured_seeds);
     const std::vector<sim::MethodType> methods = {
         sim::MethodType::L0_RANDOM_CORE,
-        sim::MethodType::L1_WORK_STEALING,
-        sim::MethodType::M0_INTRA_HOST_PROACTIVE,
+        sim::MethodType::L1_WORK_STEALING_POLLING,
+        sim::MethodType::M0_ALTO_THRESHOLD,
         sim::MethodType::M1_RESCUE_SCHED,
         sim::MethodType::M1_RESCUE_NO_TARGET_SAFETY
     };
