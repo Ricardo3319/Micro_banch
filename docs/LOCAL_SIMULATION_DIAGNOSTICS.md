@@ -53,6 +53,17 @@ frozen development seeds `11,23,37,47,59`; they do not reopen holdout tuning.
 Every profile covers W3 rho 0.70, 0.85, and 0.90 plus W2 rho 0.85 and compares
 the four primary methods on the same trace within each workload/rho/seed point.
 
+The optional fourth runner argument selects a comma-separated profile subset
+for targeted confirmation while retaining the same validation and provenance
+path. A subset must include `baseline`; omitting the argument runs all profiles.
+For example:
+
+```bash
+bash scripts/run_local_simulation_diagnostics.sh full build-local \
+  artifacts/step-22-local-simulation-diagnostics/full-ewma-confirmation \
+  baseline,ewma-0.01
+```
+
 The matrix is one-factor-at-a-time. It includes the corrected default plus:
 
 - flow-affine uniform and Zipf placement models;

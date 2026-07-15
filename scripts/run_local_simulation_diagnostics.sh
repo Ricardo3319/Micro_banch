@@ -3,18 +3,21 @@ set -euo pipefail
 
 usage() {
     cat <<'EOF'
-Usage: scripts/run_local_simulation_diagnostics.sh [smoke|pilot|full] [build-dir] [out-dir]
+Usage: scripts/run_local_simulation_diagnostics.sh [smoke|pilot|full] [build-dir] [out-dir] [profiles]
 
 Runs a one-factor-at-a-time diagnostic matrix at the four frozen anchor points:
 W3 rho 0.70/0.85/0.90 and W2 rho 0.85. Outputs are post-freeze diagnostics,
 not replacements for artifacts/step-21-corrected-full.
 
-Defaults: tier=smoke, build-dir=build, out-dir under artifacts/step-22-...
+Profiles is `all` or a comma-separated subset that includes `baseline`.
+Defaults: tier=smoke, build-dir=build, out-dir under artifacts/step-22-...,
+profiles=all.
 EOF
 }
 
 tier="${1:-smoke}"
 build_dir="${2:-build}"
+profile_filter="${4:-all}"
 
 if [[ "$tier" == "-h" || "$tier" == "--help" ]]; then
     usage
@@ -43,6 +46,46 @@ case "$tier" in
         exit 2
         ;;
 esac
+
+all_profiles=(
+    baseline placement-flow-uniform placement-flow-zipf
+    handoff-0 handoff-2 handoff-5 check-2 check-5 scan-32 scan-128
+    candidates-8 candidates-32 targets-2 targets-8 budget-2 budget-4
+    epsilon-0 epsilon-5 ewma-0.01 ewma-0.20 control-accounting-unit
+)
+
+if [[ "$profile_filter" != "all" ]]; then
+    IFS=',' read -r -a requested_profiles <<< "$profile_filter"
+    if [[ "${#requested_profiles[@]}" -eq 0 ]]; then
+        echo "Profile subset cannot be empty" >&2
+        exit 2
+    fi
+    declare -A valid_profiles=()
+    declare -A seen_profiles=()
+    for profile in "${all_profiles[@]}"; do
+        valid_profiles["$profile"]=1
+    done
+    for profile in "${requested_profiles[@]}"; do
+        if [[ -z "$profile" || -z "${valid_profiles[$profile]:-}" ]]; then
+            echo "Unknown diagnostic profile: ${profile:-<empty>}" >&2
+            exit 2
+        fi
+        if [[ -n "${seen_profiles[$profile]:-}" ]]; then
+            echo "Duplicate diagnostic profile: $profile" >&2
+            exit 2
+        fi
+        seen_profiles["$profile"]=1
+    done
+    if [[ -z "${seen_profiles[baseline]:-}" ]]; then
+        echo "A profile subset must include baseline for paired sensitivity" >&2
+        exit 2
+    fi
+fi
+
+profile_selected() {
+    local profile="$1"
+    [[ "$profile_filter" == "all" || ",$profile_filter," == *",$profile,"* ]]
+}
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd -- "$script_dir/.." && pwd)"
@@ -118,6 +161,7 @@ trap on_exit EXIT
 printf 'status=INCOMPLETE\nstarted_utc=%s\n' "$started_utc" > "$status_file"
 cat > "$metadata_file" <<EOF
 tier=$tier
+profiles_requested=$profile_filter
 source_revision=$git_revision
 source_worktree_dirty=$git_dirty
 simulator_path=$exe
@@ -155,29 +199,36 @@ run_profile() {
         > "$logs/${profile}__w2.log" 2>&1
 }
 
-run_profile baseline baseline corrected-default frozen-corrected-configuration
-run_profile placement-flow-uniform placement flow-affine-uniform simulator-model-not-RSS-measurement \
+run_selected_profile() {
+    local profile="$1"
+    if profile_selected "$profile"; then
+        run_profile "$@"
+    fi
+}
+
+run_selected_profile baseline baseline corrected-default frozen-corrected-configuration
+run_selected_profile placement-flow-uniform placement flow-affine-uniform simulator-model-not-RSS-measurement \
     --placement flow-affine --flow-count 4096 --flow-zipf-alpha 0
-run_profile placement-flow-zipf placement flow-affine-zipf-1.1 simulator-model-not-RSS-measurement \
+run_selected_profile placement-flow-zipf placement flow-affine-zipf-1.1 simulator-model-not-RSS-measurement \
     --placement flow-affine --flow-count 4096 --flow-zipf-alpha 1.1
-run_profile handoff-0 handoff-us 0 configured-simulated-delay --migration-cost-us 0
-run_profile handoff-2 handoff-us 2 configured-simulated-delay --migration-cost-us 2
-run_profile handoff-5 handoff-us 5 configured-simulated-delay --migration-cost-us 5
-run_profile check-2 check-period-us 2 one-factor-at-a-time --check-period-us 2
-run_profile check-5 check-period-us 5 one-factor-at-a-time --check-period-us 5
-run_profile scan-32 scan-depth 32 one-factor-at-a-time --scan-depth 32
-run_profile scan-128 scan-depth 128 one-factor-at-a-time --scan-depth 128
-run_profile candidates-8 k-candidates 8 one-factor-at-a-time --k-candidates 8
-run_profile candidates-32 k-candidates 32 one-factor-at-a-time --k-candidates 32
-run_profile targets-2 h-targets 2 one-factor-at-a-time --h-targets 2
-run_profile targets-8 h-targets 8 one-factor-at-a-time --h-targets 8
-run_profile budget-2 budget-per-check 2 one-factor-at-a-time --budget-per-check 2
-run_profile budget-4 budget-per-check 4 one-factor-at-a-time --budget-per-check 4
-run_profile epsilon-0 epsilon-us 0 one-factor-at-a-time --epsilon-us 0
-run_profile epsilon-5 epsilon-us 5 one-factor-at-a-time --epsilon-us 5
-run_profile ewma-0.01 ewma-alpha 0.01 one-factor-at-a-time --ewma-alpha 0.01
-run_profile ewma-0.20 ewma-alpha 0.20 one-factor-at-a-time --ewma-alpha 0.20
-run_profile control-accounting-unit control-cost normalized-1us-per-operation \
+run_selected_profile handoff-0 handoff-us 0 configured-simulated-delay --migration-cost-us 0
+run_selected_profile handoff-2 handoff-us 2 configured-simulated-delay --migration-cost-us 2
+run_selected_profile handoff-5 handoff-us 5 configured-simulated-delay --migration-cost-us 5
+run_selected_profile check-2 check-period-us 2 one-factor-at-a-time --check-period-us 2
+run_selected_profile check-5 check-period-us 5 one-factor-at-a-time --check-period-us 5
+run_selected_profile scan-32 scan-depth 32 one-factor-at-a-time --scan-depth 32
+run_selected_profile scan-128 scan-depth 128 one-factor-at-a-time --scan-depth 128
+run_selected_profile candidates-8 k-candidates 8 one-factor-at-a-time --k-candidates 8
+run_selected_profile candidates-32 k-candidates 32 one-factor-at-a-time --k-candidates 32
+run_selected_profile targets-2 h-targets 2 one-factor-at-a-time --h-targets 2
+run_selected_profile targets-8 h-targets 8 one-factor-at-a-time --h-targets 8
+run_selected_profile budget-2 budget-per-check 2 one-factor-at-a-time --budget-per-check 2
+run_selected_profile budget-4 budget-per-check 4 one-factor-at-a-time --budget-per-check 4
+run_selected_profile epsilon-0 epsilon-us 0 one-factor-at-a-time --epsilon-us 0
+run_selected_profile epsilon-5 epsilon-us 5 one-factor-at-a-time --epsilon-us 5
+run_selected_profile ewma-0.01 ewma-alpha 0.01 one-factor-at-a-time --ewma-alpha 0.01
+run_selected_profile ewma-0.20 ewma-alpha 0.20 one-factor-at-a-time --ewma-alpha 0.20
+run_selected_profile control-accounting-unit control-cost normalized-1us-per-operation \
     accounting-only-does-not-advance-time \
     --control-check-cost-us 1 --control-queue-entry-cost-us 1 \
     --control-candidate-cost-us 1 --control-target-cost-us 1 \

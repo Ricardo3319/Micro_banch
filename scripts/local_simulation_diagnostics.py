@@ -220,10 +220,12 @@ def read_profiles(path: pathlib.Path) -> dict[str, dict[str, str]]:
     profiles = {row["profile"]: row for row in rows}
     if len(profiles) != len(rows):
         raise ValueError("profiles.csv contains duplicate profile names")
-    if set(profiles) != set(PROFILE_SPECS):
+    unknown = set(profiles) - set(PROFILE_SPECS)
+    if unknown:
         raise ValueError(
-            f"profile set mismatch: expected={set(PROFILE_SPECS)} actual={set(profiles)}")
-    for name, (dimension, value, _) in PROFILE_SPECS.items():
+            f"profiles.csv contains unknown profiles: {sorted(unknown)}")
+    for name in profiles:
+        dimension, value, _ = PROFILE_SPECS[name]
         row = profiles[name]
         if row["dimension"] != dimension or row["value"] != value:
             raise ValueError(
@@ -388,7 +390,8 @@ def read_and_validate(paths: list[pathlib.Path]) -> list[dict[str, str]]:
     return rows
 
 
-def validate_matrix(rows: list[dict[str, str]], tier: str) -> None:
+def validate_matrix(rows: list[dict[str, str]], tier: str,
+                    expected_profiles: set[str]) -> None:
     warmup, measurement, expected_seeds = TIER_COHORTS[tier]
     actual_points = {(row["workload"], number(row, "rho")) for row in rows}
     actual_seeds = {integer(row, "seed") for row in rows}
@@ -398,7 +401,7 @@ def validate_matrix(rows: list[dict[str, str]], tier: str) -> None:
     if actual_seeds != expected_seeds:
         raise ValueError(
             f"seed mismatch for tier={tier}: expected={expected_seeds} actual={actual_seeds}")
-    expected_rows = (len(PROFILE_SPECS) * len(ANCHOR_POINTS)
+    expected_rows = (len(expected_profiles) * len(ANCHOR_POINTS)
                      * len(PRIMARY_METHODS) * len(expected_seeds))
     if len(rows) != expected_rows:
         raise ValueError(f"matrix row count mismatch: expected={expected_rows} actual={len(rows)}")
@@ -710,7 +713,7 @@ def main() -> int:
     if found_profiles != set(profiles):
         raise ValueError(
             f"profile manifest/raw mismatch: manifest={set(profiles)} raw={found_profiles}")
-    validate_matrix(rows, args.tier)
+    validate_matrix(rows, args.tier, set(profiles))
     summarize(rows, profiles, args.out_dir)
     write_manifest(args, rows, profiles)
     print(f"validated and summarized {len(rows)} rows across {len(profiles)} profiles")
