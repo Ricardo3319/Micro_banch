@@ -28,7 +28,7 @@ Install the build tools:
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y build-essential cmake ninja-build python3 tmux
+sudo apt-get install -y git build-essential cmake ninja-build python3 tmux
 ```
 
 Clone the experiment branch, build, and run the test gate:
