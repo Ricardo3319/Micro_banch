@@ -1,0 +1,7 @@
+=== RescueSched Main: W2 rho/seed sweep ===
+[1/4] L0_RandomCore rho=0.85 seed=11 P99=3e+02 P999=4e+02 SLO=0.445 rescue_moves=0 BMR=0
+[2/4] L1_WorkStealingPolling rho=0.85 seed=11 P99=1e+02 P999=1e+02 SLO=0.02 rescue_moves=0 BMR=0
+[3/4] M0_AltoThreshold rho=0.85 seed=11 P99=2e+02 P999=2e+02 SLO=0.005 rescue_moves=0 BMR=0
+[4/4] M1_RescueSched rho=0.85 seed=11 P99=2e+02 P999=2e+02 SLO=0.005 rescue_moves=85 BMR=0.988235
+
+RescueSched main done -> /home/ricardo/projects/Micro_banch/artifacts/step-22-local-simulation-diagnostics/smoke/raw/epsilon-5__w2.csv

@@ -1,0 +1,15 @@
+=== RescueSched Main: W3 rho/seed sweep ===
+[1/12] L0_RandomCore rho=0.7 seed=11 P99=9e+02 P999=9e+02 SLO=0.36 rescue_moves=0 BMR=0
+[2/12] L1_WorkStealingPolling rho=0.7 seed=11 P99=2e+02 P999=3e+02 SLO=0.005 rescue_moves=0 BMR=0
+[3/12] M0_AltoThreshold rho=0.7 seed=11 P99=2e+02 P999=4e+02 SLO=0.025 rescue_moves=0 BMR=0
+[4/12] M1_RescueSched rho=0.7 seed=11 P99=2e+02 P999=4e+02 SLO=0.02 rescue_moves=65 BMR=0.984615
+[5/12] L0_RandomCore rho=0.85 seed=11 P99=1e+03 P999=1e+03 SLO=0.395 rescue_moves=0 BMR=0
+[6/12] L1_WorkStealingPolling rho=0.85 seed=11 P99=2e+02 P999=3e+02 SLO=0.005 rescue_moves=0 BMR=0
+[7/12] M0_AltoThreshold rho=0.85 seed=11 P99=2e+02 P999=3e+02 SLO=0.035 rescue_moves=0 BMR=0
+[8/12] M1_RescueSched rho=0.85 seed=11 P99=2e+02 P999=3e+02 SLO=0.035 rescue_moves=76 BMR=0.986842
+[9/12] L0_RandomCore rho=0.9 seed=11 P99=1e+03 P999=1e+03 SLO=0.415 rescue_moves=0 BMR=0
+[10/12] L1_WorkStealingPolling rho=0.9 seed=11 P99=2e+02 P999=3e+02 SLO=0.005 rescue_moves=0 BMR=0
+[11/12] M0_AltoThreshold rho=0.9 seed=11 P99=2e+02 P999=3e+02 SLO=0.025 rescue_moves=0 BMR=0
+[12/12] M1_RescueSched rho=0.9 seed=11 P99=2e+02 P999=3e+02 SLO=0.03 rescue_moves=78 BMR=0.987179
+
+RescueSched main done -> /home/ricardo/projects/Micro_banch/artifacts/step-22-local-simulation-diagnostics/smoke/raw/placement-flow-zipf__w3.csv
