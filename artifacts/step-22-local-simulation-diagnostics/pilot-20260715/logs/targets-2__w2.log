@@ -1,0 +1,23 @@
+=== RescueSched Main: W2 rho/seed sweep ===
+[1/20] L0_RandomCore rho=0.85 seed=11 P99=8e+02 P999=1e+03 SLO=0.6312 rescue_moves=0 BMR=0
+[2/20] L1_WorkStealingPolling rho=0.85 seed=11 P99=1e+02 P999=1e+02 SLO=0.048 rescue_moves=0 BMR=0
+[3/20] M0_AltoThreshold rho=0.85 seed=11 P99=2e+02 P999=2e+02 SLO=0.0318 rescue_moves=0 BMR=0
+[4/20] M1_RescueSched rho=0.85 seed=11 P99=2e+02 P999=2e+02 SLO=0.02 rescue_moves=2107 BMR=0.996678
+[5/20] L0_RandomCore rho=0.85 seed=23 P99=4e+03 P999=4e+03 SLO=0.7622 rescue_moves=0 BMR=0
+[6/20] L1_WorkStealingPolling rho=0.85 seed=23 P99=7e+02 P999=8e+02 SLO=0.4622 rescue_moves=0 BMR=0
+[7/20] M0_AltoThreshold rho=0.85 seed=23 P99=5e+02 P999=5e+02 SLO=0.5126 rescue_moves=0 BMR=0
+[8/20] M1_RescueSched rho=0.85 seed=23 P99=3e+03 P999=4e+03 SLO=0.3542 rescue_moves=1539 BMR=0.998051
+[9/20] L0_RandomCore rho=0.85 seed=37 P99=5e+03 P999=5e+03 SLO=0.7832 rescue_moves=0 BMR=0
+[10/20] L1_WorkStealingPolling rho=0.85 seed=37 P99=1e+03 P999=1e+03 SLO=0.4776 rescue_moves=0 BMR=0
+[11/20] M0_AltoThreshold rho=0.85 seed=37 P99=5e+02 P999=6e+02 SLO=0.5242 rescue_moves=0 BMR=0
+[12/20] M1_RescueSched rho=0.85 seed=37 P99=3e+03 P999=3e+03 SLO=0.3542 rescue_moves=1671 BMR=0.997606
+[13/20] L0_RandomCore rho=0.85 seed=47 P99=6e+02 P999=8e+02 SLO=0.6464 rescue_moves=0 BMR=0
+[14/20] L1_WorkStealingPolling rho=0.85 seed=47 P99=1e+02 P999=2e+02 SLO=0.065 rescue_moves=0 BMR=0
+[15/20] M0_AltoThreshold rho=0.85 seed=47 P99=2e+02 P999=2e+02 SLO=0.0408 rescue_moves=0 BMR=0
+[16/20] M1_RescueSched rho=0.85 seed=47 P99=2e+02 P999=2e+02 SLO=0.026 rescue_moves=2151 BMR=0.996746
+[17/20] L0_RandomCore rho=0.85 seed=59 P99=1e+03 P999=1e+03 SLO=0.6256 rescue_moves=0 BMR=0
+[18/20] L1_WorkStealingPolling rho=0.85 seed=59 P99=2e+02 P999=2e+02 SLO=0.0674 rescue_moves=0 BMR=0
+[19/20] M0_AltoThreshold rho=0.85 seed=59 P99=2e+02 P999=2e+02 SLO=0.0694 rescue_moves=0 BMR=0
+[20/20] M1_RescueSched rho=0.85 seed=59 P99=2e+02 P999=3e+02 SLO=0.0518 rescue_moves=2141 BMR=0.997665
+
+RescueSched main done -> artifacts/step-22-local-simulation-diagnostics/pilot-20260715/raw/targets-2__w2.csv

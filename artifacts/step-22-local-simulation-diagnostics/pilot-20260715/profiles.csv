@@ -1,0 +1,22 @@
+profile,dimension,value,notes,simulator_arguments
+baseline,baseline,corrected-default,frozen-corrected-configuration,default
+placement-flow-uniform,placement,flow-affine-uniform,simulator-model-not-RSS-measurement,--placement flow-affine --flow-count 4096 --flow-zipf-alpha 0
+placement-flow-zipf,placement,flow-affine-zipf-1.1,simulator-model-not-RSS-measurement,--placement flow-affine --flow-count 4096 --flow-zipf-alpha 1.1
+handoff-0,handoff-us,0,configured-simulated-delay,--migration-cost-us 0
+handoff-2,handoff-us,2,configured-simulated-delay,--migration-cost-us 2
+handoff-5,handoff-us,5,configured-simulated-delay,--migration-cost-us 5
+check-2,check-period-us,2,one-factor-at-a-time,--check-period-us 2
+check-5,check-period-us,5,one-factor-at-a-time,--check-period-us 5
+scan-32,scan-depth,32,one-factor-at-a-time,--scan-depth 32
+scan-128,scan-depth,128,one-factor-at-a-time,--scan-depth 128
+candidates-8,k-candidates,8,one-factor-at-a-time,--k-candidates 8
+candidates-32,k-candidates,32,one-factor-at-a-time,--k-candidates 32
+targets-2,h-targets,2,one-factor-at-a-time,--h-targets 2
+targets-8,h-targets,8,one-factor-at-a-time,--h-targets 8
+budget-2,budget-per-check,2,one-factor-at-a-time,--budget-per-check 2
+budget-4,budget-per-check,4,one-factor-at-a-time,--budget-per-check 4
+epsilon-0,epsilon-us,0,one-factor-at-a-time,--epsilon-us 0
+epsilon-5,epsilon-us,5,one-factor-at-a-time,--epsilon-us 5
+ewma-0.01,ewma-alpha,0.01,one-factor-at-a-time,--ewma-alpha 0.01
+ewma-0.20,ewma-alpha,0.20,one-factor-at-a-time,--ewma-alpha 0.20
+control-accounting-unit,control-cost,normalized-1us-per-operation,accounting-only-does-not-advance-time,--control-check-cost-us 1 --control-queue-entry-cost-us 1 --control-candidate-cost-us 1 --control-target-cost-us 1 --control-estimator-update-cost-us 1 --control-poll-cost-us 1

@@ -1,0 +1,23 @@
+=== RescueSched Main: W2 rho/seed sweep ===
+[1/20] L0_RandomCore rho=0.85 seed=11 P99=2e+04 P999=2e+04 SLO=0.7062 rescue_moves=0 BMR=0
+[2/20] L1_WorkStealingPolling rho=0.85 seed=11 P99=1e+02 P999=2e+02 SLO=0.0494 rescue_moves=0 BMR=0
+[3/20] M0_AltoThreshold rho=0.85 seed=11 P99=2e+02 P999=2e+02 SLO=0.0236 rescue_moves=0 BMR=0
+[4/20] M1_RescueSched rho=0.85 seed=11 P99=2e+02 P999=2e+02 SLO=0.0116 rescue_moves=2670 BMR=0.997753
+[5/20] L0_RandomCore rho=0.85 seed=23 P99=2e+04 P999=2e+04 SLO=0.7724 rescue_moves=0 BMR=0
+[6/20] L1_WorkStealingPolling rho=0.85 seed=23 P99=7e+02 P999=1e+03 SLO=0.4674 rescue_moves=0 BMR=0
+[7/20] M0_AltoThreshold rho=0.85 seed=23 P99=5e+02 P999=5e+02 SLO=0.51 rescue_moves=0 BMR=0
+[8/20] M1_RescueSched rho=0.85 seed=23 P99=1e+04 P999=1e+04 SLO=0.3574 rescue_moves=1724 BMR=0.9971
+[9/20] L0_RandomCore rho=0.85 seed=37 P99=2e+04 P999=2e+04 SLO=0.7476 rescue_moves=0 BMR=0
+[10/20] L1_WorkStealingPolling rho=0.85 seed=37 P99=9e+02 P999=1e+03 SLO=0.4804 rescue_moves=0 BMR=0
+[11/20] M0_AltoThreshold rho=0.85 seed=37 P99=5e+02 P999=6e+02 SLO=0.527 rescue_moves=0 BMR=0
+[12/20] M1_RescueSched rho=0.85 seed=37 P99=2e+04 P999=2e+04 SLO=0.4168 rescue_moves=1296 BMR=0.998457
+[13/20] L0_RandomCore rho=0.85 seed=47 P99=2e+04 P999=2e+04 SLO=0.6834 rescue_moves=0 BMR=0
+[14/20] L1_WorkStealingPolling rho=0.85 seed=47 P99=1e+02 P999=2e+02 SLO=0.0678 rescue_moves=0 BMR=0
+[15/20] M0_AltoThreshold rho=0.85 seed=47 P99=2e+02 P999=2e+02 SLO=0.0528 rescue_moves=0 BMR=0
+[16/20] M1_RescueSched rho=0.85 seed=47 P99=2e+02 P999=2e+02 SLO=0.0366 rescue_moves=2636 BMR=0.995827
+[17/20] L0_RandomCore rho=0.85 seed=59 P99=2e+04 P999=2e+04 SLO=0.6912 rescue_moves=0 BMR=0
+[18/20] L1_WorkStealingPolling rho=0.85 seed=59 P99=2e+02 P999=3e+02 SLO=0.0698 rescue_moves=0 BMR=0
+[19/20] M0_AltoThreshold rho=0.85 seed=59 P99=2e+02 P999=2e+02 SLO=0.0614 rescue_moves=0 BMR=0
+[20/20] M1_RescueSched rho=0.85 seed=59 P99=2e+02 P999=6e+02 SLO=0.0428 rescue_moves=2734 BMR=0.997805
+
+RescueSched main done -> artifacts/step-22-local-simulation-diagnostics/pilot-20260715/raw/placement-flow-zipf__w2.csv
