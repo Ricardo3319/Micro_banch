@@ -116,7 +116,8 @@ def main() -> int:
         })
 
     with (args.out_dir / "summary.csv").open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=summary_fields)
+        writer = csv.DictWriter(
+            handle, fieldnames=summary_fields, lineterminator="\n")
         writer.writeheader()
         writer.writerows(summary_rows)
 
@@ -193,7 +194,8 @@ def main() -> int:
 
     with (args.out_dir / "paired_comparisons.csv").open(
             "w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=comparison_fields)
+        writer = csv.DictWriter(
+            handle, fieldnames=comparison_fields, lineterminator="\n")
         writer.writeheader()
         writer.writerows(comparisons)
 

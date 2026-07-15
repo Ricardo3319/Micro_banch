@@ -12,9 +12,9 @@ Primary simulator target:
 - Main simulator entry: `src/app/main.cpp`
 - Main physical-ready CLI mode: `rescue-main`
 - Minimal config: `config/rescuesched.yaml`
-- Current source commit recorded when this plan was written: `4f8bed8`
-- Worktree state at plan creation: dirty, because this change set is not yet
-  committed.
+- Corrected Linux simulation revision: `ba81d825eaf1e0b6701e21dbb6462c2a801da0b9`
+- The physical preflight and runbook are later uncommitted additions until this
+  cleanup is reviewed and committed.
 
 ## CloudLab Build Plan
 
@@ -92,9 +92,12 @@ Use the built-in migration-cost microbenchmark before trace replay:
   --out-dir artifacts/cloudlab-$(hostname)
 ```
 
-Output:
+Output when an explicit file is supplied:
 
-- `artifacts/<run>/step-17-rescuesched-closure/migration_cost_microbench.csv`
+- `<output>/migration-cost.csv`
+
+The physical preflight stores three repetitions under
+`physical-results/<run>/microbench/` and records a stability summary.
 
 The current benchmark reports:
 
@@ -175,8 +178,8 @@ Trace replay failures:
 
 Result-alignment failure:
 
-- Directional conclusions for RescueSched versus `L1_WorkStealing` and
-  `M0_IntraHostProactive` reverse on the same workload/rho point.
+- Directional conclusions for RescueSched versus `L1_WorkStealingPolling` and
+  `M0_AltoThreshold` reverse on the same workload/rho point.
 - Simulator median P99/P999 and physical median P99/P999 differ by more than
   20 percent after microbench-calibrated migration cost, unless explained by a
   documented workload or implementation difference.
@@ -190,7 +193,8 @@ Result-alignment failure:
   rejects, migrations, and deadline misses.
 - Run manifest generator that records commit, build, host, command, and output
   CSV paths.
-- Physical baseline implementations or wrappers for `L1_WorkStealing` and
-  `M0_IntraHostProactive`.
+- Physical implementations or wrappers for `L0_RandomCore`,
+  `L1_WorkStealingPolling`, `M0_AltoThreshold`, and `M1_RescueSched` in one
+  runtime.
 - A comparison script that consumes simulator CSVs and physical CSVs into one
   metrics table.

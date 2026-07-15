@@ -1,0 +1,55 @@
+% !TEX root = ../main.tex
+\subsection{Setup}
+We evaluate on a discrete-event simulator of a single host with $N{=}16$
+pinned worker cores. New requests are randomly assigned to cores; only
+waiting requests migrate; running requests do not. Unless noted, the
+defaults are $check{=}1\,\mu s$, $K{=}16$, $H{=}4$, $B{=}1$,
+$\epsilon{=}2\,\mu s$, $\theta{=}0$, and $M{=}0.5\,\mu s$. Workloads are
+W1 (near-saturation), W2 (MMPP burst-skew), and W3 (heavy-tailed).
+Baselines are RSS-local FIFO (d-FCFS), work stealing, intra-host
+proactive migration, and threshold/shortest-queue migration. All numbers
+are medians over 5 seeds unless a 10-seed CI is reported.
+
+\note{Regenerate Table~\ref{tab:main} and figures from
+artifacts/step-15-rescuesched and step-17-rescuesched-closure via
+scripts/rescue\_analysis.py before submission.}
+
+\begin{table}[t]
+\centering
+\caption{W3 heavy-tail, median over 5 seeds. RescueSched lowers SLO
+violation while migrating fewer requests than proactive migration.}
+\label{tab:main}
+\small
+\begin{tabular}{@{}llrrrr@{}}
+\toprule
+$\rho$ & Method & SLO viol. & Move rate & BMR & UMR \\
+\midrule
+0.85 & Work stealing        & 0.203 & 0.328 & 0.00 & 0.00 \\
+0.85 & Proactive mig.\ (M0) & 0.154 & 0.400 & 0.00 & 0.00 \\
+0.85 & \textbf{RescueSched} & \textbf{0.094} & 0.286 & 1.00 & 0.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Main Result}
+On W3 at $\rho{=}0.85$ RescueSched cuts the SLO violation ratio to
+$0.094$ from $0.203$ (work stealing) and $0.154$ (proactive migration),
+while its move rate ($0.286$) is \emph{lower} than proactive migration's
+($0.400$)---the gain is quality, not volume. Its P99/P99.9 are not always
+the lowest; RescueSched optimizes SLO rescue and migration usefulness,
+not raw tail latency, and we state this trade-off explicitly.
+
+\subsection{Ablations}
+Removing rescuability (\emph{NoRescuable}) migrates far more
+($0.60$ vs $0.29$) but collapses BMR to $0.31$, raises UMR to $0.69$, and
+degrades SLO violation to $0.169$---confirming that task-level
+rescuability is necessary. Removing target safety leaves \emph{actual}
+harmful migrations at $0$ under the current FIFO append-to-tail model; it
+reduces only \emph{predicted} target-risk exposure. We report this as a
+model boundary rather than a strong claim.
+
+\subsection{Sensitivity and Boundaries}
+$check{=}1\,\mu s$ is the operating point; $5\,\mu s$ misses the rescue
+window. Budget $B{=}1$ dominates $B{=}2,4$, which add unsaved migrations.
+Under W1 global overload ($\rho{=}0.95$) RescueSched performs $0$
+migrations, confirming it does not fabricate capacity.

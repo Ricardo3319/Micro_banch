@@ -1,0 +1,103 @@
+%% RescueSched --- INFOCOM submission
+%% Build: latexmk -pdf main.tex   (uses pdflatex + bibtex + IEEEtran.bst)
+%% Class: IEEEtran conference (double-column, 10pt, letterpaper)
+\documentclass[conference]{IEEEtran}
+
+% --- IEEE requires these to be loaded ---
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{url}
+
+% Correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\graphicspath{{figures/}}
+
+% Editorial note macro (turn off before submission by setting to {})
+\newcommand{\note}[1]{\textcolor{red}{[#1]}}
+
+\begin{document}
+
+\title{RescueSched: Task-Level SLO Rescue via Selective Descriptor
+Migration for Microsecond-Scale RPC Services}
+
+% INFOCOM is single-blind: author block is shown at submission.
+% Comment out and use \author{Anonymous} if a given year is double-blind.
+\author{%
+\IEEEauthorblockN{First Author\IEEEauthorrefmark{1},
+Second Author\IEEEauthorrefmark{2}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Affiliation One,
+\texttt{email1@example.com}}
+\IEEEauthorblockA{\IEEEauthorrefmark{2}Affiliation Two,
+\texttt{email2@example.com}}
+}
+
+\maketitle
+
+\begin{abstract}
+Latency-critical RPC services on commodity multi-core servers commonly
+pin one worker per core with a per-core request queue. Under bursty,
+skewed, or heavy-tailed load, transient sper-core queue imbalance causes
+P99/P99.9 tail-latency SLO violations even when the server is not
+globally overloaded. Existing work stealing, work shedding, and
+threshold-based migration answer only \emph{which core has too much
+work}, not \emph{which queued request will miss its SLO}, \emph{whether
+it can still be saved after migration}, and \emph{whether a target core
+can absorb it safely}. We present RescueSched, which reframes intra-host
+migration from load balancing to \emph{SLO rescue}: it migrates only a
+queued-but-not-running request that is locally doomed, remotely
+rescuable under a migration-cost-aware completion-time estimate, and
+safe for the target (no predicted increase in target-side violations).
+On a discrete-event simulator of a 16-core host, RescueSched reduces the
+SLO violation ratio on a heavy-tailed workload at $\rho{=}0.85$ from
+$0.20$ (work stealing) and $0.15$ (proactive migration) to $0.094$,
+while migrating \emph{fewer} requests. Ablations show the gain comes
+from a higher beneficial-migration ratio rather than migration volume,
+and that RescueSched correctly suppresses migration under global
+overload.
+\end{abstract}
+
+\begin{IEEEkeywords}
+tail latency, SLO, microsecond-scale RPC, request migration, multi-core
+scheduling
+\end{IEEEkeywords}
+
+\section{Introduction}
+\label{sec:intro}
+\input{sections/01-introduction}
+
+\section{Background and Motivation}
+\label{sec:background}
+\input{sections/02-background}
+
+\section{System Model}
+\label{sec:model}
+\input{sections/03-model}
+
+\section{RescueSched Design}
+\label{sec:design}
+\input{sections/04-design}
+
+\section{Evaluation}
+\label{sec:eval}
+\input{sections/05-evaluation}
+
+\section{Related Work}
+\label{sec:related}
+\input{sections/06-related}
+
+\section{Conclusion}
+\label{sec:conclusion}
+\input{sections/07-conclusion}
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}

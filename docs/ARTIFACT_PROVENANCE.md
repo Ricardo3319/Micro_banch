@@ -1,196 +1,68 @@
-# Artifact and Figure Provenance
+# RescueSched Artifact Provenance
 
-## RescueSched validity-v2 outputs (2026-07-12)
+This file defines the active evidence chain after removal of the pre-corrected
+Step 00-18 experiments. Historical AQB/DQB and older RescueSched outputs are not
+paper evidence and are no longer stored in the active tree.
 
-Corrected runs are written under
-`artifacts/step-19-rescuesched-validity-v2/`. They use schema
-`rescuesched-v2`, record the workload-trace SHA-256, and use task-ID-based
-warmup and measurement cohorts. They must not overwrite or be pooled with Step
-15, 17, or 18 CSV files, which remain historical evidence under older
-semantics.
+## Evidence directories
 
-Validate new output with:
-
-```powershell
-python tests/integration/validate_rescue_csv_schema.py <v2.csv>
-```
-
-Historical analysis requires the explicit `--allow-legacy` switch.
-
-This file binds each existing figure family to its input CSVs, generation
-script, command, and run metadata that must be recorded when regenerating.
-
-Current source commit recorded when this file was written: `4f8bed8`.
-Worktree state at creation: dirty, because this change set is not yet
-committed.
-
-## Required Run Metadata
-
-Every regenerated artifact directory should include a manifest with:
-
-- `git rev-parse HEAD`
-- `git status --short`
-- exact build command
-- exact simulator command
-- exact analysis script command
-- compiler and CMake versions
-- hostname and OS/kernel version
-- input CSV path, output figure path, and timestamp
-
-Minimal build command:
-
-```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --config Release
-```
-
-Minimal test gate:
-
-```bash
-ctest --test-dir build --output-on-failure
-```
-
-## Simulator CSV Producers
-
-| CSV | Producer command |
-| --- | --- |
-| `artifacts/step-15-rescuesched/rescue_main.csv` | `./build/simulator --mode rescue-main` |
-| `artifacts/step-15-rescuesched/rescue_w3_only.csv` | `./build/simulator --mode rescue-w3-only` |
-| `artifacts/step-15-rescuesched/rescue_ablation.csv` | `./build/simulator --mode rescue-ablation` |
-| `artifacts/step-15-rescuesched/rescue_check_sweep.csv` | `./build/simulator --mode rescue-check-sweep` |
-| `artifacts/step-15-rescuesched/rescue_overload_sanity.csv` | `./build/simulator --mode rescue-overload-sanity` |
-| `artifacts/step-17-rescuesched-closure/rescue_w2_burst.csv` | `./build/simulator --mode rescue-w2-burst` |
-| `artifacts/step-17-rescuesched-closure/rescue_robustness_10seed.csv` | `./build/simulator --mode rescue-robustness-10seed` |
-| `artifacts/step-17-rescuesched-closure/migration_cost_microbench.csv` | `./build/simulator --mode rescue-cost-microbench` |
-| `artifacts/step-17-rescuesched-closure/rescue_calibration.csv` | `./build/simulator --mode rescue-calibration` |
-| `artifacts/step-18-infocom-readiness/rescue_estimator_main.csv` | `./build/simulator --mode rescue-estimator-main` |
-| `artifacts/step-18-infocom-readiness/rescue_estimator_w2.csv` | `./build/simulator --mode rescue-estimator-w2` |
-| `artifacts/step-18-infocom-readiness/rescue_cost_calibration.csv` | `./build/simulator --mode rescue-cost-calibration` |
-| `artifacts/step-18-infocom-readiness/rescue_w2_boundary.csv` | `./build/simulator --mode rescue-w2-boundary` |
-| `artifacts/step-18-infocom-readiness/rescue_hybrid_main.csv` | `./build/simulator --mode rescue-hybrid-main` |
-| `artifacts/step-18-infocom-readiness/rescue_target_safety_stress.csv` | `./build/simulator --mode rescue-target-safety-stress` |
-
-Use `--out-dir DIR` to relocate these outputs under a different artifact root.
-Use `--output FILE.csv` only for a single-output mode.
-
-## RescueSched Figures
-
-Generation command:
-
-```bash
-python scripts/rescue_analysis.py
-```
-
-| Figure outputs | Input CSVs | Script function / source |
+| Directory | Role | Paper status |
 | --- | --- | --- |
-| `artifacts/step-16-rescuesched-readiness/figures/fig_rescue_slo_vs_rho.{png,pdf}` | `artifacts/step-15-rescuesched/rescue_main.csv`, `artifacts/step-15-rescuesched/rescue_w3_only.csv` | `scripts/rescue_analysis.py` |
-| `artifacts/step-16-rescuesched-readiness/figures/fig_rescue_ablation_quality.{png,pdf}` | `artifacts/step-15-rescuesched/rescue_ablation.csv` | `scripts/rescue_analysis.py` |
-| `artifacts/step-16-rescuesched-readiness/figures/fig_rescue_budget_sweep.{png,pdf}` | `artifacts/step-15-rescuesched/rescue_check_sweep.csv` | `scripts/rescue_analysis.py` |
-| `artifacts/step-17-rescuesched-closure/figures/fig_w2_burst_slo_vs_rho.{png,pdf}` | `artifacts/step-17-rescuesched-closure/rescue_w2_burst.csv` | `scripts/rescue_analysis.py` |
-| `artifacts/step-17-rescuesched-closure/figures/fig_rescue_calibration.{png,pdf}` | `artifacts/step-17-rescuesched-closure/rescue_calibration.csv` | `scripts/rescue_analysis.py` |
+| `artifacts/step-20-corrected-pilot/` | Development seeds, short cohorts | Directional check only |
+| `artifacts/step-20b-corrected-holdout-pilot/` | Frozen holdout seeds, short cohorts | Directional check only |
+| `artifacts/step-21-corrected-full/` | Ten seeds, full cohorts, paired analysis | Authoritative simulation evidence |
 
-Summary outputs from the same script:
+The full result contains raw method rows in `w1.csv`, `w2.csv`, and `w3.csv`;
+derived medians in `summary.csv`; paired bootstrap comparisons in
+`paired_comparisons.csv`; and the pre-registered decision in `go_no_go.md`.
+Its `manifest.md` records the source revision, Linux environment, exact rerun
+command, checksums, and claim boundary.
 
-- `artifacts/step-16-rescuesched-readiness/median_summary.csv`
-- `artifacts/step-16-rescuesched-readiness/readiness_report.md`
-- `artifacts/step-17-rescuesched-closure/closure_median_summary.csv`
-- `artifacts/step-17-rescuesched-closure/ci_summary.csv`
-- `artifacts/step-17-rescuesched-closure/summary.md`
+Generated figures are deliberately excluded for now. They can be regenerated
+from the authoritative CSVs with `scripts/corrected_eval_plots.py` after the
+paper figure plan is frozen.
 
-## INFOCOM Readiness Tables
-
-Generation command:
+## Reproduction
 
 ```bash
-python scripts/infocom_readiness_analysis.py
-```
-
-Inputs:
-
-- `artifacts/step-18-infocom-readiness/rescue_estimator_main.csv`
-- `artifacts/step-18-infocom-readiness/rescue_estimator_w2.csv`
-- `artifacts/step-18-infocom-readiness/rescue_cost_calibration.csv`
-- `artifacts/step-18-infocom-readiness/rescue_w2_boundary.csv`
-- `artifacts/step-18-infocom-readiness/rescue_hybrid_main.csv`
-- `artifacts/step-18-infocom-readiness/rescue_target_safety_stress.csv`
-- `artifacts/step-15-rescuesched/rescue_overload_sanity.csv`
-
-Outputs:
-
-- `artifacts/step-18-infocom-readiness/infocom_median_summary.csv`
-- `artifacts/step-18-infocom-readiness/infocom_ci_summary.csv`
-- `artifacts/step-18-infocom-readiness/summary.md`
-
-The INFOCOM readiness script currently generates tables and summary text, not
-figure files.
-
-## Corrected Full Evaluation (Current Paper Evidence)
-
-The authoritative corrected experiment is stored under
-`artifacts/step-21-corrected-full/`. Its `manifest.md` records the code commit,
-configuration, seeds, commands, row counts, schema checks, and claim boundary.
-The inputs are `w1.csv`, `w2.csv`, and `w3.csv`; derived outputs are
-`summary.csv`, `paired_comparisons.csv`, and `go_no_go.md`.
-
-Generation and analysis commands:
-
-```powershell
-pwsh -File scripts/run_corrected_eval.ps1 -Tier full -Workload W3
-pwsh -File scripts/run_corrected_eval.ps1 -Tier full -Workload W1
-pwsh -File scripts/run_corrected_eval.ps1 -Tier full -Workload W2
-python scripts/corrected_eval_analysis.py --tier full --out-dir artifacts/step-21-corrected-full --inputs artifacts/step-21-corrected-full/w3.csv artifacts/step-21-corrected-full/w2.csv artifacts/step-21-corrected-full/w1.csv
-python scripts/corrected_eval_plots.py --input-dir artifacts/step-21-corrected-full --out-dir artifacts/step-21-corrected-full/figures
-```
-
-Current paper figures:
-
-| Figure outputs | Inputs |
-| --- | --- |
-| `figures/fig_w3_deadline_violation.{png,pdf}` | `w3.csv` |
-| `figures/fig_w3_migrated_work.{png,pdf}` | `w3.csv` |
-| `figures/fig_w2_deadline_tail_tradeoff.{png,pdf}` | `w2.csv` |
-
-## Legacy Figures
-
-Generation command:
-
-```bash
-python scripts/generate_charts.py
-```
-
-| Figure outputs | Input CSVs | Script function |
-| --- | --- | --- |
-| `docs/figures/fig1_w1_p99_full.{png,pdf}` | `artifacts/step-02-tier2/metrics_scan.csv` | `fig_w1_p99_full` |
-| `docs/figures/fig2_w1_p999_full.{png,pdf}` | `artifacts/step-02-tier2/metrics_scan.csv` | `fig_w1_p999_full` |
-| `docs/figures/fig3_w2_bar.{png,pdf}` | `artifacts/step-01-tier1/metrics_table.csv` | `fig_w2_bar` |
-| `docs/figures/fig4_w3_ci.{png,pdf}` | `artifacts/step-03-tier3/metrics_table.csv` | `fig_w3_ci` |
-| `docs/figures/fig5_cross_workload.{png,pdf}` | `artifacts/step-02-tier2/metrics_scan.csv`, `artifacts/step-01-tier1/metrics_table.csv`, `artifacts/step-03-tier3/metrics_table.csv` | `fig_cross_workload` |
-| `docs/figures/fig6_migration_metrics.{png,pdf}` | `artifacts/step-02-tier2/metrics_scan.csv` | `fig_migration_metrics` |
-| `docs/figures/fig7_sensitivity.{png,pdf}` | `artifacts/step-04b-sensitivity/sensitivity_scan.csv` | `fig_sensitivity` |
-| `docs/figures/fig8_heterogeneous.{png,pdf}` | `artifacts/step-04c-heterogeneous/metrics_table.csv`, `artifacts/step-01-tier1/metrics_table.csv` | `fig_heterogeneous` |
-| `docs/figures/fig9_negative_case.{png,pdf}` | `artifacts/step-02-tier2/metrics_scan.csv`, `artifacts/step-03-tier3/metrics_table.csv`, `artifacts/step-01-tier1/metrics_table.csv` | `fig_negative_case` |
-
-## Validation Commands
-
-CSV schema gate:
-
-```bash
-python tests/integration/validate_rescue_csv_schema.py \
-  artifacts/step-15-rescuesched/rescue_main.csv \
-  artifacts/step-18-infocom-readiness/rescue_estimator_main.csv
-```
-
-CTest gate:
-
-```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
 ctest --test-dir build --output-on-failure
+./build/simulator --mode rescue-smoke
+
+bash scripts/run_corrected_eval.sh pilot build
+bash scripts/run_corrected_eval.sh holdout build
+bash scripts/run_corrected_eval.sh full build
 ```
 
-## Known Gaps
+Validate the raw CSV schema:
 
-- Existing artifact directories do not yet include per-run manifests.
-- Some old RescueSched CSVs predate the current extended header; the schema
-  validator therefore enforces a stable minimum column set and reports optional
-  current columns when absent.
-- Physical-machine figures are not defined yet because physical trace replay
-  and physical result schema are not implemented.
+```bash
+python3 tests/integration/validate_rescue_csv_schema.py \
+  artifacts/step-21-corrected-full/w1.csv \
+  artifacts/step-21-corrected-full/w2.csv \
+  artifacts/step-21-corrected-full/w3.csv
+```
+
+Re-run only deterministic analysis without simulations:
+
+```bash
+python3 scripts/corrected_eval_analysis.py \
+  --tier full \
+  --out-dir artifacts/step-21-corrected-full \
+  --inputs artifacts/step-21-corrected-full/w3.csv \
+           artifacts/step-21-corrected-full/w2.csv \
+           artifacts/step-21-corrected-full/w1.csv
+```
+
+## Physical evidence boundary
+
+`scripts/run_physical_preflight.sh` produces ignored output under
+`physical-results/`. It validates a Linux build, CTest, deterministic smoke,
+descriptor-handoff microbenchmark stability, a short simulator anchor, schema,
+and checksums. It does not implement or validate a real RPC runtime.
+
+No physical result is currently part of the paper evidence chain. That status
+changes only after a committed runtime supports frozen trace replay, all four
+primary policies, paid descriptor movement, instrumentation, paired runs, and
+an auditable physical result manifest.

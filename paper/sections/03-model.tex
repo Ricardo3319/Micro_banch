@@ -1,0 +1,52 @@
+% !TEX root = ../main.tex
+\subsection{Cores, Queues, and Requests}
+Let the server have cores $\mathcal{C}=\{1,\dots,N\}$. Each core $c$
+maintains a FIFO queue $Q_c(t)$ and may execute one request with
+estimated remaining time $R_c(t)$ ($R_c(t){=}0$ if idle). The estimated
+queued workload is
+\begin{equation}
+W_c(t) = R_c(t) + \sum_{r_i \in Q_c(t)} \hat{s}_i ,
+\end{equation}
+where $\hat{s}_i$ is the estimated service time of $r_i$. Each request is
+$r_i=\langle id_i,a_i,D_i,m_i,\hat{s}_i,c_i,state_i\rangle$ with deadline
+$D_i=a_i+SLO_i$. The scheduler considers only requests with
+$state_i=\texttt{queued}$; running requests are never migrated.
+
+\subsection{Service-Time Estimation}
+Per-method statistics maintain an EWMA estimate
+$\mu_m(t)=(1-\alpha)\mu_m(t-1)+\alpha s_i$, so $\hat{s}_i=\mu_{m_i}(t)$.
+For heavy-tailed methods a conservative quantile $\hat{s}_i=Q_p(S_{m_i})$
+(e.g.\ $p{=}0.90$) may be used as an ablation.
+
+\subsection{Local and Remote Completion-Time Counterfactuals}
+For $r_i$ at source core $s$ with $Before(i,s)$ the requests ahead of it,
+\begin{equation}
+\hat{C}_{\text{local}}(i,s)= t + R_s(t)
+  + \!\!\sum_{r_k \in Before(i,s)}\!\! \hat{s}_k + \hat{s}_i .
+\end{equation}
+Request $r_i$ is \emph{locally doomed} if
+$\hat{C}_{\text{local}}(i,s) > D_i$. With migration cost
+$M_{s,j}(i)=M_{desc}+M_{sync}+M_{numa}(s,j)$ (same-NUMA
+$\Rightarrow M_{numa}{=}0$), appending $r_i$ to the tail of $Q_j$ gives
+\begin{equation}
+\hat{C}_{\text{remote}}(i,j)= t + M_{s,j}(i) + R_j(t)
+  + \!\!\sum_{r_k \in Q_j(t)}\!\! \hat{s}_k + \hat{s}_i .
+\end{equation}
+$r_i$ is \emph{remotely feasible} on $j$ if
+$\hat{C}_{\text{remote}}(i,j)+\epsilon \le D_i$, where $\epsilon$ absorbs
+estimation and cost uncertainty.
+
+\subsection{Rescuability and Target Safety}
+$r_i$ is \emph{rescuable} from $s$ to $j$ iff
+\begin{equation}
+\hat{C}_{\text{local}}(i,s) > D_i
+\;\wedge\;
+\hat{C}_{\text{remote}}(i,j)+\epsilon \le D_i .
+\end{equation}
+This excludes \emph{needless} migration (would meet SLO locally) and
+\emph{unsaved} migration (would miss SLO anyway). The remote slack is
+$Slack_{\text{remote}}(i,j)=D_i-\hat{C}_{\text{remote}}(i,j)$.
+A target is \emph{migration-safe} if the incremental predicted risk
+$\Delta Risk(j|i,t)=Risk_{\text{after}}(j|i,t)-Risk(j,t)\le\theta$,
+where $Risk(j,t)=\sum_{r_x\in Q_j(t)}\mathbb{I}[\hat{C}_{\text{local}}
+(x,j)>D_x]$ and the default strict setting is $\theta=0$.

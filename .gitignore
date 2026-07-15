@@ -54,3 +54,6 @@ Desktop.ini
 *.temp
 *.swp
 *.swo
+
+# Physical host preflight outputs
+physical-results/

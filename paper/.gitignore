@@ -1,0 +1,15 @@
+# latexmk build output (out_dir = build)
+build/
+
+# stray aux files if built in-tree
+*.aux
+*.bbl
+*.blg
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.pdf

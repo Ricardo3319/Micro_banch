@@ -9,8 +9,8 @@
 - `M1_RescueSched_NoTargetSafety` and `M1_RescueSched_NoRescuable`: diagnostic
   ablations only.
 
-Host-level `B0/B1/B2/M0`, AQB, and DQB modes remain implemented for historical
-reproduction but are not part of the current paper interface.
+Host-level `B0/B1/B2/M0`, AQB, and DQB modes remain implemented only for legacy
+CLI compatibility and are not part of the current paper interface.
 
 `L1_WorkStealing` and `M0_IntraHostProactive` are retained as diagnostic legacy
 variants and are not used as the strong paper baselines.
@@ -41,6 +41,6 @@ counterfactual implementation exists; they are not paper claims.
 
 ## Legacy history
 
-Detailed AQB/DQB structures, results, and proposed DQB-v2 experiments are kept
-in the `DQB_*` documents. Those files describe earlier research iterations and
-must not be treated as the current implementation target.
+Detailed AQB/DQB planning files and result artifacts were removed from the
+active tree during the RescueSched cleanup. The remaining code is not an
+implementation target and must not be treated as current paper evidence.

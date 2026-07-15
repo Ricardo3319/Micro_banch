@@ -17,8 +17,9 @@ different core.
 - Primary outcome: deadline violation rate / SLO goodput. P99 and P999 are
   secondary outcomes.
 
-AQB and DQB remain in the repository only as historical experiments and legacy
-CLI modes. Their historical results are not evidence for the RescueSched paper.
+AQB and DQB remain only as legacy CLI-compatible code paths. Their historical
+documents and artifacts have been removed from the active repository surface,
+and they are not evidence for the RescueSched paper.
 
 ## Build and test
 
@@ -60,7 +61,14 @@ bash scripts/run_corrected_eval.sh full 2>&1 | tee corrected-full.log
 The full run writes to `artifacts/step-21-corrected-full`. Record
 `git rev-parse HEAD`, compiler/CMake versions, `uname -a`, `lscpu`, and the CPU
 frequency governor with the result manifest. For the planned physical-machine
-work, continue with `docs/RESCUESCHED_PHYSICAL_REPRODUCTION_PLAN.md`.
+work, run the host preflight first:
+
+```bash
+bash scripts/run_physical_preflight.sh --expected-commit "$(git rev-parse HEAD)"
+```
+
+Then continue with `docs/PHYSICAL_MACHINE_RUNBOOK.md` and
+`docs/RESCUESCHED_PHYSICAL_REPRODUCTION_PLAN.md`.
 
 ### Windows
 
@@ -82,5 +90,15 @@ Run a small configurable RescueSched experiment:
 .\build\simulator.exe --config config/rescuesched.yaml
 ```
 
-Start with `docs/01-project-overview.md` for the repository map and
-`docs/PAPER_CONTRACT_INFOCOM2027.md` for the paper claim boundary.
+## Authoritative documents
+
+- `新实验思想指导.md`: problem model and intended RescueSched mechanism.
+- `docs/PAPER_CONTRACT_INFOCOM2027.md`: authoritative paper claim boundary.
+- `docs/RESCUESCHED_EVALUATION_CONTRACT_V2.md`: frozen simulation methodology.
+- `docs/ARTIFACT_PROVENANCE.md`: current evidence and reproduction commands.
+- `docs/INFOCOM_READINESS.md`: submission blockers and completion criteria.
+- `docs/PHYSICAL_MACHINE_RUNBOOK.md`: directly executable Linux host preflight.
+
+The current simulator evidence is sufficient to freeze the narrow simulation
+claim and start writing. It is not, by itself, a completed INFOCOM systems
+evaluation; real RPC/runtime validation remains required.

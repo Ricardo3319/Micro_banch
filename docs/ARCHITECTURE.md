@@ -14,8 +14,8 @@ The paper path contains three layers:
 
 `L0_RANDOM_CORE`, `L1_WORK_STEALING_POLLING`, and `M0_ALTO_THRESHOLD` are the
 paper comparison methods. The one-shot work-stealing and immediate proactive
-modes remain diagnostics. AQB/DQB host-level migration code remains
-available as legacy history but is outside the RescueSched paper path.
+modes remain diagnostics. AQB/DQB host-level migration code remains available
+only for CLI compatibility and is outside the RescueSched paper path.
 
 ## Module boundaries
 
@@ -25,7 +25,7 @@ available as legacy history but is outside the RescueSched paper path.
 - `include/sim/workloads`: versioned trace generation and service models.
 - `include/sim/metrics`: measurement-cohort latency and migration statistics.
 - `include/sim/algorithms`: current baselines plus legacy host-level methods.
-- `artifacts`: immutable historical output and new schema-versioned runs.
+- `artifacts`: corrected schema-versioned pilot, holdout, and full runs.
 
 ## RescueSched data path
 
@@ -58,6 +58,7 @@ Versioned workload trace
 
 ## Legacy boundary
 
-DQB/AQB documents, scripts, modes, and historical artifacts are retained for
-reproducibility. They are not current architecture specifications and must not
-be mixed with RescueSched result schemas or paper claims.
+DQB/AQB modes remain compiled to avoid an unrelated high-risk code removal.
+Their old planning documents, analysis scripts, figures, and Step 00-18
+artifacts are no longer part of the active repository. Do not mix their output
+with RescueSched v2 schemas or paper claims.
