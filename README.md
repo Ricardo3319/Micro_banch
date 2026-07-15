@@ -70,6 +70,24 @@ bash scripts/run_physical_preflight.sh --expected-commit "$(git rev-parse HEAD)"
 Then continue with `docs/PHYSICAL_MACHINE_RUNBOOK.md` and
 `docs/RESCUESCHED_PHYSICAL_REPRODUCTION_PLAN.md`.
 
+Before CloudLab deployment, the repository also provides an in-process
+pinned-worker synthetic request runtime for lifecycle, concurrency, trace
+replay, and instrumentation validation:
+
+```bash
+bash scripts/run_local_physical_runtime_smoke.sh
+bash scripts/run_pinned_handoff_microbench.sh
+bash scripts/run_sanitizers.sh
+python3 scripts/generate_cloudlab_run_order.py \
+  --output physical-results/cloudlab-run-order.csv
+```
+
+Its outputs remain under `physical-results/` and are explicitly not RPC,
+CloudLab, or paper physical evidence. See
+`docs/PHYSICAL_RUNTIME_CONTRACT.md` for the ownership and evidence contract.
+The future CloudLab execution protocol is frozen in
+`docs/CLOUDLAB_PREREGISTRATION.md`.
+
 ### Windows
 
 ```powershell
@@ -98,6 +116,7 @@ Run a small configurable RescueSched experiment:
 - `docs/ARTIFACT_PROVENANCE.md`: current evidence and reproduction commands.
 - `docs/INFOCOM_READINESS.md`: submission blockers and completion criteria.
 - `docs/PHYSICAL_MACHINE_RUNBOOK.md`: directly executable Linux host preflight.
+- `docs/CLOUDLAB_PREREGISTRATION.md`: frozen paired physical-evaluation plan.
 
 The current simulator evidence is sufficient to freeze the narrow simulation
 claim and start writing. It is not, by itself, a completed INFOCOM systems

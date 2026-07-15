@@ -3,10 +3,10 @@
 本文档用于在 CloudLab 或独立 Ubuntu 裸机上直接执行当前仓库能够支持的
 物理机预检。命令不会生成图，也不会运行完整 corrected full matrix。
 
-当前提交只包含离散事件模拟器和一个进程内 descriptor handoff 微基准，尚未
-包含真实 RPC server、物理 worker runtime 或 trace replay loader。因此本手册
-第一部分能够立即执行；第二部分列出的真实迁移实验必须等 physical runtime
-实现后才能开始，不能把 `rescue-main` 的输出描述为物理迁移结果。
+当前提交包含离散事件模拟器、pinned descriptor handoff 微基准，以及用于
+CloudLab 前实现验证的 pinned-worker synthetic request runtime 和严格 trace
+replay loader。后者不包含真实 RPC server、NIC/RSS 数据路径或 client RTT，
+因此仍不能把其输出或 `rescue-main` 输出描述为物理 RPC 迁移结果。
 
 ## 1. 推荐机器
 
@@ -138,8 +138,8 @@ tmux attach -t rescuesched-preflight
 3. 使用 Release 模式配置和构建。
 4. 执行全部 CTest。
 5. 执行 deterministic `rescue-smoke`。
-6. 执行 3 次 descriptor handoff 微基准。
-7. 检查三次 handoff 结果的相对极差是否不超过 25%。
+6. 执行 legacy 和 pinned descriptor handoff 微基准各 3 次。
+7. 检查各可用 pinned 场景的运行均值相对极差是否不超过 25%。
 8. 执行 W3、`rho=0.85`、seed 11 的短锚点仿真和 schema 校验。
 9. 对结果目录中的文件生成 SHA-256 校验和。
 
@@ -165,6 +165,8 @@ echo "$RESULT_DIR"
 cat "$RESULT_DIR/PREFLIGHT_STATUS.txt"
 cat "$RESULT_DIR/MICROBENCH_STATUS.txt"
 cat "$RESULT_DIR/microbench_summary.csv"
+cat "$RESULT_DIR/pinned-handoff/HANDOFF_STATUS.txt"
+cat "$RESULT_DIR/pinned-handoff/summary.csv"
 ```
 
 成功时应看到：
@@ -189,7 +191,9 @@ tail -n 20 "$RESULT_DIR/logs/short-anchor-schema.log"
 - CMake Release 构建成功。
 - CTest 全部通过。
 - smoke 输出 `RescueSched smoke status: PASS`。
-- 三次 handoff 微基准相对极差不超过 25%。
+- legacy handoff 和各可用 pinned handoff 场景相对极差不超过 25%。
+- 若机器没有第二个 NUMA node，cross-NUMA 必须显示
+  `SKIPPED_UNAVAILABLE_TOPOLOGY`，不能填充推测数字。
 - 短锚点 CSV 通过 `rescuesched-v2` schema 校验。
 
 短锚点只验证执行链路、四方法输出和 CSV schema。其样本量不足以用于性能优劣
@@ -264,14 +268,30 @@ sha256sum -c preflight-*.tar.gz.sha256
 
 开始真实物理实验前，仓库至少需要新增并通过验收：
 
-1. 单机多 worker 的真实请求 runtime，以及明确的 CPU affinity。
-2. W3 请求生成器或冻结 trace replay loader。
-3. 不读取当前请求真实 service time 的在线 estimator。
-4. `L0_RandomCore`、polling work stealing、ALTO-style threshold 和
-   `M1_RescueSched` 的同运行时实现。
-5. request、decision、migration、scheduler overhead 和 deadline miss 日志。
-6. 自动生成的 run manifest 和物理 summary CSV。
-7. 同一冻结 trace 下的方法配对执行和物理结果比较脚本。
+1. 将当前 synthetic runtime 接入真实 RPC server/client 和 NIC/RSS 数据路径。
+2. 增加 client-observed RTT、packet/NIC、perf/cache/NUMA 观测。
+3. 冻结 CloudLab paired runner、方法顺序随机化和失败重跑规则。
+4. 生成物理 summary、置信区间和 simulator-to-physical 对齐表。
+
+已实现但仍仅用于本地 implementation validation 的项目包括：pinned workers、
+冻结 trace replay、完成后更新的 method-keyed EWMA、四策略共享 runtime、
+request/decision/migration 日志、manifest 和 sanitizer gate。执行：
+
+```bash
+bash scripts/run_local_physical_runtime_smoke.sh
+bash scripts/run_pinned_handoff_microbench.sh
+bash scripts/run_sanitizers.sh
+python3 scripts/generate_cloudlab_run_order.py \
+  --output physical-results/cloudlab-run-order.csv
+python3 scripts/generate_cloudlab_run_order.py \
+  --verify physical-results/cloudlab-run-order.csv
+```
+
+正式执行规则见 `docs/CLOUDLAB_PREREGISTRATION.md`。本地 alignment 工具：
+
+```bash
+python3 scripts/analyze_simulator_physical_alignment.py --help
+```
 
 真实 runtime 完成后，第一轮只运行以下四个预注册锚点，不立即扩展矩阵：
 

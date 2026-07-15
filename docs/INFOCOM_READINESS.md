@@ -24,19 +24,23 @@ tail-latency improvement or real-machine deployability.
 - W3 rho 0.70 and W2 tail regressions are retained as required boundaries.
 - CSV v2 schema, deterministic regression tests, and Linux reproduction script.
 - A directly executable physical-host preflight and runbook.
+- A local pinned-worker synthetic runtime with strict trace replay, shared
+  policy implementations, completion-updated EWMA, event logs, and manifests.
+- A pinned descriptor-handoff distribution runner and evidence-separated
+  simulator/runtime alignment tool.
 
 ## P0 blockers before submission
 
-1. Implement a real single-host multicore RPC or request runtime with pinned
-   workers and queued descriptor migration.
-2. Implement frozen trace replay or an equivalent paired physical workload
-   source so every policy receives the same arrivals and request classes.
-3. Port `L0_RandomCore`, `L1_WorkStealingPolling`, `M0_AltoThreshold`, and
-   `M1_RescueSched` into the same physical runtime and resource budget.
-4. Measure end-to-end decision cost, queue handoff, CPU cycles, polling cost,
+1. Integrate the validated pinned-worker request core with a real RPC
+   server/client and NIC/RSS receive path; preserve queued-only migration.
+2. Add client-observed RTT, packet/NIC/RSS, perf/cache, and NUMA instrumentation
+   to the existing request/decision/migration logs.
+3. Confirm that the four locally aligned policy implementations share the same
+   networked runtime and resource budget.
+4. Measure end-to-end decision cost, runtime queue handoff, CPU cycles, polling cost,
    cache misses, and NUMA effects; feed measured handoff distributions back
    into simulator sensitivity experiments.
-5. Run the four pre-registered CloudLab anchors with at least ten paired trace
+5. Run the four anchors under `docs/CLOUDLAB_PREREGISTRATION.md` with ten paired trace
    repetitions: W3 rho 0.70/0.85/0.90 and W2 rho 0.85.
 6. Produce physical manifests, raw logs, summary CSVs, confidence intervals,
    and simulator-versus-physical comparison tables.

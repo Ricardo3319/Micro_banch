@@ -1,8 +1,8 @@
 # RescueSched Physical Reproduction Plan
 
 This document defines the first physical-machine reproduction path for the
-current RescueSched line. It is a plan, not evidence that the physical replay
-path already exists.
+current RescueSched line. The local synthetic replay path now exists, but it is
+not a networked RPC server and is not paper-valid physical evidence.
 
 ## Scope
 
@@ -12,9 +12,9 @@ Primary simulator target:
 - Main simulator entry: `src/app/main.cpp`
 - Main physical-ready CLI mode: `rescue-main`
 - Minimal config: `config/rescuesched.yaml`
-- Corrected Linux simulation revision: `ba81d825eaf1e0b6701e21dbb6462c2a801da0b9`
-- The physical preflight and runbook are later uncommitted additions until this
-  cleanup is reviewed and committed.
+- Authoritative corrected simulation: `artifacts/step-21-corrected-full/`
+- Local runtime contract: `docs/PHYSICAL_RUNTIME_CONTRACT.md`
+- Final-run protocol: `docs/CLOUDLAB_PREREGISTRATION.md`
 
 ## CloudLab Build Plan
 
@@ -96,8 +96,10 @@ Output when an explicit file is supplied:
 
 - `<output>/migration-cost.csv`
 
-The physical preflight stores three repetitions under
-`physical-results/<run>/microbench/` and records a stability summary.
+The physical preflight stores both the legacy condition-variable benchmark and
+the pinned descriptor primitive under `physical-results/<run>/`. The pinned
+runner selects topology-valid CPU pairs and records same-core, same-socket,
+contention, and cross-NUMA distributions where the host exposes them.
 
 The current benchmark reports:
 
@@ -105,23 +107,23 @@ The current benchmark reports:
 - cross-thread condition-variable handoff cost
 - simulator calibration points for low/default/measured/high migration cost
 
-Physical migration-cost calibration should use this as the initial upper-bound
-measurement, then replace it with a pinned-thread or production-runtime
-microbench if the physical implementation has a different handoff path.
+Use `scripts/run_pinned_handoff_microbench.sh` for P50/P95/P99/P999, cycles,
+context switches, affinity, and optional `perf stat` cache misses. These are
+host-local primitive measurements. The final RPC runtime must still measure its
+complete production handoff path.
 
 ## Trace Replay Plan
 
-Current status: the repository does not yet contain a physical trace replay
-loader. This is a required implementation gap before physical validation can be
-claimed.
+Current status: `physical::FrozenTrace` strictly loads simulator v2/v3 CSVs,
+checks schema and trace identity, and feeds the pinned-worker synthetic runtime.
+This closes the local loader blocker. Integration with a real RPC server/client
+and NIC/RSS receive path is still required before physical validation.
 
-Expected trace schema:
+Accepted trace schemas are the simulator's exact request-random v2 and
+flow-affine v3 CSVs. The runtime records the embedded canonical trace SHA-256
+and the input-file SHA-256 separately.
 
-```text
-arrival_us,request_id,tenant_or_flow,service_us,slo_us,workload_class,source_host,source_core
-```
-
-Optional physical outcome schema:
+The future RPC outcome schema must include at least:
 
 ```text
 request_id,start_us,finish_us,assigned_host,assigned_core,migration_count,rescue_count,deadline_miss
@@ -129,20 +131,20 @@ request_id,start_us,finish_us,assigned_host,assigned_core,migration_count,rescue
 
 Replay phases:
 
-1. Collect physical RPC or synthetic-service traces with stable timestamps.
-2. Convert traces into the expected CSV schema.
-3. Add a loader that maps trace rows to simulator task arrivals without
-   changing RescueSched policy logic.
-4. Run simulator replay and physical replay using the same trace, seed, rho
+1. Generate and freeze simulator v2/v3 input traces and their checksums.
+2. Connect the existing loader to the real RPC request runtime without exposing
+   hidden service demand to scheduling decisions.
+3. Run simulator replay and physical replay using the same trace, seed, rho
    label, SLO, and service-time units.
-5. Compare simulator and physical metrics with the alignment table below.
+4. Compare simulator, local synthetic, and physical RPC metrics with
+   `scripts/analyze_simulator_physical_alignment.py`.
 
 ## Metrics Alignment
 
 | Simulator CSV column | Physical measurement | Notes |
 | --- | --- | --- |
-| `P99_us` | request latency P99 | Same completed-request set and warmup policy. |
-| `P999_us` | request latency P99.9 | Require enough samples for stable tail estimate. |
+| `P99_us` | server completion P99 | Client RTT is a separate physical field. |
+| `P999_us` | server completion P99.9 | Require enough samples for stable tail estimate. |
 | `slo_violation_rate` | deadline misses / completed requests | SLO definition must be identical. |
 | `total_finished` | completed request count | Exclude dropped requests unless simulator models drops. |
 | `total_generated` | submitted request count | Trace input count. |
@@ -176,25 +178,27 @@ Trace replay failures:
 - Physical logs cannot reconstruct rescue success, migration count, and SLO
   violation rate.
 
-Result-alignment failure:
+Result-alignment review triggers:
 
 - Directional conclusions for RescueSched versus `L1_WorkStealingPolling` and
   `M0_AltoThreshold` reverse on the same workload/rho point.
-- Simulator median P99/P999 and physical median P99/P999 differ by more than
-  20 percent after microbench-calibrated migration cost, unless explained by a
-  documented workload or implementation difference.
+- Simulator and physical server-side tails differ materially after calibrated
+  handoff, requiring a documented runtime, cache, NUMA, or network explanation.
 - RescueSched improves tail latency only by increasing useless or harmful
   migrations beyond the simulator-boundary cases.
 
-## Required Additions Before Physical Claim
+## Implementation status before physical claim
 
-- Physical trace loader.
-- Runtime instrumentation for rescue attempts, rescue successes, target-safety
-  rejects, migrations, and deadline misses.
-- Run manifest generator that records commit, build, host, command, and output
-  CSV paths.
-- Physical implementations or wrappers for `L0_RandomCore`,
-  `L1_WorkStealingPolling`, `M0_AltoThreshold`, and `M1_RescueSched` in one
-  runtime.
-- A comparison script that consumes simulator CSVs and physical CSVs into one
-  metrics table.
+| Item | Status |
+| --- | --- |
+| Strict frozen trace loader | Implemented for v2/v3 CSV |
+| Pinned FIFO workers and queued-only migration | Implemented in local synthetic runtime |
+| Four policies in one runtime | Implemented for local alignment validation |
+| Completion-updated method EWMA | Implemented and unit tested |
+| Request/decision/migration logs and manifests | Implemented locally |
+| Pinned handoff distribution runner | Implemented; cross-NUMA depends on host topology |
+| Evidence-separated alignment script | Implemented |
+| Frozen CloudLab protocol | Documented; execution pending |
+| Real RPC server/client and NIC/RSS path | `[IMPLEMENTATION DETAIL REQUIRED]` |
+| Client RTT and NIC/packet logs | `[IMPLEMENTATION DETAIL REQUIRED]` |
+| Final CloudLab paired results | `[PHYSICAL RESULT REQUIRED]` |

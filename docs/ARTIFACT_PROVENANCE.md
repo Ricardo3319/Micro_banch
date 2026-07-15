@@ -60,10 +60,24 @@ python3 scripts/corrected_eval_analysis.py \
 
 `scripts/run_physical_preflight.sh` produces ignored output under
 `physical-results/`. It validates a Linux build, CTest, deterministic smoke,
-descriptor-handoff microbenchmark stability, a short simulator anchor, schema,
-and checksums. It does not implement or validate a real RPC runtime.
+legacy and pinned descriptor-handoff microbenchmark stability, a short
+simulator anchor, schema, and checksums. It does not implement or validate a
+real RPC runtime.
 
 No physical result is currently part of the paper evidence chain. That status
 changes only after a committed runtime supports frozen trace replay, all four
 primary policies, paid descriptor movement, instrumentation, paired runs, and
 an auditable physical result manifest.
+
+The repository now also contains a local in-process synthetic request runtime
+governed by `docs/PHYSICAL_RUNTIME_CONTRACT.md`. Its pinned workers, frozen
+trace replay, four shared policy implementations, request/decision/migration
+logs, and sanitizer tests close implementation blockers only. Output from
+`scripts/run_local_physical_runtime_smoke.sh` remains ignored under
+`physical-results/` and is not added to the paper evidence chain.
+
+`scripts/analyze_simulator_physical_alignment.py` deliberately emits separate
+rows for corrected simulation, local synthetic runtime, and future physical
+RPC evidence. It also separates configured simulator handoff delay from a
+measured host-local primitive distribution. The script does not promote local
+validation output into the paper evidence chain.

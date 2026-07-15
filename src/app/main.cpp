@@ -186,6 +186,7 @@ struct CliOptions {
     std::optional<sim::WorkloadType> workload;
     int warmup_requests = sim::WARMUP_REQUESTS;
     int measurement_requests = sim::MEASUREMENT_REQUESTS;
+    int trace_core_count = sim::CORES_PER_HOST;
     sim::M0Config policy;
     bool help = false;
 };
@@ -204,6 +205,7 @@ static void apply_cli_option(CliOptions& opts,
     else if (key == "workload") opts.workload = parse_workload(value);
     else if (key == "warmup_requests" || key == "warmup-requests") opts.warmup_requests = std::stoi(value);
     else if (key == "measurement_requests" || key == "measurement-requests") opts.measurement_requests = std::stoi(value);
+    else if (key == "trace_core_count" || key == "trace-core-count") opts.trace_core_count = std::stoi(value);
     else if (key == "placement" || key == "placement_mode" || key == "placement-mode")
         opts.policy.placement_mode = parse_placement_mode(value);
     else if (key == "flow_count" || key == "flow-count") opts.policy.flow_count = std::stoi(value);
@@ -293,6 +295,8 @@ static CliOptions parse_cli(int argc, char** argv) {
             opts.warmup_requests = std::stoi(option_value(i, argc, argv, arg, "--warmup-requests"));
         } else if (arg == "--measurement-requests" || arg.rfind("--measurement-requests=", 0) == 0) {
             opts.measurement_requests = std::stoi(option_value(i, argc, argv, arg, "--measurement-requests"));
+        } else if (arg == "--trace-core-count" || arg.rfind("--trace-core-count=", 0) == 0) {
+            opts.trace_core_count = std::stoi(option_value(i, argc, argv, arg, "--trace-core-count"));
         } else if (arg == "--out-dir" || arg.rfind("--out-dir=", 0) == 0) {
             opts.output_dir = option_value(i, argc, argv, arg, "--out-dir");
         } else if (arg == "--output" || arg.rfind("--output=", 0) == 0) {
@@ -353,7 +357,8 @@ static CliOptions parse_cli(int argc, char** argv) {
 
     if (opts.mode == "all" && !opts.output_path.empty())
         throw std::runtime_error("--output is only valid for a single mode, not mode=all");
-    if (opts.warmup_requests < 0 || opts.measurement_requests <= 0)
+    if (opts.warmup_requests < 0 || opts.measurement_requests <= 0
+        || opts.trace_core_count <= 0)
         throw std::runtime_error("request counts must be warmup>=0 and measurement>0");
     if (std::any_of(opts.rhos.begin(), opts.rhos.end(),
                     [](double value) { return !std::isfinite(value) || value <= 0.0; }))
@@ -441,6 +446,7 @@ static void print_usage(const char* exe) {
         << "  --out-dir DIR          artifact root for default outputs\n"
         << "  --output FILE.csv      explicit CSV path for a single mode\n\n"
         << "  --trace-out FILE.csv   export the generated policy-independent trace\n\n"
+        << "  --trace-core-count N   trace-generate core count (default: 16)\n\n"
         << "Local simulation model options:\n"
         << "  --placement random|flow-affine  request-random or RSS-like flow placement\n"
         << "  --flow-count N --flow-zipf-alpha A --flow-hash-seed N\n"
@@ -1550,13 +1556,14 @@ static std::shared_ptr<const sim::WorkloadTrace> make_shared_trace(
         sim::WorkloadType workload, double rho, unsigned seed,
         const sim::M0Config& cfg,
         int warmup_requests = sim::WARMUP_REQUESTS,
-        int measurement_requests = sim::MEASUREMENT_REQUESTS) {
+        int measurement_requests = sim::MEASUREMENT_REQUESTS,
+        int core_count = sim::CORES_PER_HOST) {
     sim::TraceConfig trace_cfg;
     trace_cfg.workload = workload;
     trace_cfg.rho = rho;
     trace_cfg.seed = seed;
-    trace_cfg.core_count = sim::CORES_PER_HOST;
-    trace_cfg.effective_core_capacity = sim::CORES_PER_HOST;
+    trace_cfg.core_count = core_count;
+    trace_cfg.effective_core_capacity = core_count;
     trace_cfg.w2_hot_core_count = cfg.w2_hot_core_count;
     trace_cfg.w2_hot_dispatch_prob = cfg.w2_hot_dispatch_prob;
     trace_cfg.placement_mode = cfg.placement_mode;
@@ -2599,7 +2606,8 @@ int main(int argc, char** argv) {
         const unsigned seed = opts.seeds.empty() ? 11U : opts.seeds.front();
         auto trace = make_shared_trace(workload, rho, seed, cfg,
                                        opts.warmup_requests,
-                                       opts.measurement_requests);
+                                       opts.measurement_requests,
+                                       opts.trace_core_count);
         if (!trace->write_csv(opts.trace_output_path)) {
             std::cerr << "Cannot write trace: " << opts.trace_output_path << "\n";
             return 1;

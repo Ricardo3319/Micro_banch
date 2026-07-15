@@ -13,7 +13,7 @@ Options:
   --build-dir DIR          CMake build directory (default: build)
   --out-dir DIR            Result directory (default: physical-results/<run-id>)
   --expected-commit SHA    Fail unless HEAD matches this full SHA or prefix
-  --microbench-runs N      Handoff microbenchmark repetitions (default: 3)
+  --microbench-runs N      Legacy and pinned handoff repetitions (default: 3)
   --jobs N                 Parallel build jobs (default: detected CPU count)
   --require-clean          Fail unless the Git worktree is clean
   --skip-anchor            Skip the short W3 rho=0.85 simulator anchor
@@ -113,6 +113,7 @@ fi
 logs_dir="$out_dir/logs"
 metadata_dir="$out_dir/metadata"
 microbench_dir="$out_dir/microbench"
+pinned_microbench_dir="$out_dir/pinned-handoff"
 anchor_dir="$out_dir/anchor"
 mkdir -p "$logs_dir" "$metadata_dir" "$microbench_dir" "$anchor_dir"
 
@@ -185,6 +186,7 @@ fi
     echo "short_anchor_enabled=$run_anchor"
     echo "require_clean=$require_clean"
     echo "physical_rpc_runtime_present=NO"
+    echo "synthetic_request_runtime_present=YES"
     echo "result_scope=simulator_build_test_and_host_microbenchmark_only"
 } > "$metadata_dir/manifest.env"
 
@@ -269,6 +271,13 @@ grep -q "RescueSched smoke status: PASS" "$logs_dir/rescue-smoke.log"
 
 cp "$build_dir/CMakeCache.txt" "$metadata_dir/CMakeCache.txt"
 
+run_logged pinned-handoff \
+    bash "$root/scripts/run_pinned_handoff_microbench.sh" \
+    --build-dir "$build_dir" \
+    --out-dir "$pinned_microbench_dir" \
+    --repetitions "$microbench_runs"
+grep -q '^status=PASS$' "$pinned_microbench_dir/HANDOFF_STATUS.txt"
+
 for (( run = 1; run <= microbench_runs; ++run )); do
     run_logged "microbench-$run" \
         "$build_dir/simulator" \
@@ -342,6 +351,8 @@ fi
     echo "finished_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo "scope=simulator_build_test_and_host_microbenchmark_only"
     echo "physical_rpc_runtime=NOT_IMPLEMENTED"
+    echo "synthetic_request_runtime=IMPLEMENTED_FOR_LOCAL_VALIDATION_ONLY"
+    echo "pinned_handoff_status=PASS"
     echo "results=$out_dir"
 } > "$status_file"
 
