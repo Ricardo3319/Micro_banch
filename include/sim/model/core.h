@@ -49,6 +49,12 @@ public:
     size_t size()  const { return size_; }
     bool   empty() const { return size_ == 0; }
     void   clear() { head_ = tail_ = nullptr; size_ = 0; }
+    bool contains(const Task* task) const {
+        for (Task* current = head_; current; current = current->next) {
+            if (current == task) return true;
+        }
+        return false;
+    }
 
     // Iteration helpers.
     Task* begin() const { return head_; }
@@ -97,7 +103,7 @@ struct Core {
     }
 
     void remove_waiting(Task* t) {
-        if (!t) return;
+        if (!t || !wait_queue.contains(t)) return;
         queued_work_us -= queued_task_work_us(t);
         if (queued_work_us < 0.0) queued_work_us = 0.0;
         wait_queue.remove(t);

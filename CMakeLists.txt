@@ -100,3 +100,27 @@ set_tests_properties(rescue_v2_reproducible PROPERTIES
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     FIXTURES_REQUIRED rescue_v2_csv
 )
+
+add_test(NAME rescue_rejects_zero_check_period
+    COMMAND $<TARGET_FILE:simulator>
+            --mode rescue-main --workload W3 --rho 0.85 --seed 11
+            --warmup-requests 0 --measurement-requests 10
+            --check-period-us 0
+            --output ${CMAKE_CURRENT_BINARY_DIR}/invalid.csv
+)
+set_tests_properties(rescue_rejects_zero_check_period PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    WILL_FAIL TRUE
+)
+
+add_test(NAME rescue_rejects_nan_migration_cost
+    COMMAND $<TARGET_FILE:simulator>
+            --mode rescue-main --workload W3 --rho 0.85 --seed 11
+            --warmup-requests 0 --measurement-requests 10
+            --migration-cost-us nan
+            --output ${CMAKE_CURRENT_BINARY_DIR}/invalid-nan.csv
+)
+set_tests_properties(rescue_rejects_nan_migration_cost PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    WILL_FAIL TRUE
+)

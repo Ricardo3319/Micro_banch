@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <sstream>
 #include <string>
 #include <unordered_set>
@@ -24,6 +25,8 @@ enum class NoMigrateReason : int {
 
 struct MetricsCollector {
     Histogram latency_hist;
+    Histogram rescue_migrated_latency_hist;
+    Histogram rescue_nonmigrated_latency_hist;
     uint64_t total_finished    = 0;
     uint64_t slo_violations    = 0;
     uint64_t short_finished    = 0;
@@ -47,6 +50,11 @@ struct MetricsCollector {
     uint64_t proactive_intra_success_count = 0;
     uint64_t rescue_attempt_count = 0;
     uint64_t rescue_candidate_count = 0;
+    uint64_t rescue_queue_entries_inspected_count = 0;
+    uint64_t rescue_accepted_candidate_count = 0;
+    uint64_t rescue_target_evaluation_count = 0;
+    uint64_t rescue_source_revalidation_reject_count = 0;
+    uint64_t rescue_remote_revalidation_reject_count = 0;
     uint64_t locally_doomed_count = 0;
     uint64_t remote_feasible_count = 0;
     uint64_t target_safe_count = 0;
@@ -60,6 +68,17 @@ struct MetricsCollector {
     double descriptor_handoff_sum_us = 0.0;
     double descriptor_handoff_max_us = 0.0;
     double rescue_moved_work_us = 0.0;
+    uint64_t rescue_short_move_count = 0;
+    uint64_t rescue_long_move_count = 0;
+    uint64_t rescue_burst_move_count = 0;
+    uint64_t rescue_nonburst_move_count = 0;
+    double rescue_source_work_sum_us = 0.0;
+    double rescue_destination_work_sum_us = 0.0;
+    uint64_t rescue_commit_work_samples = 0;
+    uint64_t rescue_migrated_finished = 0;
+    uint64_t rescue_migrated_slo_violations = 0;
+    uint64_t rescue_nonmigrated_finished = 0;
+    uint64_t rescue_nonmigrated_slo_violations = 0;
     uint64_t target_unsafe_reject_count = 0;
     uint64_t remote_infeasible_reject_count = 0;
     uint64_t needless_migration_count = 0;
@@ -106,6 +125,30 @@ struct MetricsCollector {
     double source_queue_work_sum_us = 0.0;
     uint64_t source_queue_depth_sum = 0;
     uint64_t source_queue_samples = 0;
+    uint64_t estimator_observation_count = 0;
+    double estimator_signed_error_sum_us = 0.0;
+    double estimator_absolute_error_sum_us = 0.0;
+    double estimator_squared_error_sum_us2 = 0.0;
+    uint64_t estimator_underestimate_count = 0;
+    uint64_t estimator_overestimate_count = 0;
+    uint64_t estimator_exact_count = 0;
+    uint64_t estimator_cold_start_count = 0;
+    uint64_t estimator_short_observation_count = 0;
+    uint64_t estimator_long_observation_count = 0;
+    double estimator_short_absolute_error_sum_us = 0.0;
+    double estimator_long_absolute_error_sum_us = 0.0;
+    uint64_t control_check_count = 0;
+    uint64_t control_queue_entry_count = 0;
+    uint64_t control_candidate_count = 0;
+    uint64_t control_target_count = 0;
+    uint64_t control_estimator_update_count = 0;
+    uint64_t control_poll_operation_count = 0;
+    double configured_control_check_cost_sum_us = 0.0;
+    double configured_control_queue_cost_sum_us = 0.0;
+    double configured_control_candidate_cost_sum_us = 0.0;
+    double configured_control_target_cost_sum_us = 0.0;
+    double configured_control_estimator_cost_sum_us = 0.0;
+    double configured_control_poll_cost_sum_us = 0.0;
     std::array<uint64_t, DQB_MAX_TASKS_PER_BATCH + 2> exact_batch_size_hist{};
     std::unordered_set<uint64_t> harmful_actual_migration_ids;
     uint64_t measurement_target = 0;
@@ -116,12 +159,18 @@ struct MetricsCollector {
         recording = false;
         latency_hist.reset();
         latency_hist.reserve(measurement_target);
+        rescue_migrated_latency_hist.reset();
+        rescue_nonmigrated_latency_hist.reset();
         total_finished = slo_violations = total_migrations = invalid_migrations = 0;
         intra_move_count = invalid_intra_moves = 0;
         steal_attempt_count = steal_success_count = stolen_task_count = 0;
         steal_poll_count = steal_idle_core_check_count = 0;
         proactive_intra_attempt_count = proactive_intra_success_count = 0;
         rescue_attempt_count = rescue_candidate_count = locally_doomed_count = 0;
+        rescue_queue_entries_inspected_count = rescue_accepted_candidate_count = 0;
+        rescue_target_evaluation_count = 0;
+        rescue_source_revalidation_reject_count = 0;
+        rescue_remote_revalidation_reject_count = 0;
         remote_feasible_count = target_safe_count = rescue_success_count = 0;
         migration_handoff_count = 0;
         migration_handoff_sum_us = migration_handoff_max_us = 0.0;
@@ -130,6 +179,12 @@ struct MetricsCollector {
         descriptor_handoff_count = 0;
         descriptor_handoff_sum_us = descriptor_handoff_max_us = 0.0;
         rescue_moved_work_us = 0.0;
+        rescue_short_move_count = rescue_long_move_count = 0;
+        rescue_burst_move_count = rescue_nonburst_move_count = 0;
+        rescue_source_work_sum_us = rescue_destination_work_sum_us = 0.0;
+        rescue_commit_work_samples = 0;
+        rescue_migrated_finished = rescue_migrated_slo_violations = 0;
+        rescue_nonmigrated_finished = rescue_nonmigrated_slo_violations = 0;
         target_unsafe_reject_count = remote_infeasible_reject_count = 0;
         needless_migration_count = unsaved_migration_count = 0;
         beneficial_migration_count = harmful_migration_count = 0;
@@ -160,6 +215,24 @@ struct MetricsCollector {
         source_queue_work_sum_us = 0.0;
         source_queue_depth_sum = 0;
         source_queue_samples = 0;
+        estimator_observation_count = 0;
+        estimator_signed_error_sum_us = 0.0;
+        estimator_absolute_error_sum_us = 0.0;
+        estimator_squared_error_sum_us2 = 0.0;
+        estimator_underestimate_count = estimator_overestimate_count = 0;
+        estimator_exact_count = estimator_cold_start_count = 0;
+        estimator_short_observation_count = estimator_long_observation_count = 0;
+        estimator_short_absolute_error_sum_us = 0.0;
+        estimator_long_absolute_error_sum_us = 0.0;
+        control_check_count = control_queue_entry_count = 0;
+        control_candidate_count = control_target_count = 0;
+        control_estimator_update_count = control_poll_operation_count = 0;
+        configured_control_check_cost_sum_us = 0.0;
+        configured_control_queue_cost_sum_us = 0.0;
+        configured_control_candidate_cost_sum_us = 0.0;
+        configured_control_target_cost_sum_us = 0.0;
+        configured_control_estimator_cost_sum_us = 0.0;
+        configured_control_poll_cost_sum_us = 0.0;
         exact_batch_size_hist.fill(0);
         harmful_actual_migration_ids.clear();
     }
@@ -167,12 +240,23 @@ struct MetricsCollector {
     void start_recording() { recording = true; }
 
     void on_task_finish(double latency_us, double slo_us, double service_us,
-                        RpcMethod method, bool measurement_eligible) {
+                        RpcMethod method, bool measurement_eligible,
+                        bool rescue_migrated = false) {
         if (!measurement_eligible) return;
         latency_hist.record(latency_us);
         ++total_finished;
         bool violated = latency_us > slo_us;
         if (violated) ++slo_violations;
+
+        if (rescue_migrated) {
+            rescue_migrated_latency_hist.record(latency_us);
+            ++rescue_migrated_finished;
+            if (violated) ++rescue_migrated_slo_violations;
+        } else {
+            rescue_nonmigrated_latency_hist.record(latency_us);
+            ++rescue_nonmigrated_finished;
+            if (violated) ++rescue_nonmigrated_slo_violations;
+        }
 
         if (method == RpcMethod::SHORT_RPC) {
             ++short_finished;
@@ -249,6 +333,31 @@ struct MetricsCollector {
         ++rescue_candidate_count;
     }
 
+    void on_rescue_queue_entry() {
+        if (!recording) return;
+        ++rescue_queue_entries_inspected_count;
+    }
+
+    void on_rescue_accepted_candidate() {
+        if (!recording) return;
+        ++rescue_accepted_candidate_count;
+    }
+
+    void on_rescue_target_evaluation() {
+        if (!recording) return;
+        ++rescue_target_evaluation_count;
+    }
+
+    void on_rescue_source_revalidation_reject() {
+        if (!recording) return;
+        ++rescue_source_revalidation_reject_count;
+    }
+
+    void on_rescue_remote_revalidation_reject() {
+        if (!recording) return;
+        ++rescue_remote_revalidation_reject_count;
+    }
+
     void on_rescue_locally_doomed() {
         if (!recording) return;
         ++locally_doomed_count;
@@ -280,12 +389,21 @@ struct MetricsCollector {
     }
 
     void on_rescue_success(double work_us, bool predicted_harmful, bool relief,
-                           bool measurement_eligible) {
+                           bool measurement_eligible, RpcMethod method,
+                           bool burst, double source_work_us,
+                           double destination_work_us) {
         if (!measurement_eligible) return;
         ++rescue_success_count;
         ++intra_move_count;
         rescue_moved_work_us += work_us;
         intra_moved_work_us += work_us;
+        if (method == RpcMethod::SHORT_RPC) ++rescue_short_move_count;
+        else ++rescue_long_move_count;
+        if (burst) ++rescue_burst_move_count;
+        else ++rescue_nonburst_move_count;
+        rescue_source_work_sum_us += source_work_us;
+        rescue_destination_work_sum_us += destination_work_us;
+        ++rescue_commit_work_samples;
         if (predicted_harmful) ++predicted_target_unsafe_accept_count;
         if (relief) {
             ++relief_success_count;
@@ -448,6 +566,65 @@ struct MetricsCollector {
         ++source_queue_samples;
     }
 
+    void on_estimator_observation(double estimate_us, double actual_us,
+                                  RpcMethod method, uint64_t prior_samples,
+                                  bool measurement_eligible) {
+        if (!measurement_eligible) return;
+        const double error_us = estimate_us - actual_us;
+        const double absolute_error_us = std::abs(error_us);
+        ++estimator_observation_count;
+        estimator_signed_error_sum_us += error_us;
+        estimator_absolute_error_sum_us += absolute_error_us;
+        estimator_squared_error_sum_us2 += error_us * error_us;
+        if (error_us < -1e-12) ++estimator_underestimate_count;
+        else if (error_us > 1e-12) ++estimator_overestimate_count;
+        else ++estimator_exact_count;
+        if (prior_samples == 0) ++estimator_cold_start_count;
+        if (method == RpcMethod::SHORT_RPC) {
+            ++estimator_short_observation_count;
+            estimator_short_absolute_error_sum_us += absolute_error_us;
+        } else {
+            ++estimator_long_observation_count;
+            estimator_long_absolute_error_sum_us += absolute_error_us;
+        }
+    }
+
+    void on_control_check(double configured_cost_us) {
+        if (!recording) return;
+        ++control_check_count;
+        configured_control_check_cost_sum_us += std::max(0.0, configured_cost_us);
+    }
+
+    void on_control_queue_entry(double configured_cost_us) {
+        if (!recording) return;
+        ++control_queue_entry_count;
+        configured_control_queue_cost_sum_us += std::max(0.0, configured_cost_us);
+    }
+
+    void on_control_candidate(double configured_cost_us) {
+        if (!recording) return;
+        ++control_candidate_count;
+        configured_control_candidate_cost_sum_us += std::max(0.0, configured_cost_us);
+    }
+
+    void on_control_target(double configured_cost_us) {
+        if (!recording) return;
+        ++control_target_count;
+        configured_control_target_cost_sum_us += std::max(0.0, configured_cost_us);
+    }
+
+    void on_control_estimator_update(double configured_cost_us) {
+        if (!recording) return;
+        ++control_estimator_update_count;
+        configured_control_estimator_cost_sum_us += std::max(0.0, configured_cost_us);
+    }
+
+    void on_control_poll(double configured_cost_us) {
+        if (!recording) return;
+        ++control_poll_operation_count;
+        configured_control_poll_cost_sum_us += std::max(0.0, configured_cost_us);
+    }
+
     double p99()  const { return latency_hist.percentile(0.99); }
     double p999() const { return latency_hist.percentile(0.999); }
     double slo_violation_rate() const {
@@ -524,6 +701,64 @@ struct MetricsCollector {
             ? static_cast<double>(source_queue_depth_sum)
                 / static_cast<double>(source_queue_samples)
             : 0.0;
+    }
+    double avg_rescue_source_work_at_commit_us() const {
+        return rescue_commit_work_samples > 0
+            ? rescue_source_work_sum_us / static_cast<double>(rescue_commit_work_samples)
+            : 0.0;
+    }
+    double avg_rescue_destination_work_at_commit_us() const {
+        return rescue_commit_work_samples > 0
+            ? rescue_destination_work_sum_us / static_cast<double>(rescue_commit_work_samples)
+            : 0.0;
+    }
+    double rescue_migrated_slo_violation_rate() const {
+        return rescue_migrated_finished > 0
+            ? static_cast<double>(rescue_migrated_slo_violations)
+                / static_cast<double>(rescue_migrated_finished)
+            : 0.0;
+    }
+    double rescue_nonmigrated_slo_violation_rate() const {
+        return rescue_nonmigrated_finished > 0
+            ? static_cast<double>(rescue_nonmigrated_slo_violations)
+                / static_cast<double>(rescue_nonmigrated_finished)
+            : 0.0;
+    }
+    double estimator_mean_signed_error_us() const {
+        return estimator_observation_count > 0
+            ? estimator_signed_error_sum_us / static_cast<double>(estimator_observation_count)
+            : 0.0;
+    }
+    double estimator_mae_us() const {
+        return estimator_observation_count > 0
+            ? estimator_absolute_error_sum_us / static_cast<double>(estimator_observation_count)
+            : 0.0;
+    }
+    double estimator_rmse_us() const {
+        return estimator_observation_count > 0
+            ? std::sqrt(estimator_squared_error_sum_us2
+                        / static_cast<double>(estimator_observation_count))
+            : 0.0;
+    }
+    double estimator_short_mae_us() const {
+        return estimator_short_observation_count > 0
+            ? estimator_short_absolute_error_sum_us
+                / static_cast<double>(estimator_short_observation_count)
+            : 0.0;
+    }
+    double estimator_long_mae_us() const {
+        return estimator_long_observation_count > 0
+            ? estimator_long_absolute_error_sum_us
+                / static_cast<double>(estimator_long_observation_count)
+            : 0.0;
+    }
+    double configured_control_cost_sum_us() const {
+        return configured_control_check_cost_sum_us
+             + configured_control_queue_cost_sum_us
+             + configured_control_candidate_cost_sum_us
+             + configured_control_target_cost_sum_us
+             + configured_control_estimator_cost_sum_us
+             + configured_control_poll_cost_sum_us;
     }
     double summary_update_cost_est_us() const {
         return static_cast<double>(summary_update_count) * 0.02;

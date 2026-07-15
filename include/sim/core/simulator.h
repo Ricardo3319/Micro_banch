@@ -138,6 +138,8 @@ private:
     double ewma_long_service_us_ = BIMODAL_LONG_US;
     double quantile_short_service_us_ = SLO_SHORT_SERVICE_THRESHOLD_US;
     double quantile_long_service_us_ = BIMODAL_LONG_US;
+    uint64_t estimator_short_samples_ = 0;
+    uint64_t estimator_long_samples_ = 0;
 
     // B0 global queue (Ideal-cFCFS).
     TaskQueue global_queue_;

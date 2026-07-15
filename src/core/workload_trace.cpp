@@ -136,6 +136,10 @@ const char* rpc_method_name(RpcMethod method) {
     return method == RpcMethod::SHORT_RPC ? "short" : "long";
 }
 
+const char* placement_mode_name(PlacementMode mode) {
+    return mode == PlacementMode::FLOW_AFFINE ? "flow_affine" : "request_random";
+}
+
 double rpc_deadline_budget_us(RpcMethod method) {
     return method == RpcMethod::SHORT_RPC ? SLO_SHORT_US : SLO_LONG_US;
 }
@@ -149,15 +153,23 @@ std::string sha256_hex(const std::string& bytes) {
 WorkloadTrace WorkloadTrace::generate(const TraceConfig& input) {
     if (input.core_count <= 0 || input.warmup_requests < 0 || input.measurement_requests <= 0)
         throw std::invalid_argument("invalid trace request/core counts");
-    if (!(input.rho > 0.0) || !(input.effective_core_capacity > 0.0))
-        throw std::invalid_argument("rho and capacity must be positive");
+    if (!std::isfinite(input.rho) || !std::isfinite(input.effective_core_capacity)
+        || !(input.rho > 0.0) || !(input.effective_core_capacity > 0.0))
+        throw std::invalid_argument("rho and capacity must be finite and positive");
+    if (input.placement_mode == PlacementMode::FLOW_AFFINE
+        && (input.flow_count <= 0 || !std::isfinite(input.flow_zipf_alpha)
+            || input.flow_zipf_alpha < 0.0))
+        throw std::invalid_argument("invalid flow-affine trace configuration");
 
     WorkloadTrace trace;
     trace.config_ = input;
+    trace.version_ = input.placement_mode == PlacementMode::FLOW_AFFINE
+        ? RESCUE_FLOW_TRACE_VERSION : RESCUE_TRACE_VERSION;
     const uint64_t seed = input.seed;
     std::mt19937_64 arrival_rng(splitmix64(seed ^ 0x4152524956414cULL));
     std::mt19937_64 service_rng(splitmix64(seed ^ 0x53455256494345ULL));
     std::mt19937_64 routing_rng(splitmix64(seed ^ 0x524f5554494e47ULL));
+    std::mt19937_64 flow_rng(splitmix64(seed ^ 0x464c4f575f4944ULL));
 
     const double mean_exec_us = W3_MEAN_SERVICE_US + T_host_us;
     const double target_average_lambda =
@@ -193,6 +205,19 @@ WorkloadTrace WorkloadTrace::generate(const TraceConfig& input) {
         / W3_LOGNORMAL_SIGMA);
     std::uniform_real_distribution<double> unit(0.0, 1.0);
     std::uniform_int_distribution<int> any_core(0, input.core_count - 1);
+    std::uniform_int_distribution<uint64_t> any_flow(
+        1, static_cast<uint64_t>(std::max(1, input.flow_count)));
+    std::vector<double> flow_weights;
+    if (input.placement_mode == PlacementMode::FLOW_AFFINE
+        && input.flow_zipf_alpha > 0.0) {
+        flow_weights.reserve(static_cast<size_t>(input.flow_count));
+        for (int rank = 1; rank <= input.flow_count; ++rank) {
+            flow_weights.push_back(1.0 / std::pow(
+                static_cast<double>(rank), input.flow_zipf_alpha));
+        }
+    }
+    std::discrete_distribution<int> zipf_flow(
+        flow_weights.begin(), flow_weights.end());
     const size_t request_count = static_cast<size_t>(input.warmup_requests)
                                + static_cast<size_t>(input.measurement_requests);
     trace.entries_.reserve(request_count);
@@ -223,11 +248,24 @@ WorkloadTrace WorkloadTrace::generate(const TraceConfig& input) {
             ? sample_conditional_lognormal(service_rng, short_rpc)
             : (short_rpc ? BIMODAL_SHORT_US : BIMODAL_LONG_US);
 
-        int initial_core = any_core(routing_rng);
-        if (input.workload == WorkloadType::W2_MMPP_BIMODAL && in_burst
-            && !hot_cores.empty() && unit(routing_rng) < input.w2_hot_dispatch_prob) {
-            std::uniform_int_distribution<size_t> hot(0, hot_cores.size() - 1);
-            initial_core = hot_cores[hot(routing_rng)];
+        uint64_t flow_id = 0;
+        int initial_core = -1;
+        if (input.placement_mode == PlacementMode::FLOW_AFFINE) {
+            flow_id = flow_weights.empty()
+                ? any_flow(flow_rng)
+                : static_cast<uint64_t>(zipf_flow(flow_rng) + 1);
+            uint64_t hash_input = flow_id
+                ^ (static_cast<uint64_t>(input.flow_hash_seed) << 32U)
+                ^ static_cast<uint64_t>(input.flow_hash_seed);
+            initial_core = static_cast<int>(
+                splitmix64(hash_input) % static_cast<uint64_t>(input.core_count));
+        } else {
+            initial_core = any_core(routing_rng);
+            if (input.workload == WorkloadType::W2_MMPP_BIMODAL && in_burst
+                && !hot_cores.empty() && unit(routing_rng) < input.w2_hot_dispatch_prob) {
+                std::uniform_int_distribution<size_t> hot(0, hot_cores.size() - 1);
+                initial_core = hot_cores[hot(routing_rng)];
+            }
         }
 
         WorkloadTraceEntry entry;
@@ -237,6 +275,7 @@ WorkloadTrace WorkloadTrace::generate(const TraceConfig& input) {
         entry.service_time_us = service_us;
         entry.deadline_budget_us = rpc_deadline_budget_us(method);
         entry.initial_core = initial_core;
+        entry.flow_id = flow_id;
         entry.burst = in_burst;
         trace.entries_.push_back(entry);
         if (index >= static_cast<size_t>(input.warmup_requests))
@@ -244,17 +283,24 @@ WorkloadTrace WorkloadTrace::generate(const TraceConfig& input) {
     }
 
     Sha256 hash;
-    hash.update(RESCUE_TRACE_VERSION, std::strlen(RESCUE_TRACE_VERSION));
+    hash.update(trace.version_.data(), trace.version_.size());
     int workload = static_cast<int>(input.workload);
     hash_scalar(hash, workload); hash_scalar(hash, input.rho); hash_scalar(hash, input.seed);
     hash_scalar(hash, input.core_count); hash_scalar(hash, input.effective_core_capacity);
     hash_scalar(hash, input.warmup_requests); hash_scalar(hash, input.measurement_requests);
     hash_scalar(hash, input.w2_hot_core_count); hash_scalar(hash, input.w2_hot_dispatch_prob);
+    if (input.placement_mode == PlacementMode::FLOW_AFFINE) {
+        int placement = static_cast<int>(input.placement_mode);
+        hash_scalar(hash, placement); hash_scalar(hash, input.flow_count);
+        hash_scalar(hash, input.flow_zipf_alpha); hash_scalar(hash, input.flow_hash_seed);
+    }
     for (const auto& entry : trace.entries_) {
         hash_scalar(hash, entry.id); hash_scalar(hash, entry.generate_time_us);
         int method = static_cast<int>(entry.rpc_method); hash_scalar(hash, method);
         hash_scalar(hash, entry.service_time_us); hash_scalar(hash, entry.deadline_budget_us);
         hash_scalar(hash, entry.initial_core);
+        if (input.placement_mode == PlacementMode::FLOW_AFFINE)
+            hash_scalar(hash, entry.flow_id);
         uint8_t burst = entry.burst ? 1U : 0U; hash_scalar(hash, burst);
     }
     trace.sha256_ = hash.finish();
@@ -267,11 +313,22 @@ bool WorkloadTrace::write_csv(const std::string& path) const {
         std::filesystem::create_directories(output.parent_path());
     std::ofstream csv(path);
     if (!csv.is_open()) return false;
-    csv << "trace_version,trace_sha256,id,generate_time_us,rpc_method,service_time_us,deadline_budget_us,initial_core,burst\n";
+    if (config_.placement_mode == PlacementMode::FLOW_AFFINE) {
+        csv << "trace_version,trace_sha256,placement_mode,id,flow_id,generate_time_us,"
+               "rpc_method,service_time_us,deadline_budget_us,initial_core,burst\n";
+    } else {
+        csv << "trace_version,trace_sha256,id,generate_time_us,rpc_method,service_time_us,deadline_budget_us,initial_core,burst\n";
+    }
     csv << std::setprecision(17);
     for (const auto& entry : entries_) {
-        csv << RESCUE_TRACE_VERSION << ',' << sha256_ << ',' << entry.id << ','
-            << entry.generate_time_us << ',' << rpc_method_name(entry.rpc_method) << ','
+        csv << version_ << ',' << sha256_ << ',';
+        if (config_.placement_mode == PlacementMode::FLOW_AFFINE) {
+            csv << placement_mode_name(config_.placement_mode) << ',' << entry.id << ','
+                << entry.flow_id << ',';
+        } else {
+            csv << entry.id << ',';
+        }
+        csv << entry.generate_time_us << ',' << rpc_method_name(entry.rpc_method) << ','
             << entry.service_time_us << ',' << entry.deadline_budget_us << ','
             << entry.initial_core << ',' << (entry.burst ? 1 : 0) << '\n';
     }

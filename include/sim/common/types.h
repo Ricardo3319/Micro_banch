@@ -44,6 +44,11 @@ enum class WorkloadType {
     W3_POISSON_LOGNORMAL
 };
 
+enum class PlacementMode {
+    REQUEST_RANDOM,
+    FLOW_AFFINE
+};
+
 enum class ClusterProfile {
     HOMOGENEOUS,       // 64×C=1.0
     HETERO_25PCT       // 48×C=1.0 + 16×C=0.2

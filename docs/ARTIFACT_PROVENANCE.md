@@ -11,6 +11,7 @@ paper evidence and are no longer stored in the active tree.
 | `artifacts/step-20-corrected-pilot/` | Development seeds, short cohorts | Directional check only |
 | `artifacts/step-20b-corrected-holdout-pilot/` | Frozen holdout seeds, short cohorts | Directional check only |
 | `artifacts/step-21-corrected-full/` | Ten seeds, full cohorts, paired analysis | Authoritative simulation evidence |
+| `artifacts/step-22-local-simulation-diagnostics/` | Post-freeze OFAT diagnostics and model sensitivity | Diagnostic only; does not replace Step-21 |
 
 The full result contains raw method rows in `w1.csv`, `w2.csv`, and `w3.csv`;
 derived medians in `summary.csv`; paired bootstrap comparisons in

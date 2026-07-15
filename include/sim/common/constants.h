@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sim/common/types.h"
+
 namespace sim {
 
 // Frozen physical constants (us).
@@ -148,6 +150,17 @@ struct M0Config {
     int    work_steal_max_per_poll = CORES_PER_HOST;
     double alto_queue_threshold_us = 40.0;
     double alto_min_gain_us = 0.0;
+    PlacementMode placement_mode = PlacementMode::REQUEST_RANDOM;
+    int    flow_count = 4096;
+    double flow_zipf_alpha = 0.0;
+    unsigned flow_hash_seed = 0x52535331U;
+    // Accounting-only configured costs. These do not advance simulated time.
+    double control_check_cost_us = 0.0;
+    double control_queue_entry_cost_us = 0.0;
+    double control_candidate_cost_us = 0.0;
+    double control_target_cost_us = 0.0;
+    double control_estimator_update_cost_us = 0.0;
+    double control_poll_cost_us = 0.0;
 };
 
 // Heterogeneous cluster constants.

@@ -14,8 +14,12 @@ struct Task {
     double  expected_service_time_us = 0.0; // EWMA or known E
     double  deadline_budget_us = 0.0;
     int     initial_core = -1;
+    uint64_t flow_id = 0;
     bool    arrival_burst = false;
     bool    measurement_eligible = false;
+    bool    execution_started = false;
+    bool    completed = false;
+    uint64_t estimator_prior_samples = 0;
     bool    migration_in_flight = false;
     double  migration_start_us = 0.0;
     bool    descriptor_handoff_paid = false;

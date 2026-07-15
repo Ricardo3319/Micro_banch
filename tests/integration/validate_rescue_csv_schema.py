@@ -3,6 +3,7 @@
 
 import argparse
 import csv
+import math
 import pathlib
 import re
 import sys
@@ -50,6 +51,26 @@ REQUIRED_COLUMNS = [
     "max_descriptor_handoff_us",
 ]
 
+DIAGNOSTIC_COLUMNS = [
+    "placement_mode",
+    "flow_count",
+    "flow_zipf_alpha",
+    "flow_hash_seed",
+    "rescue_queue_entries_inspected_count",
+    "rescue_accepted_candidate_count",
+    "rescue_target_evaluation_count",
+    "estimator_observation_count",
+    "estimator_underestimate_count",
+    "estimator_overestimate_count",
+    "estimator_exact_count",
+    "estimator_short_observation_count",
+    "estimator_long_observation_count",
+    "estimator_mae_us",
+    "estimator_rmse_us",
+    "control_cost_mode",
+    "configured_control_cost_sum_us",
+]
+
 
 def fail(message: str) -> None:
     print(f"schema validation failed: {message}", file=sys.stderr)
@@ -58,9 +79,9 @@ def fail(message: str) -> None:
 
 def as_int(row: dict[str, str], name: str, path: pathlib.Path, line: int) -> int:
     try:
-        value = float(row[name])
+        value = as_float(row, name, path, line)
         integer = int(value)
-    except (KeyError, ValueError) as exc:
+    except (KeyError, ValueError, OverflowError) as exc:
         fail(f"{path}:{line} invalid integer {name}: {exc}")
     if value != integer:
         fail(f"{path}:{line} non-integral {name}={value}")
@@ -69,9 +90,12 @@ def as_int(row: dict[str, str], name: str, path: pathlib.Path, line: int) -> int
 
 def as_float(row: dict[str, str], name: str, path: pathlib.Path, line: int) -> float:
     try:
-        return float(row[name])
+        value = float(row[name])
     except (KeyError, ValueError) as exc:
         fail(f"{path}:{line} invalid numeric {name}: {exc}")
+    if not math.isfinite(value):
+        fail(f"{path}:{line} non-finite numeric {name}={value}")
+    return value
 
 
 def validate_v2(path: pathlib.Path) -> int:
@@ -84,19 +108,33 @@ def validate_v2(path: pathlib.Path) -> int:
         missing = [name for name in REQUIRED_COLUMNS if name not in reader.fieldnames]
         if missing:
             fail(f"{path} missing v2 columns: {', '.join(missing)}")
+        diagnostic_present = [
+            name for name in DIAGNOSTIC_COLUMNS if name in reader.fieldnames]
+        if diagnostic_present and len(diagnostic_present) != len(DIAGNOSTIC_COLUMNS):
+            missing_diag = [
+                name for name in DIAGNOSTIC_COLUMNS if name not in reader.fieldnames]
+            fail(f"{path} has partial diagnostic extension: {', '.join(missing_diag)}")
+        has_diagnostics = bool(diagnostic_present)
 
         rows = 0
         trace_identity: dict[tuple[str, str, str], str] = {}
         for line, row in enumerate(reader, start=2):
             rows += 1
+            if None in row or any(value is None for value in row.values()):
+                fail(f"{path}:{line} row width does not match header")
             if row["schema_version"] != SCHEMA_VERSION:
                 fail(f"{path}:{line} schema_version={row['schema_version']!r}")
             if not row["trace_version"].startswith("rescuesched-trace-v"):
                 fail(f"{path}:{line} invalid trace_version={row['trace_version']!r}")
             if not SHA256_RE.fullmatch(row["trace_sha256"]):
                 fail(f"{path}:{line} invalid trace_sha256")
-            for name in ("rpc_method_model", "deadline_model", "offered_load_definition",
-                         "scenario", "workload", "method", "service_estimate_mode"):
+            text_fields = [
+                "rpc_method_model", "deadline_model", "offered_load_definition",
+                "scenario", "workload", "method", "service_estimate_mode",
+            ]
+            if has_diagnostics:
+                text_fields.extend(["placement_mode", "control_cost_mode"])
+            for name in text_fields:
                 if not row[name].strip():
                     fail(f"{path}:{line} empty {name}")
 
@@ -118,6 +156,26 @@ def validate_v2(path: pathlib.Path) -> int:
                 fail(f"{path}:{line} non-positive duration")
             if not 0.0 <= as_float(row, "slo_violation_rate", path, line) <= 1.0:
                 fail(f"{path}:{line} SLO violation outside [0,1]")
+            if has_diagnostics:
+                if row["placement_mode"] not in {"request_random", "flow_affine"}:
+                    fail(f"{path}:{line} invalid placement_mode")
+                if row["control_cost_mode"] != "accounting_only":
+                    fail(f"{path}:{line} invalid control_cost_mode")
+                if as_int(row, "estimator_observation_count", path, line) != measurement:
+                    fail(f"{path}:{line} estimator diagnostics do not cover cohort")
+                estimator_directions = sum(as_int(row, name, path, line) for name in (
+                    "estimator_underestimate_count", "estimator_overestimate_count",
+                    "estimator_exact_count"))
+                if estimator_directions != measurement:
+                    fail(f"{path}:{line} estimator direction diagnostics do not cover cohort")
+                short_observations = as_int(
+                    row, "estimator_short_observation_count", path, line)
+                long_observations = as_int(
+                    row, "estimator_long_observation_count", path, line)
+                if short_observations + long_observations != measurement:
+                    fail(f"{path}:{line} estimator class diagnostics do not cover cohort")
+                if as_float(row, "configured_control_cost_sum_us", path, line) < 0.0:
+                    fail(f"{path}:{line} negative configured control cost")
             for name in ("migration_rate", "intra_move_rate"):
                 if not 0.0 <= as_float(row, name, path, line) <= 1.0:
                     fail(f"{path}:{line} {name} outside [0,1]")

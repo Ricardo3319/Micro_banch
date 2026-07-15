@@ -1,5 +1,6 @@
 # CMake / build outputs
 build/
+build-local/
 build-aqb-check/
 cmake-build-*/
 out/

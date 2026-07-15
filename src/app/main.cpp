@@ -15,6 +15,7 @@
 #include <condition_variable>
 #include <deque>
 #include <filesystem>
+#include <iterator>
 #include <mutex>
 #include <optional>
 #include <sstream>
@@ -162,6 +163,18 @@ static sim::WorkloadType parse_workload(const std::string& value) {
     throw std::runtime_error("Unknown workload: " + value);
 }
 
+static sim::PlacementMode parse_placement_mode(const std::string& value) {
+    std::string v = lower_copy(value);
+    v.erase(std::remove_if(v.begin(), v.end(),
+                           [](char c) { return c == '_' || c == '-' || c == ' '; }),
+            v.end());
+    if (v == "random" || v == "requestrandom")
+        return sim::PlacementMode::REQUEST_RANDOM;
+    if (v == "flow" || v == "rss" || v == "flowaffine")
+        return sim::PlacementMode::FLOW_AFFINE;
+    throw std::runtime_error("Unknown placement mode: " + value);
+}
+
 struct CliOptions {
     std::string mode = "all";
     std::string config_path;
@@ -173,6 +186,7 @@ struct CliOptions {
     std::optional<sim::WorkloadType> workload;
     int warmup_requests = sim::WARMUP_REQUESTS;
     int measurement_requests = sim::MEASUREMENT_REQUESTS;
+    sim::M0Config policy;
     bool help = false;
 };
 
@@ -190,6 +204,27 @@ static void apply_cli_option(CliOptions& opts,
     else if (key == "workload") opts.workload = parse_workload(value);
     else if (key == "warmup_requests" || key == "warmup-requests") opts.warmup_requests = std::stoi(value);
     else if (key == "measurement_requests" || key == "measurement-requests") opts.measurement_requests = std::stoi(value);
+    else if (key == "placement" || key == "placement_mode" || key == "placement-mode")
+        opts.policy.placement_mode = parse_placement_mode(value);
+    else if (key == "flow_count" || key == "flow-count") opts.policy.flow_count = std::stoi(value);
+    else if (key == "flow_zipf_alpha" || key == "flow-zipf-alpha") opts.policy.flow_zipf_alpha = std::stod(value);
+    else if (key == "flow_hash_seed" || key == "flow-hash-seed")
+        opts.policy.flow_hash_seed = static_cast<unsigned>(std::stoul(value, nullptr, 0));
+    else if (key == "check_period_us" || key == "check-period-us") opts.policy.t_check_us = std::stod(value);
+    else if (key == "scan_depth" || key == "scan-depth") opts.policy.rescue_scan_depth = std::stoi(value);
+    else if (key == "k_candidates" || key == "k-candidates") opts.policy.rescue_k_candidates = std::stoi(value);
+    else if (key == "h_targets" || key == "h-targets") opts.policy.rescue_h_targets = std::stoi(value);
+    else if (key == "budget_per_check" || key == "budget-per-check") opts.policy.rescue_budget_per_check = std::stoi(value);
+    else if (key == "epsilon_us" || key == "epsilon-us") opts.policy.rescue_epsilon_us = std::stod(value);
+    else if (key == "migration_cost_us" || key == "migration-cost-us") opts.policy.rescue_migration_cost_us = std::stod(value);
+    else if (key == "ewma_alpha" || key == "ewma-alpha") opts.policy.service_estimate_ewma_alpha = std::stod(value);
+    else if (key == "work_steal_poll_us" || key == "work-steal-poll-us") opts.policy.work_steal_poll_us = std::stod(value);
+    else if (key == "control_check_cost_us" || key == "control-check-cost-us") opts.policy.control_check_cost_us = std::stod(value);
+    else if (key == "control_queue_entry_cost_us" || key == "control-queue-entry-cost-us") opts.policy.control_queue_entry_cost_us = std::stod(value);
+    else if (key == "control_candidate_cost_us" || key == "control-candidate-cost-us") opts.policy.control_candidate_cost_us = std::stod(value);
+    else if (key == "control_target_cost_us" || key == "control-target-cost-us") opts.policy.control_target_cost_us = std::stod(value);
+    else if (key == "control_estimator_update_cost_us" || key == "control-estimator-update-cost-us") opts.policy.control_estimator_update_cost_us = std::stod(value);
+    else if (key == "control_poll_cost_us" || key == "control-poll-cost-us") opts.policy.control_poll_cost_us = std::stod(value);
     else if (key == "config") opts.config_path = value;
     else throw std::runtime_error("Unknown option: " + raw_key);
 }
@@ -264,6 +299,46 @@ static CliOptions parse_cli(int argc, char** argv) {
             opts.output_path = option_value(i, argc, argv, arg, "--output");
         } else if (arg == "--trace-out" || arg.rfind("--trace-out=", 0) == 0) {
             opts.trace_output_path = option_value(i, argc, argv, arg, "--trace-out");
+        } else if (arg == "--placement" || arg.rfind("--placement=", 0) == 0) {
+            opts.policy.placement_mode = parse_placement_mode(
+                option_value(i, argc, argv, arg, "--placement"));
+        } else if (arg == "--flow-count" || arg.rfind("--flow-count=", 0) == 0) {
+            opts.policy.flow_count = std::stoi(option_value(i, argc, argv, arg, "--flow-count"));
+        } else if (arg == "--flow-zipf-alpha" || arg.rfind("--flow-zipf-alpha=", 0) == 0) {
+            opts.policy.flow_zipf_alpha = std::stod(option_value(i, argc, argv, arg, "--flow-zipf-alpha"));
+        } else if (arg == "--flow-hash-seed" || arg.rfind("--flow-hash-seed=", 0) == 0) {
+            opts.policy.flow_hash_seed = static_cast<unsigned>(std::stoul(
+                option_value(i, argc, argv, arg, "--flow-hash-seed"), nullptr, 0));
+        } else if (arg == "--check-period-us" || arg.rfind("--check-period-us=", 0) == 0) {
+            opts.policy.t_check_us = std::stod(option_value(i, argc, argv, arg, "--check-period-us"));
+        } else if (arg == "--scan-depth" || arg.rfind("--scan-depth=", 0) == 0) {
+            opts.policy.rescue_scan_depth = std::stoi(option_value(i, argc, argv, arg, "--scan-depth"));
+        } else if (arg == "--k-candidates" || arg.rfind("--k-candidates=", 0) == 0) {
+            opts.policy.rescue_k_candidates = std::stoi(option_value(i, argc, argv, arg, "--k-candidates"));
+        } else if (arg == "--h-targets" || arg.rfind("--h-targets=", 0) == 0) {
+            opts.policy.rescue_h_targets = std::stoi(option_value(i, argc, argv, arg, "--h-targets"));
+        } else if (arg == "--budget-per-check" || arg.rfind("--budget-per-check=", 0) == 0) {
+            opts.policy.rescue_budget_per_check = std::stoi(option_value(i, argc, argv, arg, "--budget-per-check"));
+        } else if (arg == "--epsilon-us" || arg.rfind("--epsilon-us=", 0) == 0) {
+            opts.policy.rescue_epsilon_us = std::stod(option_value(i, argc, argv, arg, "--epsilon-us"));
+        } else if (arg == "--migration-cost-us" || arg.rfind("--migration-cost-us=", 0) == 0) {
+            opts.policy.rescue_migration_cost_us = std::stod(option_value(i, argc, argv, arg, "--migration-cost-us"));
+        } else if (arg == "--ewma-alpha" || arg.rfind("--ewma-alpha=", 0) == 0) {
+            opts.policy.service_estimate_ewma_alpha = std::stod(option_value(i, argc, argv, arg, "--ewma-alpha"));
+        } else if (arg == "--work-steal-poll-us" || arg.rfind("--work-steal-poll-us=", 0) == 0) {
+            opts.policy.work_steal_poll_us = std::stod(option_value(i, argc, argv, arg, "--work-steal-poll-us"));
+        } else if (arg == "--control-check-cost-us" || arg.rfind("--control-check-cost-us=", 0) == 0) {
+            opts.policy.control_check_cost_us = std::stod(option_value(i, argc, argv, arg, "--control-check-cost-us"));
+        } else if (arg == "--control-queue-entry-cost-us" || arg.rfind("--control-queue-entry-cost-us=", 0) == 0) {
+            opts.policy.control_queue_entry_cost_us = std::stod(option_value(i, argc, argv, arg, "--control-queue-entry-cost-us"));
+        } else if (arg == "--control-candidate-cost-us" || arg.rfind("--control-candidate-cost-us=", 0) == 0) {
+            opts.policy.control_candidate_cost_us = std::stod(option_value(i, argc, argv, arg, "--control-candidate-cost-us"));
+        } else if (arg == "--control-target-cost-us" || arg.rfind("--control-target-cost-us=", 0) == 0) {
+            opts.policy.control_target_cost_us = std::stod(option_value(i, argc, argv, arg, "--control-target-cost-us"));
+        } else if (arg == "--control-estimator-update-cost-us" || arg.rfind("--control-estimator-update-cost-us=", 0) == 0) {
+            opts.policy.control_estimator_update_cost_us = std::stod(option_value(i, argc, argv, arg, "--control-estimator-update-cost-us"));
+        } else if (arg == "--control-poll-cost-us" || arg.rfind("--control-poll-cost-us=", 0) == 0) {
+            opts.policy.control_poll_cost_us = std::stod(option_value(i, argc, argv, arg, "--control-poll-cost-us"));
         } else if (!arg.empty() && arg[0] == '-') {
             throw std::runtime_error("Unknown CLI option: " + arg);
         } else if (ends_with(lower_copy(arg), ".yaml") || ends_with(lower_copy(arg), ".yml")) {
@@ -280,6 +355,53 @@ static CliOptions parse_cli(int argc, char** argv) {
         throw std::runtime_error("--output is only valid for a single mode, not mode=all");
     if (opts.warmup_requests < 0 || opts.measurement_requests <= 0)
         throw std::runtime_error("request counts must be warmup>=0 and measurement>0");
+    if (std::any_of(opts.rhos.begin(), opts.rhos.end(),
+                    [](double value) { return !std::isfinite(value) || value <= 0.0; }))
+        throw std::runtime_error("rho values must be finite and positive");
+    const double finite_policy_values[] = {
+        opts.policy.flow_zipf_alpha,
+        opts.policy.t_check_us,
+        opts.policy.work_steal_poll_us,
+        opts.policy.rescue_epsilon_us,
+        opts.policy.rescue_migration_cost_us,
+        opts.policy.service_estimate_ewma_alpha,
+        opts.policy.control_check_cost_us,
+        opts.policy.control_queue_entry_cost_us,
+        opts.policy.control_candidate_cost_us,
+        opts.policy.control_target_cost_us,
+        opts.policy.control_estimator_update_cost_us,
+        opts.policy.control_poll_cost_us,
+    };
+    if (std::any_of(std::begin(finite_policy_values), std::end(finite_policy_values),
+                    [](double value) { return !std::isfinite(value); }))
+        throw std::runtime_error("simulation parameters must be finite");
+    if (opts.policy.flow_count <= 0 || opts.policy.flow_zipf_alpha < 0.0)
+        throw std::runtime_error("flow_count must be positive and flow_zipf_alpha non-negative");
+    if (!(opts.policy.t_check_us > 0.0)
+        || !(opts.policy.work_steal_poll_us > 0.0))
+        throw std::runtime_error("check and polling periods must be positive");
+    if (opts.policy.rescue_scan_depth <= 0
+        || opts.policy.rescue_k_candidates <= 0
+        || opts.policy.rescue_h_targets <= 0
+        || opts.policy.rescue_budget_per_check <= 0)
+        throw std::runtime_error("scan, candidate, target, and budget bounds must be positive");
+    if (opts.policy.rescue_epsilon_us < 0.0
+        || opts.policy.rescue_migration_cost_us < 0.0)
+        throw std::runtime_error("epsilon and migration cost must be non-negative");
+    if (!(opts.policy.service_estimate_ewma_alpha > 0.0)
+        || opts.policy.service_estimate_ewma_alpha > 1.0)
+        throw std::runtime_error("EWMA alpha must be in (0,1]");
+    const double control_costs[] = {
+        opts.policy.control_check_cost_us,
+        opts.policy.control_queue_entry_cost_us,
+        opts.policy.control_candidate_cost_us,
+        opts.policy.control_target_cost_us,
+        opts.policy.control_estimator_update_cost_us,
+        opts.policy.control_poll_cost_us,
+    };
+    if (std::any_of(std::begin(control_costs), std::end(control_costs),
+                    [](double value) { return value < 0.0; }))
+        throw std::runtime_error("accounting-only control costs must be non-negative");
     return opts;
 }
 
@@ -319,6 +441,12 @@ static void print_usage(const char* exe) {
         << "  --out-dir DIR          artifact root for default outputs\n"
         << "  --output FILE.csv      explicit CSV path for a single mode\n\n"
         << "  --trace-out FILE.csv   export the generated policy-independent trace\n\n"
+        << "Local simulation model options:\n"
+        << "  --placement random|flow-affine  request-random or RSS-like flow placement\n"
+        << "  --flow-count N --flow-zipf-alpha A --flow-hash-seed N\n"
+        << "  --check-period-us X --scan-depth N --k-candidates N --h-targets N\n"
+        << "  --budget-per-check N --epsilon-us X --migration-cost-us X --ewma-alpha X\n"
+        << "  --control-*-cost-us X  accounting-only configured control costs\n\n"
         << "Examples:\n"
         << "  " << exe << " --mode rescue-smoke\n"
         << "  " << exe << " --mode rescue-main --workload W3 --rho 0.85 --seed 11 --out-dir artifacts/dev\n"
@@ -1002,12 +1130,16 @@ static void write_rescue_header(std::ofstream& csv) {
            "measurement_requests,measured_generated_work_us,"
            "experiment_duration_us,latency_sample_count,"
            "scenario,workload,method,rho,seed,"
-           "check_period_us,epsilon_us,budget_per_check,k_candidates,h_targets,"
+           "check_period_us,scan_depth,epsilon_us,budget_per_check,k_candidates,h_targets,"
            "migration_cost_us,service_estimate_mode,service_estimate_noise_cv,"
            "service_estimate_ewma_alpha,w2_hot_core_count,w2_hot_dispatch_prob,"
+           "placement_mode,flow_count,flow_zipf_alpha,flow_hash_seed,"
            "target_insert_policy,hybrid_pressure_ratio,hybrid_min_gain_us,"
            "work_steal_poll_us,work_steal_max_per_poll,"
            "alto_queue_threshold_us,alto_min_gain_us,"
+           "control_cost_mode,control_check_cost_us,control_queue_entry_cost_us,"
+           "control_candidate_cost_us,control_target_cost_us,"
+           "control_estimator_update_cost_us,control_poll_cost_us,"
            "target_safety_enabled,rescuable_filter_enabled,"
            "P99_us,P999_us,slo_violation_rate,total_finished,total_generated,"
            "migration_rate,invalid_migration_ratio,"
@@ -1018,6 +1150,9 @@ static void write_rescue_header(std::ofstream& csv) {
            "invalid_intra_move_ratio,"
            "rescue_attempt_count,rescue_candidate_count,locally_doomed_count,"
            "remote_feasible_count,target_safe_count,rescue_success_count,"
+           "rescue_queue_entries_inspected_count,rescue_accepted_candidate_count,"
+           "rescue_target_evaluation_count,rescue_source_revalidation_reject_count,"
+           "rescue_remote_revalidation_reject_count,"
            "migration_handoff_count,avg_migration_handoff_us,"
            "max_migration_handoff_us,max_rescue_commits_per_check,"
            "max_target_reservation_work_us,"
@@ -1025,6 +1160,14 @@ static void write_rescue_header(std::ofstream& csv) {
            "max_descriptor_handoff_us,"
            "rescue_moved_work_us,target_unsafe_reject_count,"
            "remote_infeasible_reject_count,needless_migration_count,"
+           "rescue_short_move_count,rescue_long_move_count,"
+           "rescue_burst_move_count,rescue_nonburst_move_count,"
+           "avg_rescue_source_work_at_commit_us,"
+           "avg_rescue_destination_work_at_commit_us,"
+           "rescue_migrated_finished,rescue_migrated_slo_violation_rate,"
+           "rescue_migrated_P99_us,rescue_migrated_P999_us,"
+           "rescue_nonmigrated_finished,rescue_nonmigrated_slo_violation_rate,"
+           "rescue_nonmigrated_P99_us,rescue_nonmigrated_P999_us,"
            "unsaved_migration_count,beneficial_migration_count,"
            "harmful_migration_count,predicted_target_unsafe_accept_count,"
            "target_harm_watch_count,harmful_actual_count,harmful_actual_ratio,"
@@ -1032,7 +1175,16 @@ static void write_rescue_header(std::ofstream& csv) {
            "useless_migration_ratio,rescue_per_migration,"
            "relief_attempt_count,relief_success_count,relief_beneficial_count,"
            "relief_useless_count,relief_moved_work_us,"
-           "relief_beneficial_migration_ratio,relief_useless_migration_ratio\n";
+           "relief_beneficial_migration_ratio,relief_useless_migration_ratio,"
+           "estimator_observation_count,estimator_mean_signed_error_us,"
+           "estimator_mae_us,estimator_rmse_us,estimator_underestimate_count,"
+           "estimator_overestimate_count,estimator_exact_count,"
+           "estimator_cold_start_count,estimator_short_observation_count,"
+           "estimator_long_observation_count,estimator_short_mae_us,"
+           "estimator_long_mae_us,control_check_count,"
+           "control_queue_entry_count,control_candidate_count,control_target_count,"
+           "control_estimator_update_count,control_poll_operation_count,"
+           "configured_control_cost_sum_us\n";
 }
 
 static void write_rescue_row(std::ofstream& csv,
@@ -1055,7 +1207,8 @@ static void write_rescue_row(std::ofstream& csv,
         << m.latency_hist.count() << ","
         << scenario << "," << workload_name(wl) << "," << method_name(method)
         << "," << rho << "," << seed << ","
-        << cfg.t_check_us << "," << cfg.rescue_epsilon_us << ","
+        << cfg.t_check_us << "," << cfg.rescue_scan_depth << ","
+        << cfg.rescue_epsilon_us << ","
         << cfg.rescue_budget_per_check << "," << cfg.rescue_k_candidates << ","
         << cfg.rescue_h_targets << ","
         << cfg.rescue_migration_cost_us << ","
@@ -1063,11 +1216,20 @@ static void write_rescue_row(std::ofstream& csv,
         << cfg.service_estimate_noise_cv << ","
         << cfg.service_estimate_ewma_alpha << ","
         << cfg.w2_hot_core_count << "," << cfg.w2_hot_dispatch_prob << ","
+        << sim::placement_mode_name(trace_cfg.placement_mode) << ","
+        << trace_cfg.flow_count << "," << trace_cfg.flow_zipf_alpha << ","
+        << trace_cfg.flow_hash_seed << ","
         << target_insert_policy_name(cfg.rescue_target_insert_policy) << ","
         << cfg.rescue_hybrid_pressure_ratio << ","
         << cfg.rescue_hybrid_min_gain_us << ","
         << cfg.work_steal_poll_us << "," << cfg.work_steal_max_per_poll << ","
         << cfg.alto_queue_threshold_us << "," << cfg.alto_min_gain_us << ","
+        << "accounting_only," << cfg.control_check_cost_us << ","
+        << cfg.control_queue_entry_cost_us << ","
+        << cfg.control_candidate_cost_us << ","
+        << cfg.control_target_cost_us << ","
+        << cfg.control_estimator_update_cost_us << ","
+        << cfg.control_poll_cost_us << ","
         << (method_has_target_safety(method) ? 1 : 0) << ","
         << (method_has_rescuable_filter(method) ? 1 : 0) << ","
         << std::setprecision(3) << m.p99() << "," << m.p999() << ","
@@ -1085,6 +1247,11 @@ static void write_rescue_row(std::ofstream& csv,
         << m.rescue_attempt_count << "," << m.rescue_candidate_count << ","
         << m.locally_doomed_count << "," << m.remote_feasible_count << ","
         << m.target_safe_count << "," << m.rescue_success_count << ","
+        << m.rescue_queue_entries_inspected_count << ","
+        << m.rescue_accepted_candidate_count << ","
+        << m.rescue_target_evaluation_count << ","
+        << m.rescue_source_revalidation_reject_count << ","
+        << m.rescue_remote_revalidation_reject_count << ","
         << m.migration_handoff_count << ","
         << m.average_migration_handoff_us() << ","
         << m.migration_handoff_max_us << ","
@@ -1095,7 +1262,20 @@ static void write_rescue_row(std::ofstream& csv,
         << m.descriptor_handoff_max_us << ","
         << m.rescue_moved_work_us << "," << m.target_unsafe_reject_count << ","
         << m.remote_infeasible_reject_count << ","
-        << m.needless_migration_count << "," << m.unsaved_migration_count << ","
+        << m.needless_migration_count << ","
+        << m.rescue_short_move_count << "," << m.rescue_long_move_count << ","
+        << m.rescue_burst_move_count << "," << m.rescue_nonburst_move_count << ","
+        << m.avg_rescue_source_work_at_commit_us() << ","
+        << m.avg_rescue_destination_work_at_commit_us() << ","
+        << m.rescue_migrated_finished << ","
+        << m.rescue_migrated_slo_violation_rate() << ","
+        << m.rescue_migrated_latency_hist.percentile(0.99) << ","
+        << m.rescue_migrated_latency_hist.percentile(0.999) << ","
+        << m.rescue_nonmigrated_finished << ","
+        << m.rescue_nonmigrated_slo_violation_rate() << ","
+        << m.rescue_nonmigrated_latency_hist.percentile(0.99) << ","
+        << m.rescue_nonmigrated_latency_hist.percentile(0.999) << ","
+        << m.unsaved_migration_count << ","
         << m.beneficial_migration_count << "," << m.harmful_migration_count << ","
         << m.predicted_target_unsafe_accept_count << ","
         << m.target_harm_watch_count << ","
@@ -1108,7 +1288,21 @@ static void write_rescue_row(std::ofstream& csv,
         << m.relief_beneficial_count << "," << m.relief_useless_count << ","
         << m.relief_moved_work_us << ","
         << m.relief_beneficial_migration_ratio() << ","
-        << m.relief_useless_migration_ratio() << "\n";
+        << m.relief_useless_migration_ratio() << ","
+        << m.estimator_observation_count << ","
+        << m.estimator_mean_signed_error_us() << ","
+        << m.estimator_mae_us() << "," << m.estimator_rmse_us() << ","
+        << m.estimator_underestimate_count << ","
+        << m.estimator_overestimate_count << "," << m.estimator_exact_count << ","
+        << m.estimator_cold_start_count << ","
+        << m.estimator_short_observation_count << ","
+        << m.estimator_long_observation_count << ","
+        << m.estimator_short_mae_us() << "," << m.estimator_long_mae_us() << ","
+        << m.control_check_count << "," << m.control_queue_entry_count << ","
+        << m.control_candidate_count << "," << m.control_target_count << ","
+        << m.control_estimator_update_count << ","
+        << m.control_poll_operation_count << ","
+        << m.configured_control_cost_sum_us() << "\n";
 }
 
 static int run_intra_smoke() {
@@ -1365,6 +1559,10 @@ static std::shared_ptr<const sim::WorkloadTrace> make_shared_trace(
     trace_cfg.effective_core_capacity = sim::CORES_PER_HOST;
     trace_cfg.w2_hot_core_count = cfg.w2_hot_core_count;
     trace_cfg.w2_hot_dispatch_prob = cfg.w2_hot_dispatch_prob;
+    trace_cfg.placement_mode = cfg.placement_mode;
+    trace_cfg.flow_count = cfg.flow_count;
+    trace_cfg.flow_zipf_alpha = cfg.flow_zipf_alpha;
+    trace_cfg.flow_hash_seed = cfg.flow_hash_seed;
     trace_cfg.warmup_requests = warmup_requests;
     trace_cfg.measurement_requests = measurement_requests;
     return std::make_shared<const sim::WorkloadTrace>(
@@ -1509,7 +1707,8 @@ static int run_rescue_main(const std::string& csv_path,
                            const std::vector<double>& configured_rhos,
                            const std::vector<unsigned>& configured_seeds,
                            int warmup_requests,
-                           int measurement_requests) {
+                           int measurement_requests,
+                           const sim::M0Config& requested_cfg) {
     ensure_parent_dir(csv_path);
     std::ofstream csv(csv_path);
     if (!csv.is_open()) { std::cerr << "Cannot open " << csv_path << "\n"; return 1; }
@@ -1531,12 +1730,11 @@ static int run_rescue_main(const std::string& csv_path,
               << " rho/seed sweep ===\n";
     for (double rho : rhos) {
         for (unsigned seed : seeds) {
-            sim::M0Config shared_cfg;
-            auto trace = make_shared_trace(wl, rho, seed, shared_cfg,
+            auto trace = make_shared_trace(wl, rho, seed, requested_cfg,
                                            warmup_requests, measurement_requests);
             for (auto method : methods) {
                 sim::Simulator eng;
-                sim::M0Config cfg;
+                sim::M0Config cfg = requested_cfg;
                 eng.configure(method, rho, seed, wl,
                               sim::ClusterProfile::HOMOGENEOUS, cfg, trace);
                 eng.run();
@@ -2394,7 +2592,7 @@ int main(int argc, char** argv) {
             std::cerr << "trace-generate requires --trace-out FILE.csv\n";
             return 2;
         }
-        sim::M0Config cfg;
+        sim::M0Config cfg = opts.policy;
         const auto workload = opts.workload.value_or(
             sim::WorkloadType::W3_POISSON_LOGNORMAL);
         const double rho = opts.rhos.empty() ? 0.85 : opts.rhos.front();
@@ -2600,7 +2798,8 @@ int main(int argc, char** argv) {
                     opts.workload.value_or(
                         sim::WorkloadType::W3_POISSON_LOGNORMAL),
                     opts.rhos, opts.seeds,
-                    opts.warmup_requests, opts.measurement_requests);
+                    opts.warmup_requests, opts.measurement_requests,
+                    opts.policy);
             });
     } else if (mode == "rescue-ablation") {
         return run_csv(

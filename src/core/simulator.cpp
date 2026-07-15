@@ -137,6 +137,10 @@ void Simulator::configure(MethodType method, double rho, unsigned seed,
         trace_config.effective_core_capacity = effective_capacity_;
         trace_config.w2_hot_core_count = m0cfg.w2_hot_core_count;
         trace_config.w2_hot_dispatch_prob = m0cfg.w2_hot_dispatch_prob;
+        trace_config.placement_mode = m0cfg.placement_mode;
+        trace_config.flow_count = m0cfg.flow_count;
+        trace_config.flow_zipf_alpha = m0cfg.flow_zipf_alpha;
+        trace_config.flow_hash_seed = m0cfg.flow_hash_seed;
         trace_ = std::make_shared<WorkloadTrace>(WorkloadTrace::generate(trace_config));
     }
     trace_index_ = 0;
@@ -153,6 +157,8 @@ void Simulator::configure(MethodType method, double rho, unsigned seed,
     migration_batch_id_counter_ = 0;
     ewma_short_service_us_ = class_mean_service_estimate(RpcMethod::SHORT_RPC);
     ewma_long_service_us_ = class_mean_service_estimate(RpcMethod::LONG_RPC);
+    estimator_short_samples_ = 0;
+    estimator_long_samples_ = 0;
     quantile_short_service_us_ = std::max(
         SLO_SHORT_SERVICE_THRESHOLD_US, ewma_short_service_us_ * 1.5);
     quantile_long_service_us_ = std::max(BIMODAL_LONG_US, ewma_long_service_us_ * 1.5);
@@ -313,6 +319,8 @@ void Simulator::update_service_estimator(RpcMethod method, double base_service_u
         guard = (1.0 - decay_alpha) * guard + decay_alpha * base_service_us;
     }
     guard = std::max(floor_est, guard);
+    if (short_class) ++estimator_short_samples_;
+    else ++estimator_long_samples_;
 }
 
 void Simulator::handle_task_generate(const Event& /*e*/) {
@@ -332,10 +340,13 @@ void Simulator::handle_task_generate(const Event& /*e*/) {
     t->base_service_time_us = entry.service_time_us;
     t->deadline_budget_us = entry.deadline_budget_us;
     t->initial_core = entry.initial_core;
+    t->flow_id = entry.flow_id;
     t->arrival_burst = entry.burst;
     t->measurement_eligible =
         entry.id > static_cast<uint64_t>(trace_->config().warmup_requests);
     if (t->measurement_eligible && !metrics_.recording) metrics_.start_recording();
+    t->estimator_prior_samples = t->rpc_method == RpcMethod::SHORT_RPC
+        ? estimator_short_samples_ : estimator_long_samples_;
     t->expected_service_time_us = estimate_service_time(
         t->rpc_method, t->base_service_time_us);
     if (t->measurement_eligible)
@@ -514,6 +525,11 @@ void Simulator::handle_task_execute(int host, int core_id) {
 void Simulator::start_execution(Core& c, double now) {
     Task* t = c.pop_waiting_front();
     if (!t) { c.idle = true; return; }
+    if (t->migration_in_flight)
+        throw std::logic_error("in-flight descriptor reached execution");
+    if (t->execution_started || t->completed)
+        throw std::logic_error("request executed more than once");
+    t->execution_started = true;
     c.idle = false;
     c.running = t;
     double exec_us = compute_exec_time(t->base_service_time_us, c.capacity);
@@ -546,6 +562,7 @@ bool Simulator::move_waiting_task_intra_host(int host, int src_core_id, int dst_
     Node& node = nodes_[host];
     Core& src_core = node.cores[src_core_id];
     Core& dst_core = node.cores[dst_core_id];
+    if (!src_core.wait_queue.contains(task)) return false;
 
     src_core.remove_waiting(task);
     task->intra_moved = true;
@@ -607,6 +624,10 @@ bool Simulator::move_rescue_task_intra_host(int host, int src_core_id, int dst_c
     Node& node = nodes_[host];
     Core& src_core = node.cores[src_core_id];
     Core& dst_core = node.cores[dst_core_id];
+    if (!src_core.wait_queue.contains(task)) return false;
+    const double source_work_at_commit_us = src_core.local_workload_us(now_us_);
+    const double destination_work_at_commit_us = dst_core.local_workload_us(now_us_)
+        + incoming_core_reservation_[host][dst_core_id];
     uint64_t rescue_migration_id = ++migration_batch_id_counter_;
 
     auto deadline_abs = [](const Task* t) {
@@ -663,8 +684,10 @@ bool Simulator::move_rescue_task_intra_host(int host, int src_core_id, int dst_c
     incoming_core_reservation_[host][dst_core_id] += moved_work_us;
     metrics_.on_target_reservation(
         incoming_core_reservation_[host][dst_core_id], task->measurement_eligible);
-    metrics_.on_rescue_success(moved_work_us, predicted_harmful, relief,
-                               task->measurement_eligible);
+    metrics_.on_rescue_success(
+        moved_work_us, predicted_harmful, relief, task->measurement_eligible,
+        task->rpc_method, task->arrival_burst, source_work_at_commit_us,
+        destination_work_at_commit_us);
 
     Event arrival;
     arrival.timestamp_us = now_us_ + std::max(0.0, m0_config_.rescue_migration_cost_us);
@@ -710,6 +733,7 @@ int Simulator::run_work_stealing_poll(int host) {
         if (core.idle && incoming_core_reservation_[host][core.core_id] <= 0.0)
             ++idle_cores;
     metrics_.on_steal_poll(idle_cores);
+    metrics_.on_control_poll(m0_config_.control_poll_cost_us);
 
     int moved = 0;
     const int limit = std::max(1, m0_config_.work_steal_max_per_poll);
@@ -724,6 +748,7 @@ int Simulator::run_work_stealing_poll(int host) {
 
 bool Simulator::run_alto_threshold_check(int host) {
     metrics_.on_proactive_intra_attempt();
+    metrics_.on_control_check(m0_config_.control_check_cost_us);
     if (host < 0 || host >= static_cast<int>(nodes_.size())) return false;
     Node& node = nodes_[host];
     const int scan_depth = std::max(1, m0_config_.rescue_scan_depth);
@@ -758,16 +783,20 @@ bool Simulator::run_alto_threshold_check(int host) {
         for (Task* task = source.wait_queue.begin();
              task && depth < scan_depth && candidates < max_candidates;
              task = task->next, ++depth) {
+            metrics_.on_control_queue_entry(
+                m0_config_.control_queue_entry_cost_us);
             const double source_task_work =
                 task->expected_service_time_us / source.capacity + T_host_us;
             const double local_completion_abs = now_us_ + prefix_work_us
                                               + source_task_work;
             if (!task->intra_moved && local_completion_abs > task->deadline_abs_us()) {
                 ++candidates;
+                metrics_.on_control_candidate(m0_config_.control_candidate_cost_us);
                 int tried = 0;
                 for (const auto& target : targets) {
                     if (target.core == source.core_id) continue;
                     if (tried++ >= target_count) break;
+                    metrics_.on_control_target(m0_config_.control_target_cost_us);
                     const Core& destination = node.cores[target.core];
                     const double target_task_work =
                         task->expected_service_time_us / destination.capacity + T_host_us;
@@ -873,6 +902,7 @@ bool Simulator::run_intra_proactive_check(int host) {
 
 bool Simulator::run_rescue_sched_check(int host) {
     metrics_.on_rescue_attempt();
+    metrics_.on_control_check(m0_config_.control_check_cost_us);
     if (host < 0 || host >= static_cast<int>(nodes_.size())) return false;
 
     const bool no_target_safety =
@@ -929,6 +959,9 @@ bool Simulator::run_rescue_sched_check(int host) {
         for (Task* cur = core.wait_queue.begin();
              cur && depth < scan_depth;
              cur = cur->next, ++depth) {
+            metrics_.on_rescue_queue_entry();
+            metrics_.on_control_queue_entry(
+                m0_config_.control_queue_entry_cost_us);
             double work_us = estimated_task_work(core, cur);
             double completion_abs_us = now_us_ + prefix_work_us + work_us;
             if (completion_abs_us > deadline_abs(cur)) ++risk;
@@ -977,6 +1010,9 @@ bool Simulator::run_rescue_sched_check(int host) {
              cur && depth < scan_depth && accepted_from_source < max_candidates;
              cur = cur->next, ++depth) {
             metrics_.on_rescue_candidate();
+            metrics_.on_rescue_queue_entry();
+            metrics_.on_control_queue_entry(
+                m0_config_.control_queue_entry_cost_us);
             if (cur->intra_moved) {
                 prefix_work_us += estimated_task_work(src_core, cur);
                 continue;
@@ -997,6 +1033,9 @@ bool Simulator::run_rescue_sched_check(int host) {
                     source_work_us
                 });
                 ++accepted_from_source;
+                metrics_.on_rescue_accepted_candidate();
+                metrics_.on_control_candidate(
+                    m0_config_.control_candidate_cost_us);
             }
 
             prefix_work_us += work_us;
@@ -1013,6 +1052,8 @@ bool Simulator::run_rescue_sched_check(int host) {
             if (target.core == cand.src_core) continue;
             if (tried_targets >= target_count) break;
             ++tried_targets;
+            metrics_.on_rescue_target_evaluation();
+            metrics_.on_control_target(m0_config_.control_target_cost_us);
 
             const Core& dst_core = node.cores[target.core];
             double remote_work_us = estimated_task_work(dst_core, cand.task);
@@ -1091,7 +1132,10 @@ bool Simulator::run_rescue_sched_check(int host) {
         if (move.cand.src_core < 0 || move.cand.src_core >= CORES_PER_HOST) continue;
         if (move.dst_core < 0 || move.dst_core >= CORES_PER_HOST) continue;
         if (source_used[move.cand.src_core]) continue;
-        if (!task_is_waiting_on_source(move)) continue;
+        if (!task_is_waiting_on_source(move)) {
+            metrics_.on_rescue_source_revalidation_reject();
+            continue;
+        }
 
         const Core& destination = node.cores[move.dst_core];
         double remote_work_us = estimated_task_work(destination, move.cand.task);
@@ -1104,6 +1148,7 @@ bool Simulator::run_rescue_sched_check(int host) {
             && current_remote_completion_abs_us + m0_config_.rescue_epsilon_us
                 > deadline_abs(move.cand.task)) {
             metrics_.on_rescue_remote_infeasible_reject();
+            metrics_.on_rescue_remote_revalidation_reject();
             continue;
         }
         double current_remote_latency_us =
@@ -1245,7 +1290,12 @@ void Simulator::handle_task_finish(const Event& e) {
     double latency_us = now_us_ - t->generate_time_us;
     metrics_.on_task_finish(latency_us, t->deadline_budget_us,
                             t->base_service_time_us, t->rpc_method,
-                            t->measurement_eligible);
+                            t->measurement_eligible, t->rescue_intra_moved);
+    metrics_.on_estimator_observation(
+        t->expected_service_time_us, t->base_service_time_us, t->rpc_method,
+        t->estimator_prior_samples, t->measurement_eligible);
+    metrics_.on_control_estimator_update(
+        m0_config_.control_estimator_update_cost_us);
     update_service_estimator(t->rpc_method, t->base_service_time_us);
 
     // Check if migration was invalid: actual latency > estimated local latency.
@@ -1271,6 +1321,7 @@ void Simulator::handle_task_finish(const Event& e) {
     t->target_harm_watch_active = false;
     t->target_harm_watch_recorded = false;
     t->target_harm_watch_migration_id = 0;
+    t->completed = true;
 
     core.running = nullptr;
     core.idle = true;
