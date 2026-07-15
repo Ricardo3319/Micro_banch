@@ -103,6 +103,41 @@ coverage, estimator direction/class coverage, configured cost arithmetic, and
 the actual CSV parameters for every OFAT profile before writing summaries. Its bootstrap
 intervals are descriptive and are not a rerun of the corrected gate.
 
+## Full-Size EWMA Confirmation
+
+The development-seed pilot selected `ewma-0.01` for a targeted full-size
+confirmation, alongside the corrected default. The resulting artifact is
+`artifacts/step-22-local-simulation-diagnostics/full-ewma-confirmation-20260715/`.
+It covers seeds `11,23,37,47,59`, 200,000 warmup requests, and 1,000,000
+measurement requests at W2 rho 0.85 and W3 rho 0.70, 0.85, and 0.90.
+
+The extended-schema default rows were compared with the matching Step-21 rows.
+All 80 rows matched across all 90 shared columns, with zero differences. The
+Step-22 instrumentation therefore preserves the frozen default outcomes at the
+four diagnostic anchors.
+
+For RescueSched, changing the shared method-keyed EWMA alpha from 0.05 to 0.01
+produced the following paired development-seed sensitivity. Negative miss-rate
+change means fewer deadline violations; the intervals are descriptive paired
+bootstrap intervals from `sensitivity_vs_default.csv`.
+
+| Anchor | Mean miss-rate change | 95% descriptive interval | Median P99 ratio | Median P999 ratio | Migrated-work-rate ratio |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| W2 rho 0.85 | 0 | [0, 0] | 1.0000 | 1.0000 | 1.0000 |
+| W3 rho 0.70 | -0.0001210 | [-0.0001784, -0.0000718] | 0.9950 | 1.0000 | 0.9927 |
+| W3 rho 0.85 | -0.0011362 | [-0.0014898, -0.0007826] | 0.9953 | 0.9948 | 0.9914 |
+| W3 rho 0.90 | -0.0018180 | [-0.0023400, -0.0014108] | 0.9958 | 1.0046 | 0.9891 |
+
+This is not a RescueSched-only improvement. The alpha controls the estimator
+shared by the deployable-estimator methods, and ALTO's mean miss rate also
+improved at every W3 anchor. RescueSched's mean miss-rate advantage over ALTO
+decreased slightly at all three W3 points. The W3 rho 0.70 negative result
+against polling remains, the W2 tail regression is unchanged, and W3 rho 0.90
+has a small median P999 regression under alpha 0.01. Consequently, alpha 0.05
+remains the frozen default, Step-21 remains authoritative, and alpha 0.01 is
+only an estimator-calibration candidate requiring preregistration and
+independent evidence.
+
 ## Evidence Boundary
 
 - `artifacts/step-21-corrected-full/` remains the authoritative corrected
