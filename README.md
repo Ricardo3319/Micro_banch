@@ -22,6 +22,48 @@ CLI modes. Their historical results are not evidence for the RescueSched paper.
 
 ## Build and test
 
+### Linux (Ubuntu 22.04/24.04)
+
+Install the build tools:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y build-essential cmake ninja-build python3 tmux
+```
+
+Clone the experiment branch, build, and run the test gate:
+
+```bash
+git clone --branch codex/rescuesched-baselines \
+  https://github.com/Ricardo3319/Micro_banch.git
+cd Micro_banch
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+ctest --test-dir build --output-on-failure
+./build/simulator --mode rescue-smoke
+```
+
+Run the short corrected evaluation before starting the expensive full matrix:
+
+```bash
+bash scripts/run_corrected_eval.sh pilot
+```
+
+After checking `artifacts/step-20-corrected-pilot/go_no_go.md`, run the full
+matrix in a persistent terminal such as `tmux`:
+
+```bash
+tmux new -s rescuesched
+bash scripts/run_corrected_eval.sh full 2>&1 | tee corrected-full.log
+```
+
+The full run writes to `artifacts/step-21-corrected-full`. Record
+`git rev-parse HEAD`, compiler/CMake versions, `uname -a`, `lscpu`, and the CPU
+frequency governor with the result manifest. For the planned physical-machine
+work, continue with `docs/RESCUESCHED_PHYSICAL_REPRODUCTION_PLAN.md`.
+
+### Windows
+
 ```powershell
 cmake -S . -B build
 cmake --build build --config Release
