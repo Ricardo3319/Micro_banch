@@ -73,14 +73,8 @@ affinity。先保持平台默认值并完整记录；后续只通过预注册的
 
 ## 4. 克隆并固定版本
 
-本轮 Linux corrected evaluation 的代码基线是：
-
-```text
-ba81d825eaf1e0b6701e21dbb6462c2a801da0b9
-```
-
-推荐先把本手册和 `scripts/run_physical_preflight.sh` 提交并推送到实验分支。
-物理机随后克隆该分支，并把克隆时的 HEAD 冻结为本次实验提交：
+不要从文档中的历史 SHA 推断实验版本。先把本轮非论文代码和脚本提交并推送到
+实验分支，再在部署时读取远端分支的完整 SHA，并将其冻结为本次实验提交：
 
 ```bash
 cd ~
@@ -100,16 +94,9 @@ git status --short
 避免实验过程中远程分支移动导致代码版本变化。正式实验应保证
 `git status --short` 无输出。
 
-如果暂时不提交这两个新文件，也可以从开发机临时复制脚本。先在物理机克隆并
-固定原代码基线 `ba81d82`，再从开发机执行：
-
-```bash
-scp /home/ricardo/projects/Micro_banch/scripts/run_physical_preflight.sh \
-  <cloudlab-user>@<server-hostname>:~/Micro_banch/scripts/
-```
-
-这种临时方式会使物理机工作区出现一个未跟踪脚本，只适合环境预检，不适合
-正式论文实验。正式实验必须使用已提交的脚本版本。
+server 和 client 必须 checkout 同一个 `EXPERIMENT_COMMIT`。不要用 `scp`
+单独替换脚本或可执行文件；正式运行的每个输入和程序都必须来自已提交版本，
+或者在 manifest 中有独立 SHA-256 和生成命令。
 
 ## 5. 一键执行物理机预检
 

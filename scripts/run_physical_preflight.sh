@@ -21,7 +21,8 @@ Options:
 
 Example:
   bash scripts/run_physical_preflight.sh \
-    --expected-commit ba81d825eaf1e0b6701e21dbb6462c2a801da0b9
+    --expected-commit <full-frozen-commit-sha> \
+    --require-clean
 EOF
 }
 
