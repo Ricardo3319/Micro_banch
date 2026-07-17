@@ -136,6 +136,31 @@ test "$(git rev-parse HEAD)" = "$EXPECTED_COMMIT"
 test -z "$(git status --porcelain)"
 ```
 
+### 4.3 无 GitHub 凭据时的审计型 bundle 部署
+
+**Host：node0 发起、node1 接收。Input：** node0 clean commit，node1 clean worktree。**成功条件：** bundle 验证/fetch 成功，node1 full SHA 完全相同。**恢复入口：** 任一 checkout 不 clean 时停止并人工保存本地修改；bundle 只解决节点间部署，不冒充 GitHub push。
+
+```bash
+# node0
+cd /users/Mingyang/Micro_banch
+COMMIT="$(git rev-parse HEAD)"
+BUNDLE="/tmp/rescuesched-wp1-$COMMIT.bundle"
+git bundle create "$BUNDLE" codex/infocom2027-integration
+git bundle verify "$BUNDLE"
+scp "$BUNDLE" node1:/tmp/
+
+# node1
+cd /users/Mingyang/Micro_banch
+test -z "$(git status --porcelain)"
+git fetch "/tmp/rescuesched-wp1-$COMMIT.bundle" \
+  codex/infocom2027-integration
+git switch --force-create codex/infocom2027-integration FETCH_HEAD
+test "$(git rev-parse HEAD)" = "$COMMIT"
+test -z "$(git status --porcelain)"
+```
+
+远端 branch/tag 仍须之后在有 GitHub 认证的环境执行普通、非 force push。
+
 ## 5. 分析 Python 环境
 
 **Host：node0；node1 仅在需要离线分析时重复。Input：** `requirements/analysis-lock.txt`。**成功条件：** venv 创建成功，`pip check` 和 imports PASS。**恢复入口：** 删除仅被忽略的 `.venv-analysis/` 后按锁文件重建；不要修改系统 Python。
@@ -200,7 +225,7 @@ bash scripts/run_two_node_rpc_smoke.sh --help >/dev/null
 
 ## 8. 创建 integration tag
 
-**Host：node0。Input：** 两机同 full commit、clean、Release/23 CTest PASS。**成功条件：** annotated tag 指向当前 HEAD 并已 push。**恢复入口：** 任一验收未满足时不创建 tag；若远端同名 tag 已存在且目标不同，停止并人工审计，禁止强推覆盖。
+**Host：node0。Input：** 两机同 full commit、clean、Release/23 CTest PASS。**成功条件：** annotated tag 指向当前 HEAD；有认证时 push 成功。**恢复入口：** 任一验收未满足时不创建 tag；若远端同名 tag 已存在且目标不同，停止并人工审计，禁止强推覆盖。节点没有 GitHub credential 时保留本地 tag 并把 remote publication 标为 `BLOCKED_CREDENTIALS`，不得冒充已 push。
 
 ```bash
 cd /users/Mingyang/Micro_banch

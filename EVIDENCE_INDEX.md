@@ -29,9 +29,9 @@
 | `E-WP0-LEASE-20260717-01` | `GATE-LEASE` | N/A | N/A | `physical-results/wp0-lease-20260717T161011Z/SUMMARY.txt` | N/A | N/A | N/A | N/A | N/A | N/A | N/A | null | null | **BLOCKED**：两机 manifest 为 `2026-07-18T03:00:00Z` |
 | `E-WP0-S3-01` | `GATE-REMOTE-RECOVERY` | N/A | N/A | null | N/A | N/A | N/A | N/A | N/A | N/A | N/A | null | null | **BLOCKED**：仓库外 rclone 配置和 bucket/prefix 缺失 |
 | `E-WP1-INTEGRATION-01` | `GATE-INTEGRATION-ASSETS` | N/A | N/A | repository tree | N/A | N/A | N/A | N/A | N/A | `SELF` | null | null | null | PASS：simulator/paper/corrected artifacts 保留，物理实现按 allowlist 集成 |
-| `E-WP1-BUILD-NODE0-01` | `GATE-RELEASE-CTEST` | N/A | N/A | `physical-results/wp1-build-<UTC>-amd140/ctest.log` | N/A | N/A | N/A | N/A | N/A | `SELF` | null | null | null | PENDING：最终 tagged commit 上重跑 |
-| `E-WP1-BUILD-NODE1-01` | `GATE-RELEASE-CTEST` | N/A | N/A | `physical-results/wp1-build-<UTC>-amd136/ctest.log` | N/A | N/A | N/A | N/A | N/A | `SELF` | null | null | null | PENDING：最终 tagged commit 上重跑 |
-| `E-WP1-IDENTITY-01` | `GATE-SAME-COMMIT-CLEAN` | N/A | N/A | `physical-results/wp1-identity-<UTC>/IDENTITY_STATUS.txt` | N/A | N/A | N/A | N/A | N/A | `SELF` | null | null | null | PENDING |
+| `E-WP1-BUILD-NODE0-01` | `GATE-RELEASE-CTEST` | N/A | N/A | `physical-results/wp1-final-physical-integration-v1-node0/ctest.log` | N/A | N/A | N/A | N/A | N/A | `SELF` | null | null | null | PASS：最终 tag commit 上 Release 23/23 CTest |
+| `E-WP1-BUILD-NODE1-01` | `GATE-RELEASE-CTEST` | N/A | N/A | `physical-results/wp1-final-physical-integration-v1-node1/ctest.log` | N/A | N/A | N/A | N/A | N/A | `SELF` | null | null | null | PASS：最终 tag commit 上 Release 23/23 CTest |
+| `E-WP1-IDENTITY-01` | `GATE-SAME-COMMIT-CLEAN` | N/A | N/A | `physical-results/wp1-final-identity/IDENTITY_STATUS.txt` | N/A | N/A | N/A | N/A | N/A | `SELF` | null | null | null | PASS：两机 same full commit、clean、23/23 tests；使用 bundle 部署 |
 
 租期原始 XML 的 SHA256：
 

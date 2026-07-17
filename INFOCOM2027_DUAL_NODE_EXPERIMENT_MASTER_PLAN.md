@@ -304,6 +304,7 @@ local test file
 
 ## WP1：集成分支与文档基线
 
+**状态：** **PASS_LOCAL / REMOTE_PUSH_BLOCKED**；两机同提交构建测试完成，GitHub 凭据缺失导致远端 branch/tag 发布待补
 **计划窗口：** 2026-07-17 至 18
 **依赖：** WP0 租期确认事实；不依赖 S3 才能编写代码，但部署前须 S3 PASS
 
