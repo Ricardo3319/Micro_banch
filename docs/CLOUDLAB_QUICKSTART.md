@@ -67,7 +67,7 @@ cmake --build "$BUILD" --parallel
 ctest --test-dir "$BUILD" --output-on-failure
 ```
 
-WP1 gate 要求两机 `23/23` tests PASS、working tree clean、commit 相同。
+WP1 gate 要求两机 `24/24` tests PASS、working tree clean、commit 相同。
 
 ## 5. 实现级检查（非正式证据）
 

@@ -180,7 +180,7 @@ PY
 
 ## 6. Release build 与 CTest
 
-**Host：node0 和 node1，分别执行。Input：** 同一 clean integration commit。**成功条件：** configure/build exit 0，CTest `100% tests passed, 0 tests failed out of 23`。**恢复入口：** 保留失败 build directory/log；修复代码后产生新提交，两机全部重跑，禁止在不同 commit 拼接 PASS。
+**Host：node0 和 node1，分别执行。Input：** 同一 clean integration commit。**成功条件：** configure/build exit 0，CTest `100% tests passed, 0 tests failed out of 24`。**恢复入口：** 保留失败 build directory/log；修复代码后产生新提交，两机全部重跑，禁止在不同 commit 拼接 PASS。
 
 ```bash
 cd /users/Mingyang/Micro_banch

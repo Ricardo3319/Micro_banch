@@ -293,6 +293,17 @@ if(Python3_Interpreter_FOUND)
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         FIXTURES_REQUIRED cloudlab_order_csv
     )
+
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        add_test(NAME two_node_coordinator_rejects_commit_mismatch
+            COMMAND ${Python3_EXECUTABLE}
+                    ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration/test_two_node_coordinator_fail_closed.py
+                    ${CMAKE_CURRENT_SOURCE_DIR}
+        )
+        set_tests_properties(two_node_coordinator_rejects_commit_mismatch PROPERTIES
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        )
+    endif()
 endif()
 
 add_test(NAME rescue_v2_reproducible

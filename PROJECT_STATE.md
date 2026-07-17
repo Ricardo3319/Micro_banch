@@ -1,7 +1,7 @@
 # RescueSched 项目状态
 
 > 单一状态入口。实验合同见 `EXPERIMENT_CONTRACT.md`，操作入口见 `RUNBOOK.md`，证据映射见 `EVIDENCE_INDEX.md`。
-> 最后更新：2026-07-17T16:21:27Z（UTC）
+> 最后更新：2026-07-17T16:26:00Z（UTC）
 
 ## 1. 当前结论
 
@@ -9,7 +9,7 @@
 | --- | --- | --- |
 | WP0.1 租期证据 | **BLOCKED** | 两机实时 `geni-get -n manifest` 均显示 `2026-07-18T03:00:00Z`，没有显示负责人预期的 2026-07-25。 |
 | WP0.2 S3 闭环 | **BLOCKED** | 两机均未发现仓库外 `rclone`/AWS 配置或凭据，不能执行 upload → remote SHA → download → local SHA → delete。 |
-| WP1 集成基线 | **PASS_LOCAL / REMOTE_PUSH_BLOCKED** | integration、文档/config、两机 Release + 23/23 CTest、clean/same-commit 和本地 annotated tag 均完成；GitHub HTTPS 凭据在节点上不可用，branch/tag 远端发布待认证后补做。 |
+| WP1 集成基线 | **PASS_LOCAL / REMOTE_PUSH_BLOCKED** | integration、文档/config、两机 Release + 24/24 CTest、clean/same-commit 和本地 annotated tag 均完成；GitHub HTTPS 凭据在节点上不可用，branch/tag 远端发布待认证后补做。 |
 | WP2 及以后 | **NOT_STARTED** | 未执行 host tuning、pilot、calibration 或 formal experiment。 |
 
 **当前禁止事项：** WP0 未通过时，不得开始 host tuning、pilot 或 formal paired block；不得把 2026-07-25 写成已由 manifest 证明的租期。
@@ -119,9 +119,10 @@ last_remote_verified_object: null
 
 1. 从冻结 baseline 建立 `codex/infocom2027-integration`。
 2. 选择性导入物理 runtime/RPC/trace/tests/scripts，并保留 simulator、paper 和 corrected artifacts。
-3. node0/node1 已在同一 clean integration candidate 上分别完成 Release build 和 23/23 CTest；最终 tag commit 使用固定 final evidence 目录再次重做。
+3. node0/node1 已在同一 clean integration candidate 上分别完成 Release build 和 24/24 CTest；最终 tag commit 使用固定 final evidence 目录再次重做。
 4. 两机重新采集 uncached manifest，并确认当前仍为 2026-07-18 03:00 UTC。
 5. HTTPS `git push` 因节点无 GitHub credential 失败；使用 `git bundle` 完成 node1 同提交部署，没有伪造远端发布。
+6. coordinator 负向验收发现远端 commit `test` 的失败状态会被后续 shell 命令掩盖；已改为显式读取/比较 server commit 和 dirty status，并要求在 tag 前重新验证 fail-closed。
 
 下一步（最多三项）：
 

@@ -170,11 +170,21 @@ server_repo="$(resolve_remote_repo)"
 printf -v server_repo_q '%q' "$server_repo"
 printf -v server_binary_q '%q' "$server_repo/$build_dir/rescuesched_rpc_server"
 printf -v server_wrapper_q '%q' "$server_repo/scripts/run_background_job.sh"
+server_commit="$(ssh "${ssh_options[@]}" "$server_host" \
+    "git -C $server_repo_q rev-parse HEAD")"
+if [[ "$server_commit" != "$commit" ]]; then
+    echo "Server commit mismatch: local=$commit server=$server_commit" >&2
+    exit 1
+fi
+server_dirty="$(ssh "${ssh_options[@]}" "$server_host" \
+    "git -C $server_repo_q status --porcelain")"
+if [[ -n "$server_dirty" ]]; then
+    echo "Server repository must be clean" >&2
+    printf '%s\n' "$server_dirty" >&2
+    exit 1
+fi
 ssh "${ssh_options[@]}" "$server_host" \
-    "test \"\$(git -C $server_repo_q rev-parse HEAD)\" = '$commit'; \
-     test -z \"\$(git -C $server_repo_q status --porcelain)\"; \
-     test -x $server_binary_q; \
-     test -x $server_wrapper_q"
+    "test -x $server_binary_q && test -x $server_wrapper_q"
 echo "Resolved server repository: $server_repo"
 
 mkdir -p "$out_dir/metadata"
