@@ -30,7 +30,7 @@ sha256sum "$OUT/node0/manifest.xml" "$OUT/node1/manifest.xml" \
 grep -oE 'expires="[^"]+"' "$OUT"/node*/manifest.xml
 ```
 
-当前证据 `physical-results/wp0-lease-20260717T161011Z/` 显示两机均为 `2026-07-18T03:00:00Z`，所以本 gate 为 `BLOCKED`。
+当前证据 `physical-results/wp0-final-review-20260717T163447Z/` 显示两机均为 `2026-07-18T03:00:00Z`，所以本 gate 为 `BLOCKED`。
 
 ## 2. WP0.2：S3 最小权限闭环
 
@@ -225,7 +225,7 @@ bash scripts/run_two_node_rpc_smoke.sh --help >/dev/null
 
 ## 8. 创建 integration tag
 
-**Host：node0。Input：** 两机同 full commit、clean、Release/23 CTest PASS。**成功条件：** annotated tag 指向当前 HEAD；有认证时 push 成功。**恢复入口：** 任一验收未满足时不创建 tag；若远端同名 tag 已存在且目标不同，停止并人工审计，禁止强推覆盖。节点没有 GitHub credential 时保留本地 tag 并把 remote publication 标为 `BLOCKED_CREDENTIALS`，不得冒充已 push。
+**Host：node0。Input：** 两机同 full commit、clean、Release/24 CTest PASS。**成功条件：** annotated tag 指向当前 HEAD；有认证时 push 成功。**恢复入口：** 任一验收未满足时不创建 tag；若远端同名 tag 已存在且目标不同，停止并人工审计，禁止强推覆盖。节点没有 GitHub credential 时保留本地 tag 并把 remote publication 标为 `BLOCKED_CREDENTIALS`，不得冒充已 push。
 
 ```bash
 cd /users/Mingyang/Micro_banch

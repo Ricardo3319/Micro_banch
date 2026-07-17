@@ -26,12 +26,13 @@
 
 | evidence_id | claim_id | paper_location | figure_or_table | analysis_output | block_id | attempt_id | method | trace_sha256 | config_sha256 | commit_sha | host_profile_sha256 | archive_sha256 | s3_object_key | validation_status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `E-WP0-LEASE-20260717-01` | `GATE-LEASE` | N/A | N/A | `physical-results/wp0-lease-20260717T161011Z/SUMMARY.txt` | N/A | N/A | N/A | N/A | N/A | N/A | N/A | null | null | **BLOCKED**：两机 manifest 为 `2026-07-18T03:00:00Z` |
+| `E-WP0-LEASE-20260717-01` | `GATE-LEASE` | N/A | N/A | `physical-results/wp0-final-review-20260717T163447Z/SUMMARY.txt` | N/A | N/A | N/A | N/A | N/A | N/A | N/A | null | null | **BLOCKED**：两机 manifest 为 `2026-07-18T03:00:00Z` |
 | `E-WP0-S3-01` | `GATE-REMOTE-RECOVERY` | N/A | N/A | null | N/A | N/A | N/A | N/A | N/A | N/A | N/A | null | null | **BLOCKED**：仓库外 rclone 配置和 bucket/prefix 缺失 |
 | `E-WP1-INTEGRATION-01` | `GATE-INTEGRATION-ASSETS` | N/A | N/A | repository tree | N/A | N/A | N/A | N/A | N/A | `SELF` | null | null | null | PASS：simulator/paper/corrected artifacts 保留，物理实现按 allowlist 集成 |
-| `E-WP1-BUILD-NODE0-01` | `GATE-RELEASE-CTEST` | N/A | N/A | `physical-results/wp1-final-v2-physical-integration-v1-node0/ctest.log` | N/A | N/A | N/A | N/A | N/A | `SELF` | null | null | null | PASS：最终 tag commit 上 Release 24/24 CTest |
-| `E-WP1-BUILD-NODE1-01` | `GATE-RELEASE-CTEST` | N/A | N/A | `physical-results/wp1-final-v2-physical-integration-v1-node1/ctest.log` | N/A | N/A | N/A | N/A | N/A | `SELF` | null | null | null | PASS：最终 tag commit 上 Release 24/24 CTest |
-| `E-WP1-IDENTITY-01` | `GATE-SAME-COMMIT-CLEAN` | N/A | N/A | `physical-results/wp1-final-v2-identity/IDENTITY_STATUS.txt` | N/A | N/A | N/A | N/A | N/A | `SELF` | null | null | null | PASS：两机 same full commit、clean、24/24 tests；使用 bundle 部署 |
+| `E-WP1-BUILD-NODE0-01` | `GATE-RELEASE-CTEST` | N/A | N/A | `physical-results/wp1-final-v3-physical-integration-v1-node0/ctest.log` | N/A | N/A | N/A | N/A | N/A | `SELF` | null | null | null | PASS：最终 tag commit 上 Release 24/24 CTest |
+| `E-WP1-BUILD-NODE1-01` | `GATE-RELEASE-CTEST` | N/A | N/A | `physical-results/wp1-final-v3-physical-integration-v1-node1/ctest.log` | N/A | N/A | N/A | N/A | N/A | `SELF` | null | null | null | PASS：最终 tag commit 上 Release 24/24 CTest |
+| `E-WP1-IDENTITY-01` | `GATE-SAME-COMMIT-CLEAN` | N/A | N/A | `physical-results/wp1-final-v3-identity/IDENTITY_STATUS.txt` | N/A | N/A | N/A | N/A | N/A | `SELF` | null | null | null | PASS：两机 same full commit、clean、24/24 tests；使用 bundle 部署 |
+| `E-WP1-FAIL-CLOSED-01` | `GATE-COORDINATOR-FAIL-CLOSED` | N/A | N/A | `physical-results/wp1-final-v3-identity/NEGATIVE_GATE_STATUS.txt` | N/A | N/A | N/A | N/A | N/A | `SELF` | null | null | null | PASS：load-generator dirty、server dirty、server commit mismatch 均在创建输出/RPC 工作前拒绝 |
 
 租期原始 XML 的 SHA256：
 

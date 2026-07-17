@@ -1,7 +1,7 @@
 # RescueSched 项目状态
 
 > 单一状态入口。实验合同见 `EXPERIMENT_CONTRACT.md`，操作入口见 `RUNBOOK.md`，证据映射见 `EVIDENCE_INDEX.md`。
-> 最后更新：2026-07-17T16:26:00Z（UTC）
+> 最后更新：2026-07-17T16:35:31Z（UTC）
 
 ## 1. 当前结论
 
@@ -42,7 +42,7 @@ remote_publication: BLOCKED_CREDENTIALS
 | node0 | server/main experiment | `amd140.utah.cloudlab.us` | `10.10.1.1` | `enp65s0f0np0` / `mlx5_core` | `2026-07-18T03:00:00Z` |
 | node1 | load generator/coordinator | `amd136.utah.cloudlab.us` | `10.10.1.2` | `enp65s0f0np0` / `mlx5_core` | `2026-07-18T03:00:00Z` |
 
-采集：`2026-07-17T16:10:11Z`，命令为 `geni-get -n manifest`（绕过缓存）。两份 manifest 的 SHA256 相同：
+最终复核采集：node0 `2026-07-17T16:35:12Z`、node1 `2026-07-17T16:35:31Z`，命令为 `geni-get -n manifest`（绕过缓存）。两份 manifest 的 SHA256 相同：
 
 ```text
 ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8
@@ -51,7 +51,7 @@ ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8
 节点本地、被 Git 忽略的原始证据目录：
 
 ```text
-physical-results/wp0-lease-20260717T161011Z/
+physical-results/wp0-final-review-20260717T163447Z/
 ```
 
 按当前 manifest 计算：
@@ -119,10 +119,11 @@ last_remote_verified_object: null
 
 1. 从冻结 baseline 建立 `codex/infocom2027-integration`。
 2. 选择性导入物理 runtime/RPC/trace/tests/scripts，并保留 simulator、paper 和 corrected artifacts。
-3. node0/node1 已在同一 clean integration candidate 上分别完成 Release build 和 24/24 CTest；最终 tag commit 使用固定 final evidence 目录再次重做。
+3. node0/node1 已在同一 clean 最终提交上分别完成 Release build 和 24/24 CTest，固定 final evidence 目录中的日志与 SHA 清单已验证。
 4. 两机重新采集 uncached manifest，并确认当前仍为 2026-07-18 03:00 UTC。
 5. HTTPS `git push` 因节点无 GitHub credential 失败；使用 `git bundle` 完成 node1 同提交部署，没有伪造远端发布。
-6. coordinator 负向验收发现远端 commit `test` 的失败状态会被后续 shell 命令掩盖；已改为显式读取/比较 server commit 和 dirty status，并要求在 tag 前重新验证 fail-closed。
+6. coordinator 负向验收发现远端 commit `test` 的失败状态会被后续 shell 命令掩盖；已改为显式读取/比较 server commit 和 dirty status，并通过 load-generator dirty、server dirty、server commit mismatch 三项 fail-closed 验收。
+7. 首轮 commit-mismatch 负向验收因上述缺陷意外启动了一个失败的非正式 short smoke；失败目录保留在 `physical-results/wp1-mismatch-should-not-exist/`、`physical-results/wp1-final-failclosed/` 及 node0 的 `physical-results/two-node-active/L0_RandomCore-20260717T162510Z-7192/`，不作为正式结果或 PASS 证据。
 
 下一步（最多三项）：
 
