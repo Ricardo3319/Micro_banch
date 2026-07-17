@@ -1,0 +1,205 @@
+contract:
+  version: infocom2027-physical-v0.1
+  status: DRAFT_UNFROZEN
+  timezone: UTC
+  repository_commit: SELF
+  integration_tag: physical-integration-v1
+
+methods:
+  - L0_RandomCore
+  - L1_WorkStealingPolling
+  - M0_AltoThreshold
+  - M1_RescueSched
+
+anchors:
+  - id: W3-rho085
+    workload: W3
+    rho_label: 0.85
+    role: primary_confirmation
+    arrival_scale: null
+  - id: W3-rho090
+    workload: W3
+    rho_label: 0.90
+    role: primary_confirmation
+    arrival_scale: null
+  - id: W3-rho070
+    workload: W3
+    rho_label: 0.70
+    role: negative_boundary
+    arrival_scale: null
+  - id: W2-rho085
+    workload: W2
+    rho_label: 0.85
+    role: burst_tail_boundary
+    arrival_scale: null
+
+seeds: [11, 23, 37, 47, 59, 71, 83, 97, 109, 127]
+infrastructure_seeds: [1009, 1013]
+cohort:
+  warmup_requests: 200000
+  measurement_requests: 1000000
+  paired_unit: anchor_x_seed
+  methods_per_block: 4
+  target_valid_blocks: 40
+  target_valid_method_runs: 160
+
+nodes:
+  node0:
+    role: server_main_experiment
+    control_hostname: amd140.utah.cloudlab.us
+    experiment_ipv4: 10.10.1.1
+    experiment_interface: enp65s0f0np0
+    nic_driver: mlx5_core
+    topology_status: OBSERVED_NOT_FORMALLY_FROZEN
+    physical_cores: 16
+    logical_cpus: 32
+    worker_count_primary: 16
+    worker_cpus: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    receiver_cpus: [16, 17]
+    response_sender_cpus: [18, 19]
+    scheduler_cpus: [20]
+    server_main_cpus: [21]
+    housekeeping_cpus: [22, 23]
+    experiment_irq_cpus: [24, 25, 26, 27, 28, 29, 30, 31]
+    smt_sibling_map: "cpu[16+n] is sibling of cpu[n], n=0..15"
+  node1:
+    role: load_generator_observer_coordinator
+    control_hostname: amd136.utah.cloudlab.us
+    experiment_ipv4: 10.10.1.2
+    experiment_interface: enp65s0f0np0
+    nic_driver: mlx5_core
+    topology_status: OBSERVED_NOT_FORMALLY_FROZEN
+    physical_cores: 16
+    logical_cpus: 32
+    client0_sender_cpus: [0]
+    client0_receiver_cpus: [1]
+    client1_sender_cpus: [2]
+    client1_receiver_cpus: [3]
+    coordinator_cpus: [4]
+    monitor_cpus: [5]
+    post_run_archive_cpus: [6, 7]
+    experiment_irq_cpus: [8, 9, 10, 11, 12, 13, 14, 15]
+    unused_for_experiment_cpus: [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
+
+network:
+  status: PLANNED_NOT_FROZEN
+  rpc_transport: UDP
+  control_network_use: SSH_ONLY
+  experiment_network_use: RPC_ONLY
+  server_port: 9000
+  source_port_base: 20000
+  client_count: 2
+  flow_sockets_per_client: 256
+  flow_partition_rule: "flow_id % client_count"
+  shared_absolute_start: true
+  reuseport_ingress_shards_equal_workers: true
+
+nic_irq_profile:
+  status: PLANNED_NOT_APPLIED
+  combined_queues: 8
+  irqbalance: "stopped"
+  rps: "off"
+  xps: response_sender_or_control_cpus_only
+  offloads:
+    gro: "off"
+    gso: "off"
+    tso: "off"
+    lro: "off"
+    rx_checksum: "on"
+    tx_checksum: "on"
+  ring_entries_default: 1024
+  ring_entries_conditional: 4096
+  socket_buffer_request_bytes: 8388608
+  sysctl:
+    net.core.rmem_max: 16777216
+    net.core.wmem_max: 16777216
+    net.core.netdev_max_backlog: 250000
+  open_file_limit: 65536
+  host_profile_sha256: null
+
+runtime:
+  service: non_preemptive
+  migratable_state: QUEUED_ONLY
+  destination_insertion: FIFO_APPEND_TAIL
+  estimator:
+    kind: method_keyed_ewma
+    alpha: 0.05
+    update: after_completion
+    hidden_service_demand_visible_to_policy: false
+  scheduler_period_us: null
+  scheduler_period_candidates_us: [10, 25, 50, 100]
+  l1_poll_period_us: null
+  handoff_estimate_us: null
+  worker_mode: PENDING_PRIMARY_16_OR_FALLBACK_12
+  fallback_worker_count: 12
+  fallback_decision_deadline_utc: "2026-07-20T12:00:00Z"
+
+logging:
+  decision_mode: PENDING
+  decision_record_cap: null
+  decision_bucket_us: null
+  server_completion_and_client_rtt_separate: true
+  preserve_failed_attempts: true
+
+output:
+  schema_version: rescuesched-physical-v1-candidate
+  formal_schema_frozen: false
+  method_required_files:
+    - manifest.env
+    - RUNTIME_STATUS.txt
+    - RPC_SERVER_STATUS.txt
+    - RPC_CLIENT_STATUS.txt
+    - requests.csv
+    - client_requests.csv
+    - client_summary.csv
+    - decisions.csv
+    - migrations.csv
+    - summary.csv
+    - stdout.log
+    - stderr.log
+    - command.txt
+    - SHA256SUMS
+  block_required_identity:
+    - trace_sha256
+    - config_sha256
+    - schedule_sha256
+    - flow_map_sha256
+    - commit_sha
+    - host_profile_sha256
+    - archive_sha256
+    - remote_stream_sha256
+
+failure_thresholds:
+  expected_request_count_complete: true
+  send_failures_max: 0
+  malformed_requests_max: 0
+  unknown_requests_max: 0
+  duplicate_requests_max: 0
+  response_queue_overflow_max: 0
+  nic_drop_delta_max: 0
+  udp_drop_delta_max: 0
+  offered_load_relative_error_max: 0.02
+  realized_rho_absolute_error_max: 0.01
+  send_lag_p99_us_max: 4.0
+  scheduler_missed_epoch_fraction_max: 0.05
+  max_infrastructure_attempts_per_block: 3
+
+classification:
+  valid_complete: VALID_COMPLETE
+  valid_application_overload: VALID_APPLICATION_OVERLOAD
+  infrastructure_failure: INFRASTRUCTURE_FAILURE
+  incomplete: INCOMPLETE
+  rerun_rule: rerun_entire_four_method_block_after_infrastructure_fix
+
+lease_and_backup_gate:
+  manifest_required_date: "2026-07-25"
+  observed_node0_expiration_utc: "2026-07-18T03:00:00Z"
+  observed_node1_expiration_utc: "2026-07-18T03:00:00Z"
+  lease_status: BLOCKED
+  s3_region: us-west-2
+  rclone_config_path: null
+  s3_remote: null
+  s3_bucket: null
+  s3_prefix: null
+  s3_gate_status: BLOCKED
+  formal_execution_allowed: false

@@ -26,6 +26,18 @@ enum class PolicyKind {
     M1_RESCUE_SCHED
 };
 
+enum class ArrivalMode {
+    TRACE_REPLAY,
+    NETWORK_INGRESS
+};
+
+enum class NetworkSubmitStatus {
+    ACCEPTED,
+    UNKNOWN_REQUEST,
+    FLOW_MISMATCH,
+    DUPLICATE_OR_TERMINAL
+};
+
 const char* descriptor_state_name(DescriptorState state);
 const char* policy_name(PolicyKind policy);
 PolicyKind parse_policy(const std::string& value);
@@ -45,6 +57,7 @@ struct DescriptorView {
 
 struct RuntimeConfig {
     PolicyKind policy = PolicyKind::M1_RESCUE_SCHED;
+    ArrivalMode arrival_mode = ArrivalMode::TRACE_REPLAY;
     int worker_count = 16;
     std::vector<int> cpu_ids;
     bool strict_affinity = true;
@@ -79,6 +92,7 @@ struct RequestOutcome {
     uint32_t execution_count = 0;
     uint32_t completion_count = 0;
     double planned_arrival_us = 0.0;
+    double trace_arrival_us = 0.0;
     double enqueue_us = 0.0;
     double start_us = 0.0;
     double finish_us = 0.0;
@@ -172,7 +186,12 @@ public:
     PhysicalRuntime& operator=(const PhysicalRuntime&) = delete;
 
     RuntimeResult run();
+    void start_network_ingress();
+    NetworkSubmitStatus submit_network_request(
+        uint64_t request_id, uint64_t flow_id, int ingress_core);
+    RuntimeResult finish_network_ingress(bool cancel_unreceived = true);
     bool request_cancel(uint64_t request_id);
+    DescriptorState request_state(uint64_t request_id) const;
     void set_completion_callback(CompletionCallback callback);
     void write_outputs(const RuntimeResult& result) const;
 

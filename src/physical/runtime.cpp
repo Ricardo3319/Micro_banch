@@ -208,6 +208,7 @@ void MethodEwmaEstimator::observe(
 struct PhysicalRuntime::Impl {
     struct Descriptor {
         DescriptorView view;
+        double trace_arrival_us = 0.0;
         double enqueue_us = 0.0;
         double start_us = 0.0;
         double finish_us = 0.0;
@@ -298,6 +299,7 @@ struct PhysicalRuntime::Impl {
             descriptor.view.method = entry.method;
             descriptor.view.planned_arrival_us = entry.arrival_us;
             descriptor.view.deadline_abs_us = entry.arrival_us + entry.deadline_budget_us;
+            descriptor.trace_arrival_us = entry.arrival_us;
             descriptor.view.initial_core = entry.initial_core;
             descriptor.view.current_core = entry.initial_core;
             descriptor.measurement_eligible =
@@ -715,6 +717,7 @@ struct PhysicalRuntime::Impl {
         outcome.execution_count = descriptor.execution_count;
         outcome.completion_count = descriptor.completion_count;
         outcome.planned_arrival_us = descriptor.view.planned_arrival_us;
+        outcome.trace_arrival_us = descriptor.trace_arrival_us;
         outcome.enqueue_us = descriptor.enqueue_us;
         outcome.start_us = descriptor.start_us;
         outcome.finish_us = descriptor.finish_us;
@@ -921,6 +924,8 @@ PhysicalRuntime::~PhysicalRuntime() {
 
 RuntimeResult PhysicalRuntime::run() {
     if (impl_->started) throw std::logic_error("physical runtime is single-use");
+    if (impl_->config.arrival_mode != ArrivalMode::TRACE_REPLAY)
+        throw std::logic_error("run() requires trace replay arrival mode");
     impl_->started = true;
     impl_->start_time = Clock::now();
     impl_->start_threads();
@@ -957,6 +962,82 @@ RuntimeResult PhysicalRuntime::run() {
             return impl_->terminal_count == impl_->descriptors.size();
         });
     }
+    impl_->stop_threads();
+    return impl_->build_result();
+}
+
+void PhysicalRuntime::start_network_ingress() {
+    if (impl_->started) throw std::logic_error("physical runtime is single-use");
+    if (impl_->config.arrival_mode != ArrivalMode::NETWORK_INGRESS)
+        throw std::logic_error("network ingress mode is not enabled");
+    if (impl_->config.time_scale != 1.0)
+        throw std::logic_error("network ingress requires time_scale=1");
+    impl_->started = true;
+    impl_->start_time = Clock::now();
+    impl_->start_threads();
+}
+
+NetworkSubmitStatus PhysicalRuntime::submit_network_request(
+        uint64_t request_id, uint64_t flow_id, int ingress_core) {
+    if (!impl_->started || impl_->config.arrival_mode != ArrivalMode::NETWORK_INGRESS)
+        throw std::logic_error("network ingress runtime has not started");
+    if (ingress_core < 0 || ingress_core >= impl_->config.worker_count)
+        throw std::out_of_range("network ingress core outside worker range");
+
+    const auto found = impl_->index_by_id.find(request_id);
+    if (found == impl_->index_by_id.end()) return NetworkSubmitStatus::UNKNOWN_REQUEST;
+    const size_t index = found->second;
+    if (impl_->trace.entries()[index].flow_id != flow_id)
+        return NetworkSubmitStatus::FLOW_MISMATCH;
+    const auto estimate = impl_->estimator.snapshot(
+        impl_->descriptors[index].view.method);
+    {
+        std::lock_guard<std::mutex> lock(impl_->mutex);
+        auto& descriptor = impl_->descriptors[index];
+        if (descriptor.view.state != DescriptorState::PENDING)
+            return NetworkSubmitStatus::DUPLICATE_OR_TERMINAL;
+        const double now = impl_->now_us();
+        const double deadline_budget = impl_->trace.entries()[index].deadline_budget_us;
+        descriptor.view.planned_arrival_us = now;
+        descriptor.view.deadline_abs_us = now + deadline_budget;
+        descriptor.view.estimated_service_us = estimate.first;
+        descriptor.view.estimator_prior_samples = estimate.second;
+        descriptor.view.initial_core = ingress_core;
+        descriptor.view.current_core = ingress_core;
+        descriptor.enqueue_us = now;
+        ++impl_->submitted_count;
+        impl_->queues[static_cast<size_t>(ingress_core)].push_back(index);
+        descriptor.view.state = DescriptorState::QUEUED;
+        impl_->worker_cvs[static_cast<size_t>(ingress_core)]->notify_one();
+    }
+    return NetworkSubmitStatus::ACCEPTED;
+}
+
+RuntimeResult PhysicalRuntime::finish_network_ingress(bool cancel_unreceived) {
+    if (!impl_->started || impl_->config.arrival_mode != ArrivalMode::NETWORK_INGRESS)
+        throw std::logic_error("network ingress runtime has not started");
+
+    std::vector<std::pair<CompletionCallback, RequestOutcome>> callbacks;
+    {
+        std::unique_lock<std::mutex> lock(impl_->mutex);
+        if (cancel_unreceived) {
+            for (auto& descriptor : impl_->descriptors) {
+                if (descriptor.view.state != DescriptorState::PENDING) continue;
+                descriptor.view.state = DescriptorState::CANCELLED;
+                descriptor.finish_us = impl_->now_us();
+                ++impl_->terminal_count;
+                if (impl_->completion_callback) {
+                    callbacks.emplace_back(
+                        impl_->completion_callback, impl_->outcome_for(descriptor));
+                }
+            }
+        }
+        impl_->submission_done = true;
+        impl_->terminal_cv.wait(lock, [&] {
+            return impl_->terminal_count == impl_->descriptors.size();
+        });
+    }
+    for (auto& item : callbacks) item.first(item.second);
     impl_->stop_threads();
     return impl_->build_result();
 }
@@ -1005,6 +1086,14 @@ bool PhysicalRuntime::request_cancel(uint64_t request_id) {
     return terminal_now;
 }
 
+DescriptorState PhysicalRuntime::request_state(uint64_t request_id) const {
+    std::lock_guard<std::mutex> lock(impl_->mutex);
+    const auto found = impl_->index_by_id.find(request_id);
+    if (found == impl_->index_by_id.end())
+        throw std::out_of_range("unknown physical runtime request ID");
+    return impl_->descriptors[found->second].view.state;
+}
+
 void PhysicalRuntime::set_completion_callback(CompletionCallback callback) {
     std::lock_guard<std::mutex> lock(impl_->mutex);
     impl_->completion_callback = std::move(callback);
@@ -1020,6 +1109,7 @@ void PhysicalRuntime::write_outputs(const RuntimeResult& result) const {
     {
         std::ofstream csv(root / "requests.csv");
         csv << "request_id,state,method,measurement_eligible,planned_arrival_us,"
+               "trace_arrival_us,"
                "enqueue_us,service_start_us,finish_us,deadline_abs_us,"
                "server_completion_us,client_rtt_us,client_rtt_status,initial_core,"
                "final_core,migration_count,execution_count,completion_count,"
@@ -1033,10 +1123,11 @@ void PhysicalRuntime::write_outputs(const RuntimeResult& result) const {
                 : impl_->descriptors[found->second].view.method;
             csv << request.id << ',' << descriptor_state_name(request.state) << ','
                 << method_name(method) << ',' << (request.measurement_eligible ? 1 : 0) << ','
-                << request.planned_arrival_us << ',' << request.enqueue_us << ','
+                << request.planned_arrival_us << ',' << request.trace_arrival_us << ','
+                << request.enqueue_us << ','
                 << request.start_us << ',' << request.finish_us << ','
                 << request.deadline_abs_us << ',' << request.server_completion_us
-                << ",,unavailable_synthetic_runtime," << request.initial_core << ','
+                << ",,unavailable_server_log," << request.initial_core << ','
                 << request.final_core << ',' << request.migration_count << ','
                 << request.execution_count << ',' << request.completion_count << ','
                 << request.synthetic_service_us << ',' << request.estimated_service_us << ','
@@ -1091,7 +1182,9 @@ void PhysicalRuntime::write_outputs(const RuntimeResult& result) const {
                "max_submit_lag_us,mean_submit_lag_us,invariants_pass\n";
         const auto& summary = result.summary;
         csv << std::setprecision(17)
-            << "local_synthetic_runtime_implementation_validation,"
+            << (impl_->config.arrival_mode == ArrivalMode::NETWORK_INGRESS
+                    ? "physical_network_rpc_server" :
+                      "local_synthetic_runtime_implementation_validation") << ','
             << impl_->trace.embedded_sha256() << ','
             << impl_->trace.input_file_sha256() << ','
             << impl_->config.workload_label << ',' << impl_->config.rho_label << ','
@@ -1115,9 +1208,12 @@ void PhysicalRuntime::write_outputs(const RuntimeResult& result) const {
 
     {
         std::ofstream manifest(root / "manifest.env");
+        const bool network = impl_->config.arrival_mode == ArrivalMode::NETWORK_INGRESS;
         manifest << std::setprecision(17)
-                 << "evidence_scope=local_synthetic_runtime_implementation_validation\n"
-                 << "physical_rpc_runtime_present=NO\n"
+                 << "evidence_scope="
+                 << (network ? "physical_network_rpc_server"
+                             : "local_synthetic_runtime_implementation_validation") << '\n'
+                 << "physical_rpc_runtime_present=" << (network ? "YES" : "NO") << '\n'
                  << "client_rtt_available=NO\n"
                  << "workload=" << impl_->config.workload_label << '\n'
                  << "rho=" << impl_->config.rho_label << '\n'
@@ -1145,14 +1241,20 @@ void PhysicalRuntime::write_outputs(const RuntimeResult& result) const {
                  << "ewma_alpha=" << impl_->config.ewma_alpha << '\n'
                  << "estimator_scope=shared_global_method_keyed_completion_updated\n"
                  << "target_insert_policy=append_tail\n"
-                 << "arrival_model=open_loop_monotonic_clock\n"
-                 << "synthetic_service_runtime=YES\n";
+                 << "arrival_model="
+                 << (network ? "external_network_ingress" : "open_loop_monotonic_clock")
+                 << '\n'
+                 << "trace_driven_cpu_service=YES\n";
     }
 
     std::ofstream status(root / "RUNTIME_STATUS.txt");
+    const bool network = impl_->config.arrival_mode == ArrivalMode::NETWORK_INGRESS;
     status << "status=" << (result.summary.invariants_pass ? "PASS" : "FAIL") << '\n'
-           << "scope=local_synthetic_runtime_implementation_validation\n"
-           << "physical_rpc_runtime=NOT_IMPLEMENTED\n";
+           << "scope=" << (network ? "physical_network_rpc_server"
+                                   : "local_synthetic_runtime_implementation_validation")
+           << '\n'
+           << "physical_rpc_runtime=" << (network ? "IMPLEMENTED" : "NOT_ACTIVE")
+           << '\n';
 }
 
 } // namespace physical

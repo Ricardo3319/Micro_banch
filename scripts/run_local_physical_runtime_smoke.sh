@@ -90,12 +90,10 @@ cmake --build "$build_dir" --parallel
 ctest --test-dir "$build_dir" --output-on-failure
 
 trace_path="$out_dir/trace/w3-rho-085-seed-11.csv"
-"$build_dir/simulator" --mode trace-generate \
+"$build_dir/rescuesched_trace_generator" \
     --workload W3 --rho 0.85 --seed 11 \
-    --warmup-requests "$warmup" \
-    --measurement-requests "$requests" \
-    --trace-core-count "$workers" \
-    --trace-out "$trace_path"
+    --warmup "$warmup" --requests "$requests" \
+    --workers "$workers" --out "$trace_path"
 
 policies=(L0_RandomCore L1_WorkStealingPolling M0_AltoThreshold M1_RescueSched)
 for (( repetition = 1; repetition <= repetitions; ++repetition )); do
@@ -118,7 +116,7 @@ done
 
 {
     echo "evidence_scope=local_synthetic_runtime_implementation_validation"
-    echo "physical_rpc_runtime_present=NO"
+    echo "network_path_exercised=NO"
     echo "commit=$(git -C "$root" rev-parse HEAD)"
     echo "dirty_status=$(git -C "$root" status --porcelain | wc -l)"
     echo "trace=$trace_path"

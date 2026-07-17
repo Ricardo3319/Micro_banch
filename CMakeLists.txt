@@ -32,6 +32,11 @@ target_include_directories(physical_runtime_core PUBLIC
 )
 target_link_libraries(physical_runtime_core PUBLIC sim_core Threads::Threads)
 
+add_executable(rescuesched_trace_generator
+    src/app/trace_generator_main.cpp
+)
+target_link_libraries(rescuesched_trace_generator PRIVATE sim_core)
+
 # Enable optimizations for the simulation workload.
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(sim_core PRIVATE -O2)
@@ -63,13 +68,36 @@ add_executable(rescuesched_handoff_microbench
 )
 target_link_libraries(rescuesched_handoff_microbench PRIVATE Threads::Threads)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_executable(rescuesched_rpc_server
+        src/app/rpc_server_main.cpp
+    )
+    target_link_libraries(rescuesched_rpc_server PRIVATE physical_runtime_core)
+
+    add_executable(rescuesched_rpc_client
+        src/app/rpc_client_main.cpp
+    )
+    target_link_libraries(rescuesched_rpc_client PRIVATE physical_runtime_core)
+
+    add_executable(rpc_protocol_tests
+        tests/unit/rpc_protocol_tests.cpp
+    )
+    target_link_libraries(rpc_protocol_tests PRIVATE physical_runtime_core)
+endif()
+
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(simulator PRIVATE -O2)
     target_compile_options(simulator_validity_tests PRIVATE -O2)
+    target_compile_options(rescuesched_trace_generator PRIVATE -O2 -Wall -Wextra -Wpedantic)
     target_compile_options(physical_runtime_core PRIVATE -O2 -Wall -Wextra -Wpedantic)
     target_compile_options(rescuesched_physical_runtime PRIVATE -O2 -Wall -Wextra -Wpedantic)
     target_compile_options(physical_runtime_tests PRIVATE -O2 -Wall -Wextra -Wpedantic)
     target_compile_options(rescuesched_handoff_microbench PRIVATE -O2 -Wall -Wextra -Wpedantic)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        target_compile_options(rescuesched_rpc_server PRIVATE -O2 -Wall -Wextra -Wpedantic)
+        target_compile_options(rescuesched_rpc_client PRIVATE -O2 -Wall -Wextra -Wpedantic)
+        target_compile_options(rpc_protocol_tests PRIVATE -O2 -Wall -Wextra -Wpedantic)
+    endif()
     if(RESCUESCHED_ENABLE_SANITIZERS)
         set(RESCUESCHED_SANITIZER_FLAGS -fsanitize=address,undefined -fno-omit-frame-pointer)
         target_compile_options(physical_runtime_core PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
@@ -77,6 +105,14 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang
         target_compile_options(physical_runtime_tests PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
         target_link_options(rescuesched_physical_runtime PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
         target_link_options(physical_runtime_tests PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+            target_compile_options(rescuesched_rpc_server PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
+            target_compile_options(rescuesched_rpc_client PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
+            target_compile_options(rpc_protocol_tests PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
+            target_link_options(rescuesched_rpc_server PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
+            target_link_options(rescuesched_rpc_client PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
+            target_link_options(rpc_protocol_tests PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
+        endif()
     endif()
     if(RESCUESCHED_ENABLE_THREAD_SANITIZER)
         set(RESCUESCHED_TSAN_FLAGS -fsanitize=thread -fno-omit-frame-pointer)
@@ -85,6 +121,14 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang
         target_compile_options(physical_runtime_tests PRIVATE ${RESCUESCHED_TSAN_FLAGS})
         target_link_options(rescuesched_physical_runtime PRIVATE ${RESCUESCHED_TSAN_FLAGS})
         target_link_options(physical_runtime_tests PRIVATE ${RESCUESCHED_TSAN_FLAGS})
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+            target_compile_options(rescuesched_rpc_server PRIVATE ${RESCUESCHED_TSAN_FLAGS})
+            target_compile_options(rescuesched_rpc_client PRIVATE ${RESCUESCHED_TSAN_FLAGS})
+            target_compile_options(rpc_protocol_tests PRIVATE ${RESCUESCHED_TSAN_FLAGS})
+            target_link_options(rescuesched_rpc_server PRIVATE ${RESCUESCHED_TSAN_FLAGS})
+            target_link_options(rescuesched_rpc_client PRIVATE ${RESCUESCHED_TSAN_FLAGS})
+            target_link_options(rpc_protocol_tests PRIVATE ${RESCUESCHED_TSAN_FLAGS})
+        endif()
     endif()
 endif()
 
@@ -108,6 +152,39 @@ set_tests_properties(rescue_smoke_deterministic PROPERTIES
 
 add_test(NAME simulator_validity
     COMMAND $<TARGET_FILE:simulator_validity_tests>
+)
+
+add_test(NAME trace_generator_cli_help
+    COMMAND $<TARGET_FILE:rescuesched_trace_generator> --help
+)
+set_tests_properties(trace_generator_cli_help PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    PASS_REGULAR_EXPRESSION "frozen flow-affine trace"
+)
+add_test(NAME trace_generate_a
+    COMMAND $<TARGET_FILE:rescuesched_trace_generator>
+            --out ${CMAKE_CURRENT_BINARY_DIR}/trace-a.csv
+            --workload W3 --rho 0.85 --seed 11 --workers 2
+            --warmup 20 --requests 100 --flow-count 32
+)
+add_test(NAME trace_generate_b
+    COMMAND $<TARGET_FILE:rescuesched_trace_generator>
+            --out ${CMAKE_CURRENT_BINARY_DIR}/trace-b.csv
+            --workload W3 --rho 0.85 --seed 11 --workers 2
+            --warmup 20 --requests 100 --flow-count 32
+)
+set_tests_properties(trace_generate_a trace_generate_b PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    FIXTURES_SETUP frozen_trace
+)
+add_test(NAME trace_reproducible
+    COMMAND ${CMAKE_COMMAND} -E compare_files
+            ${CMAKE_CURRENT_BINARY_DIR}/trace-a.csv
+            ${CMAKE_CURRENT_BINARY_DIR}/trace-b.csv
+)
+set_tests_properties(trace_reproducible PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    FIXTURES_REQUIRED frozen_trace
 )
 
 add_test(NAME physical_runtime_validity
@@ -134,6 +211,29 @@ set_tests_properties(handoff_microbench_cli_help PROPERTIES
 set_tests_properties(simulator_validity PROPERTIES
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_test(NAME rpc_server_cli_help
+        COMMAND $<TARGET_FILE:rescuesched_rpc_server> --help
+    )
+    set_tests_properties(rpc_server_cli_help PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        PASS_REGULAR_EXPRESSION "real UDP request/response server"
+    )
+    add_test(NAME rpc_client_cli_help
+        COMMAND $<TARGET_FILE:rescuesched_rpc_client> --help
+    )
+    set_tests_properties(rpc_client_cli_help PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        PASS_REGULAR_EXPRESSION "real open-loop UDP requests"
+    )
+    add_test(NAME rpc_protocol_validity
+        COMMAND $<TARGET_FILE:rpc_protocol_tests>
+    )
+    set_tests_properties(rpc_protocol_validity PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+endif()
 
 add_test(NAME rescue_v2_generate_a
     COMMAND $<TARGET_FILE:simulator>

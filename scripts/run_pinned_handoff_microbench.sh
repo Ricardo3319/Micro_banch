@@ -249,7 +249,7 @@ PY
 
 {
     echo "evidence_scope=local_host_pinned_handoff_microbenchmark_not_rpc_or_network"
-    echo "physical_rpc_runtime_present=NO"
+    echo "network_path_exercised=NO"
     echo "commit=$(git -C "$root" rev-parse HEAD)"
     echo "dirty_status=$(git -C "$root" status --porcelain | wc -l)"
     echo "build_dir=$build_dir"

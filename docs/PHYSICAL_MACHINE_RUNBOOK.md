@@ -1,5 +1,8 @@
 # RescueSched Physical Machine Runbook
 
+> **Integration notice (2026-07-17):** This document is retained as a host-preflight and historical synthetic-runtime guide. The repository now includes a real UDP RPC server/client, frozen trace loader, client RTT logs, and a two-node coordinator. For current WP0/WP1 gates use `PROJECT_STATE.md` and root `RUNBOOK.md`; for current RPC execution use `docs/CLOUDLAB_RUNBOOK.md`. No formal experiment is authorized while WP0 is blocked.
+
+
 本文档用于在 CloudLab 或独立 Ubuntu 裸机上直接执行当前仓库能够支持的
 物理机预检。命令不会生成图，也不会运行完整 corrected full matrix。
 
@@ -248,48 +251,20 @@ scp <cloudlab-user>@<server-hostname>:~/Micro_banch/preflight-*.tar.gz.sha256 .
 sha256sum -c preflight-*.tar.gz.sha256
 ```
 
-## 9. 真实物理迁移实验的停止线
+## 9. 当前真实 RPC 实现与停止线
 
-完成上述步骤后，可以确认物理机环境、模拟器和 handoff 微基准可用，但此时
-必须停止使用“真实 RPC 实验”“物理迁移收益”或“CloudLab 系统验证”等表述。
+仓库现已包含真实 UDP server/client、`SO_REUSEPORT` ingress shards、稳定
+source-port flow sockets、client RTT、双 client partition 和两节点 coordinator。
+这些组件通过 WP1 build/test 只表示 implementation baseline，不等于正式物理证据。
 
-开始真实物理实验前，仓库至少需要新增并通过验收：
+进入两节点 smoke、host tuning、pilot 或 formal matrix 前必须遵守：
 
-1. 将当前 synthetic runtime 接入真实 RPC server/client 和 NIC/RSS 数据路径。
-2. 增加 client-observed RTT、packet/NIC、perf/cache/NUMA 观测。
-3. 冻结 CloudLab paired runner、方法顺序随机化和失败重跑规则。
-4. 生成物理 summary、置信区间和 simulator-to-physical 对齐表。
-
-已实现但仍仅用于本地 implementation validation 的项目包括：pinned workers、
-冻结 trace replay、完成后更新的 method-keyed EWMA、四策略共享 runtime、
-request/decision/migration 日志、manifest 和 sanitizer gate。执行：
-
-```bash
-bash scripts/run_local_physical_runtime_smoke.sh
-bash scripts/run_pinned_handoff_microbench.sh
-bash scripts/run_sanitizers.sh
-python3 scripts/generate_cloudlab_run_order.py \
-  --output physical-results/cloudlab-run-order.csv
-python3 scripts/generate_cloudlab_run_order.py \
-  --verify physical-results/cloudlab-run-order.csv
-```
-
-正式执行规则见 `docs/CLOUDLAB_PREREGISTRATION.md`。本地 alignment 工具：
-
-```bash
-python3 scripts/analyze_simulator_physical_alignment.py --help
-```
-
-真实 runtime 完成后，第一轮只运行以下四个预注册锚点，不立即扩展矩阵：
-
-- W3 `rho=0.85`
-- W3 `rho=0.90`
-- W3 `rho=0.70`，保留低负载反例
-- W2 `rho=0.85`，保留 tail amplification 边界
-
-每个方法至少执行 10 次 paired trace repetitions，并分别报告 server-side
-deadline violation、goodput、P50/P99/P999、迁移请求和迁移工作量、CPU 周期、
-cache miss、NUMA movement 以及端到端 RTT。
+1. 根目录 `PROJECT_STATE.md` 中 lease 和 S3 gate 均为 PASS；
+2. 两机 checkout 同一 clean `physical-integration-v1` commit；
+3. 使用 topology validator 生成/验证 worker CPU 列表；当前计划 worker 是 CPU 0-15，
+   禁止旧列表 `0,2,4,...,30`；
+4. 按 `docs/CLOUDLAB_RUNBOOK.md` 和根目录 `RUNBOOK.md` 执行；
+5. local replay、loopback、short smoke 和 handoff microbenchmark 不称为论文证据。
 
 ## 10. 常见失败
 

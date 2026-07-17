@@ -59,7 +59,7 @@ RescueSched 的核心问题是：在 RSS 分片的多核 RPC server 中，某个
 
 **硬缺口：**
 
-- 物理复现文档明确说明它是“计划而非证据”，并确认仓库尚无 physical trace replay loader；因此目前不能写“已在真实 RPC server/CloudLab 上验证”。[P-PHYS]
+- 仓库已具备 physical trace loader、pinned runtime、真实 UDP RPC server/client、client RTT 和两节点 coordinator，但当前只有 integration/build 证据，尚无冻结合同下的正式 40-block CloudLab 结果；因此仍不能写“已在真实 RPC server/CloudLab 上完成性能验证”。[P-PHYS]
 - 物理计划仍使用旧基线名 `L1_WorkStealing` 与 `M0_IntraHostProactive` 作为部分对齐标准，而最新评估合同规定强基线是 `L1_WorkStealingPolling` 与 `M0_AltoThreshold`。提交前必须统一。[P-EVAL][P-PHYS]
 - 仓库中的 provenance 文档记录其写作时 worktree 为 dirty；提交证据必须迁移到 clean、immutable commit/tag 和只读归档。[P-PROV]
 
@@ -67,7 +67,7 @@ RescueSched 的核心问题是：在 RSS 分片的多核 RPC server 中，某个
 
 | 排名 | 风险                                                         |  严重性 | 立即措施                                                     |
 | ---- | ------------------------------------------------------------ | ------: | ------------------------------------------------------------ |
-| 1    | **没有真实 RPC/RSS 运行时证据，且 physical trace replay loader 尚不存在** | 致命/高 | 立即完成真机运行时、真实 descriptor handoff、强基线和同 trace replay；否则不得声称“系统已部署/验证”。 |
+| 1    | **真实 RPC/RSS runtime 已集成，但正式双机矩阵证据仍不存在，且 WP0 lease/S3 门禁受阻** | 致命/高 | 先解除租期与异地备份门禁，再完成 host profile、pilot、合同冻结和 40-block/160-run 正式矩阵；此前不得声称“系统性能已部署/验证”。 |
 | 2    | **官方截止日期距调研日仅 16 天，且具体时刻/时区、摘要注册规则未发布或未读取** | 致命/高 | 把内部最终上传设为 2026-07-30 12:00 PDT；每天复查当届官网和投稿系统。 |
 | 3    | **ALTOCUMULUS 已经是高度相近的 MICRO 2022 RPC scheduling 工作** |      高 | 完成逐机制 claim matrix；novelty 只能落在 request-specific deadline outcome change、remote feasibility、paid handoff 和目标侧安全，而不是“主动迁移 RPC”。 |
 | 4    | **INFOCOM 2027 页数、模板、匿名、supplement、EDAS 和 desk-reject 细则未确认** |      高 | 使用未修改的 IEEE conference 模板准备；同时维护完全匿名稿和匿名 artifact；规则发布后立即做差异审计。 |
