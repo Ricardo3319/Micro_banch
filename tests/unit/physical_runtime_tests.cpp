@@ -37,6 +37,13 @@ void write_v2_trace(const fs::path& path, const std::string& rows) {
         << rows;
 }
 
+void write_v3_trace(const fs::path& path, const std::string& rows) {
+    std::ofstream csv(path);
+    csv << "trace_version,trace_sha256,placement_mode,id,flow_id,generate_time_us,"
+           "rpc_method,service_time_us,deadline_budget_us,initial_core,burst\n"
+        << rows;
+}
+
 void test_strict_trace_loader() {
     const fs::path valid = temp_path("trace-valid.csv");
     write_v2_trace(valid,
@@ -158,7 +165,7 @@ void test_rescue_migrates_only_queued_and_appends_tail() {
 void test_running_cancel_is_non_preemptive() {
     const fs::path trace_path = temp_path("running-cancel.csv");
     write_v2_trace(trace_path,
-        "rescuesched-trace-v2," + embedded_hash() + ",1,0,short,500,1000,0,0\n");
+        "rescuesched-trace-v2," + embedded_hash() + ",1,0,short,5000,10000,0,0\n");
     physical::RuntimeConfig config;
     config.policy = physical::PolicyKind::L0_RANDOM_CORE;
     config.worker_count = 1;
@@ -174,7 +181,14 @@ void test_running_cancel_is_non_preemptive() {
     });
     physical::RuntimeResult result;
     std::thread runner([&] { result = runtime.run(); });
-    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    const auto running_deadline = std::chrono::steady_clock::now()
+        + std::chrono::seconds(2);
+    while (runtime.request_state(1) != physical::DescriptorState::RUNNING
+           && std::chrono::steady_clock::now() < running_deadline) {
+        std::this_thread::yield();
+    }
+    require(runtime.request_state(1) == physical::DescriptorState::RUNNING,
+            "request did not enter RUNNING before cancellation deadline");
     require(runtime.request_cancel(1), "running cancel request was rejected");
     runner.join();
     require(result.requests.front().state == physical::DescriptorState::DONE,
@@ -220,6 +234,51 @@ void test_terminal_cancel_callback_fires_once() {
     fs::remove(trace_path);
 }
 
+void test_network_ingress_identity_and_lifecycle() {
+    const fs::path trace_path = temp_path("network-ingress.csv");
+    write_v3_trace(trace_path,
+        "rescuesched-trace-v3," + embedded_hash()
+            + ",flow_affine,1,101,0,short,5,100,0,0\n"
+        "rescuesched-trace-v3," + embedded_hash()
+            + ",flow_affine,2,202,10,long,10,200,1,0\n");
+    physical::RuntimeConfig config;
+    config.arrival_mode = physical::ArrivalMode::NETWORK_INGRESS;
+    config.policy = physical::PolicyKind::L0_RANDOM_CORE;
+    config.worker_count = 2;
+    config.strict_affinity = false;
+    config.host_overhead_us = 0.0;
+    physical::FrozenTrace trace = physical::FrozenTrace::load_csv(
+        trace_path.string(), config.worker_count);
+    physical::PhysicalRuntime runtime(std::move(trace), config);
+
+    runtime.start_network_ingress();
+    require(runtime.submit_network_request(99, 101, 0)
+                == physical::NetworkSubmitStatus::UNKNOWN_REQUEST,
+            "unknown network request was accepted");
+    require(runtime.submit_network_request(1, 999, 0)
+                == physical::NetworkSubmitStatus::FLOW_MISMATCH,
+            "network request with the wrong flow was accepted");
+    require(runtime.submit_network_request(1, 101, 1)
+                == physical::NetworkSubmitStatus::ACCEPTED,
+            "valid network request was rejected");
+    require(runtime.submit_network_request(1, 101, 1)
+                == physical::NetworkSubmitStatus::DUPLICATE_OR_TERMINAL,
+            "duplicate network request was accepted");
+
+    const physical::RuntimeResult result = runtime.finish_network_ingress(true);
+    require(result.summary.invariants_pass, "network ingress invariants failed");
+    require(result.summary.completed_requests == 1,
+            "accepted network request did not complete");
+    require(result.summary.cancelled_requests == 1,
+            "unreceived network request was not cancelled");
+    const auto& first = result.requests.front();
+    require(first.initial_core == 1 && first.final_core == 1,
+            "actual ingress shard was not preserved as initial placement");
+    require(first.trace_arrival_us == 0.0 && first.planned_arrival_us >= 0.0,
+            "trace and physical arrival timestamps were not separated");
+    fs::remove(trace_path);
+}
+
 } // namespace
 
 int main() {
@@ -230,6 +289,7 @@ int main() {
         test_rescue_migrates_only_queued_and_appends_tail();
         test_running_cancel_is_non_preemptive();
         test_terminal_cancel_callback_fires_once();
+        test_network_ingress_identity_and_lifecycle();
         std::cout << "physical runtime tests: PASS\n";
         return 0;
     } catch (const std::exception& error) {

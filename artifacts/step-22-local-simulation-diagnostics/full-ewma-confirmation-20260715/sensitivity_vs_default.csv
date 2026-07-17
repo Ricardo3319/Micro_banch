@@ -1,5 +1,0 @@
-profile,dimension,value,workload,rho,paired_seeds,same_trace_identity,mean_slo_change_vs_default,ci95_low,ci95_high,p99_over_default,p999_over_default,work_rate_over_default,comparison_scope
-ewma-0.01,ewma-alpha,0.01,W2,0.85,5,1,0.0,0.0,0.0,1.0,1.0,1.0,same_trace_parameter_sensitivity
-ewma-0.01,ewma-alpha,0.01,W3,0.7,5,1,-0.00012100000000000027,-0.00017840000000000008,-7.179999999999964e-05,0.9949748743718593,1.0,0.9926580521144809,same_trace_parameter_sensitivity
-ewma-0.01,ewma-alpha,0.01,W3,0.85,5,1,-0.0011361999999999982,-0.0014897999999999995,-0.0007825999999999972,0.9953271028037384,0.9948051948051948,0.9914382839776338,same_trace_parameter_sensitivity
-ewma-0.01,ewma-alpha,0.01,W3,0.9,5,1,-0.001818000000000003,-0.002340000000000006,-0.001410800000000001,0.9957983193277311,1.0045977011494254,0.9891416520841746,same_trace_parameter_sensitivity

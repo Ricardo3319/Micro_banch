@@ -1,9 +1,0 @@
-# Minimal RescueSched CLI config.
-# CLI flags override these values.
-mode: rescue-main
-workload: W3
-rhos: [0.85]
-seeds: [11]
-output_dir: artifacts/rescuesched-cli
-warmup_requests: 200000
-measurement_requests: 1000000

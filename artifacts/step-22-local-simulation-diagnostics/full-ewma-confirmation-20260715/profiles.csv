@@ -1,3 +1,0 @@
-profile,dimension,value,notes,simulator_arguments
-baseline,baseline,corrected-default,frozen-corrected-configuration,default
-ewma-0.01,ewma-alpha,0.01,one-factor-at-a-time,--ewma-alpha 0.01

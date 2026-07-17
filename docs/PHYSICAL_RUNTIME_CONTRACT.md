@@ -1,21 +1,22 @@
-# RescueSched Local Physical Runtime Contract
+# Physical Runtime Contract
 
-## Status and evidence boundary
+## Evidence Scopes
 
-This contract governs the in-process, pinned-worker request runtime used to
-close implementation blockers before CloudLab deployment. The runtime executes
-synthetic service demand from a frozen simulator trace. It is not an RPC
-server, does not exercise a NIC or RSS receive path, and does not produce
-paper-valid physical results by itself.
+The repository has two execution modes that share the same descriptor,
+scheduler, policy, handoff, and output implementation:
 
-Outputs from this runtime may be described as local implementation smoke,
-stress, concurrency, or preflight evidence. They must not be described as
-CloudLab results, production readiness, end-to-end RPC latency, measured
-network behavior, or a completed physical evaluation.
+- `LOCAL_TRACE_REPLAY` submits trace rows from a local monotonic clock. It is
+  implementation and concurrency evidence, not a network result.
+- `NETWORK_INGRESS` accepts real UDP requests. It records server-side timing
+  and returns a UDP response so the client can record end-to-end RTT.
 
-## Descriptor lifecycle
+A loopback or short three-node smoke proves implementation readiness only.
+Paper-facing physical evidence requires the frozen CloudLab matrix, host
+metadata, paired repetitions, and archived raw outputs.
 
-Every accepted trace row owns one stable descriptor for the complete run:
+## Descriptor Lifecycle
+
+Every trace row owns one stable descriptor:
 
 ```text
 PENDING -> QUEUED -> RUNNING -> DONE
@@ -24,150 +25,83 @@ PENDING -> QUEUED -> RUNNING -> DONE
           IN_FLIGHT-+
 
 PENDING/QUEUED/IN_FLIGHT -> CANCELLED
-RUNNING + cancel request -> DONE with cancel_requested_after_start=1
 ```
 
-- `PENDING`: the immutable trace row has been loaded but its open-loop arrival
-  time has not been reached.
-- `QUEUED`: exactly one worker FIFO owns the descriptor. This is the only state
-  from which migration may begin.
-- `IN_FLIGHT`: the source FIFO has removed the descriptor and the destination
-  has reserved its estimated work. No FIFO owns the descriptor.
-- `RUNNING`: exactly one worker owns the descriptor and executes it
-  non-preemptively.
-- `DONE`: execution completed exactly once and the method-keyed estimator was
-  updated exactly once.
-- `CANCELLED`: execution never started. A cancellation received during handoff
-  is honored before destination insertion.
+Only `QUEUED` descriptors may migrate. Service is non-preemptive. Deadline
+expiry is an outcome rather than implicit cancellation, so accepted requests
+drain to a recorded terminal state.
 
-Deadline expiry is an outcome, not an implicit cancellation. A request that
-passes its server-side deadline remains queued or running and drains to a
-terminal state unless an explicit cancellation is issued.
+Queue membership, descriptor state, running ownership, destination
+reservations, and terminal counters are protected by the runtime coordination
+mutex. The completion-updated method-keyed EWMA has a separate short-lived
+lock. Policy code cannot inspect the current request's hidden service demand.
 
-## Ownership and buffer lifetime
+The common handoff primitive removes a revalidated queued descriptor, marks it
+`IN_FLIGHT`, reserves estimated destination work, executes the shared handoff
+path, then appends it to the destination FIFO tail. All migrating policies use
+this path.
 
-- A stable runtime-owned descriptor pool retains every descriptor until all
-  workers and the scheduler have joined.
-- A worker FIFO contains non-owning descriptor pointers. Queue membership and
-  descriptor state are changed under the scheduler coordination mutex.
-- Synthetic payload service demand is stored outside `DescriptorView` and is
-  read only by the execution path.
-- Completion callbacks receive an immutable outcome snapshot after terminal
-  state has been committed. Each callback fires at most once.
+## Network Ingress
 
-## Synchronization contract
+The server creates one UDP `SO_REUSEPORT` socket per worker/ingress shard. The
+kernel-selected receiving socket defines the request's initial worker. A
+request is accepted only when both `request_id` and `flow_id` match the loaded
+frozen trace; duplicate IDs, malformed datagrams, unknown IDs, and flow
+mismatches are counted and fail the status gate.
 
-The first implementation uses one explicit scheduler coordination mutex for
-descriptor state, FIFO membership, running ownership, target reservations, and
-terminal counters. This favors auditable ownership over maximum concurrency.
-Workers release the mutex while executing synthetic work.
+Each wire request contains:
 
-The shared method-keyed EWMA has its own mutex. Its lock is acquired only for a
-short estimate snapshot or completion update. Policy decisions use the
-estimate captured when the descriptor is enqueued; they do not receive the
-current request's hidden service demand.
+- request ID;
+- flow ID;
+- client send timestamp.
 
-The common handoff primitive performs these ordered operations:
+Each response echoes those fields and adds server receive/start/finish times,
+ingress shard, final worker, migration count, and deadline status. The client
+validates request ID, flow ID, send timestamp, and flow partition before
+accepting a response.
 
-1. revalidate `QUEUED` state and source FIFO membership;
-2. remove from the source FIFO;
-3. set `IN_FLIGHT` and reserve estimated work at the destination;
-4. release the coordination mutex and execute the common handoff fence/path;
-5. reacquire the mutex, clear the reservation, and append at the destination
-   FIFO tail, unless cancellation is pending;
-6. set `QUEUED`, notify the destination worker, and record elapsed handoff time.
+Clients issue requests open-loop from trace arrival timestamps. Stable sockets
+bind deterministic source ports. With multiple clients, trace rows are split by
+`flow_id % client_count`; all clients use the same `source_port_base`, because
+they run on different hosts. A shared `--start-at-unix-ns` aligns submission.
 
-All four policies use this primitive. A running descriptor is absent from its
-FIFO, so a migration attempt cannot pass source revalidation.
+## Frozen Trace
 
-## Policy-visible data
+`rescuesched_trace_generator` retains only the simulation semantics needed on
+physical machines: W2 MMPP/bimodal and W3 Poisson/lognormal arrivals, rho and
+seed, service demand, deadline, flow identity, RSS-like hash, and canonical
+trace SHA-256. The physical loader separately records the embedded canonical
+hash and SHA-256 of the exact CSV bytes.
 
-The scheduler may inspect only `DescriptorView` fields:
+The loader rejects unknown headers, malformed or non-finite values, duplicate
+or non-increasing IDs, non-monotonic arrivals, inconsistent embedded hashes,
+invalid workers, and unknown methods or placement modes.
 
-- request ID, method key, planned arrival, server-side deadline;
-- current method-keyed service estimate and estimator prior sample count;
-- current/initial core, state, and prior migration count.
+## Policy Surface
 
-The scheduler must not inspect synthetic service demand, future completion
-time based on actual demand, or any counterfactual outcome. Queue predictions
-use estimated work, estimated running residual, and in-flight reservations.
+- `L0_RandomCore`: keep the kernel-selected ingress worker.
+- `L1_WorkStealingPolling`: idle workers pull queued work through the common
+  handoff primitive.
+- `M0_AltoThreshold`: move bounded-prefix candidates when queue work exceeds
+  the threshold and predicted completion improves.
+- `M1_RescueSched`: move a queued request only when it is predicted locally
+  late, remotely feasible, and safe for the bounded destination prefix.
 
-## Frozen trace replay
+All policies share execution, queues, estimator, handoff, logging, worker
+count, CPU allocation, sockets, trace, and request protocol.
 
-The loader accepts the simulator's exact request-random v2 and flow-affine v3
-CSV schemas. It rejects:
+## Pass Conditions
 
-- unknown or reordered headers and mixed trace versions;
-- missing, malformed, non-finite, or negative timing values;
-- non-unique/non-increasing IDs or non-monotonic arrival times;
-- inconsistent embedded trace SHA-256 values;
-- initial cores outside the configured worker range;
-- unknown method, placement, or Boolean values.
+`RPC_SERVER_STATUS.txt` and `RPC_CLIENT_STATUS.txt` must both report
+`status=PASS`. A valid run also requires:
 
-The embedded simulator trace SHA-256 and the SHA-256 of the input CSV bytes are
-recorded separately. The CSV alone does not contain every generator parameter,
-so the loader does not claim to reconstruct the simulator's canonical trace
-hash from rows.
+- every expected request reaches exactly one terminal outcome;
+- no duplicate execution or completion;
+- no unknown, malformed, mismatched, or duplicate network request;
+- no missing, duplicate, invalid, or timed-out client response;
+- all destination reservations drain to zero;
+- strict worker affinity succeeds for formal physical runs;
+- trace identities and output invariants pass.
 
-For local worker counts below the simulator's default 16 cores, `trace-generate`
-accepts `--trace-core-count N`. Its default remains 16, and corrected evaluation
-commands do not use this export-only option.
-
-Replay uses a monotonic clock and planned arrival timestamps. Submission does
-not wait for completions or queue capacity, so server slowdown does not reduce
-the offered arrival sequence. Generator lag is logged separately. The
-server-side completion time is measured from the planned arrival; client RTT is
-unavailable in this synthetic runtime.
-
-## Common policy implementations
-
-- `L0_RandomCore`: retains frozen initial placement and performs no handoff.
-- `L1_WorkStealingPolling`: an idle worker periodically pulls the front queued
-  descriptor from the source with the largest estimated workload.
-- `M0_AltoThreshold`: scans bounded source prefixes above a queue-work
-  threshold and moves a predicted locally late descriptor when estimated
-  completion improves by the configured minimum gain.
-- `M1_RescueSched`: moves a queued descriptor only when it is predicted locally
-  doomed, remotely deadline-feasible with epsilon, and the bounded destination
-  prefix has no predicted deadline risk before insertion.
-
-These are implementation-alignment versions in a shared synthetic runtime.
-Their local output is not a replacement for the corrected simulator evidence
-or the future CloudLab experiment.
-
-## Event and outcome records
-
-Each run writes separate CSVs for:
-
-- request outcomes: planned arrival, enqueue, service start, finish, deadline,
-  initial/final core, migration count, estimator snapshot, server-side
-  completion, deadline violation, and client RTT availability;
-- decisions: policy check, scanned entries/targets, request/core choice,
-  predicted local and remote completion, rejection/commit reason, elapsed
-  decision nanoseconds, and hardware cycles when supported;
-- migrations: source removal, destination insertion, source/destination core,
-  handoff elapsed time, and outcome;
-- summary: deadline violation, goodput, P50/P99/P999, migrations, configured
-  synthetic work, submission lag, and invariant counters;
-- manifest: policy/configuration, trace identities, CPU assignments, affinity
-  status, clock, and evidence-scope labels.
-
-Server-side completion and client-observed RTT remain different fields. BMR,
-UMR, or other counterfactual diagnostics are not emitted as physical facts.
-
-## Local acceptance gate
-
-A local run passes only if:
-
-- every trace row reaches exactly one terminal state;
-- no descriptor executes or completes more than once;
-- every successful migration begins from `QUEUED` and inserts at FIFO tail;
-- no descriptor is owned by two queues or a queue and a worker;
-- target reservations drain to zero;
-- every requested worker reports successful affinity when strict affinity is
-  enabled;
-- all output schemas and trace identities validate.
-
-Passing this gate closes implementation and concurrency blockers only. Paper
-physical claims still require the pre-registered CloudLab protocol, paired
-repetitions, RPC/network instrumentation, and archived raw evidence.
+Server completion and client RTT remain separate measurements. Local replay,
+loopback, and microbenchmark outputs must retain their narrower evidence labels.

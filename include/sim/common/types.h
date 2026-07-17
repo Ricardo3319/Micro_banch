@@ -1,45 +1,13 @@
 #pragma once
-#include <cstdint>
 
 namespace sim {
-
-using TaskId = uint64_t;
 
 enum class RpcMethod : int {
     SHORT_RPC = 0,
     LONG_RPC = 1
 };
 
-enum class EventType : int {
-    TASK_FINISH    = 0,   // highest priority at same ts
-    TASK_ARRIVE    = 1,
-    TASK_MIGRATION_ARRIVE = 2,
-    TASK_EXECUTE   = 3,
-    TASK_GENERATE  = 4,
-    SYNC_LOAD      = 5,
-    CHECK_MIGRATION = 6
-};
-
-enum class MethodType {
-    B0_IDEAL_CFCFS,
-    L0_RANDOM_CORE,
-    L1_WORK_STEALING,
-    L1_WORK_STEALING_POLLING,
-    B1_POWER_OF_K,
-    B2_REACTIVE_MIGRATION,
-    M0_INTRA_HOST_PROACTIVE,
-    M0_ALTO_THRESHOLD,
-    M1_RESCUE_SCHED,
-    M1_RESCUE_NO_TARGET_SAFETY,
-    M1_RESCUE_NO_RESCUABLE,
-    M1_RESCUE_HYBRID,
-    M0_PROACTIVE_MIGRATION,
-    M1_AQB_PROACTIVE_MIGRATION,
-    M2_DQB_PROACTIVE_MIGRATION
-};
-
 enum class WorkloadType {
-    W1_POISSON_BIMODAL,
     W2_MMPP_BIMODAL,
     W3_POISSON_LOGNORMAL
 };
@@ -47,11 +15,6 @@ enum class WorkloadType {
 enum class PlacementMode {
     REQUEST_RANDOM,
     FLOW_AFFINE
-};
-
-enum class ClusterProfile {
-    HOMOGENEOUS,       // 64×C=1.0
-    HETERO_25PCT       // 48×C=1.0 + 16×C=0.2
 };
 
 } // namespace sim

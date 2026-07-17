@@ -1,7 +1,7 @@
 # CMake / build outputs
 build/
+build-*/
 build-local/
-build-aqb-check/
 build-sanitizers/
 build-thread-sanitizer/
 cmake-build-*/
