@@ -3,7 +3,7 @@
 This branch is the focused Linux implementation for reproducing RescueSched on
 CloudLab or another bare-metal cluster. It contains the frozen W2/W3 trace
 generator, the pinned-worker runtime, a real UDP RPC server/client, host
-instrumentation, and three-node experiment orchestration.
+instrumentation, and two-node experiment orchestration.
 
 Historical simulation outputs, paper sources, plotting code, and the complete
 discrete-event simulator are intentionally absent. They remain available from
@@ -61,24 +61,25 @@ The command passes only when both `RPC_SERVER_STATUS.txt` and
 `RPC_CLIENT_STATUS.txt` report `status=PASS` and every request receives one
 valid response.
 
-## Three-Node CloudLab Check
+## Two-Node CloudLab Check
 
-Use one server and two load-generator nodes. Run the coordinator from an
-observer node that has key-based SSH access to all three:
+Use `node0` as the dedicated server/main experiment machine and `node1` as the
+load generator plus observer/coordinator. Run the coordinator on `node1`; it
+starts two disjoint local client partitions and controls `node0` over SSH:
 
 ```bash
-bash scripts/run_three_node_rpc_smoke.sh \
-  --server-host server \
-  --client0-host client0 \
-  --client1-host client1 \
-  --server-ip 10.10.1.1 \
-  --repo-dir '~/Micro_banch' \
+bash scripts/run_two_node_rpc_smoke.sh \
+  --server-host Mingyang@amd140.utah.cloudlab.us \
+  --server-ip <node0-experiment-ip> \
+  --server-repo-dir '~/Micro_banch' \
   --build-dir build-cloudlab
 ```
 
 All four policies consume the same trace. The validator requires complete,
 non-overlapping client partitions, one response per request, one trace hash,
-and identical flow-to-ingress-shard mapping across policies.
+one shared client start time, and identical flow-to-ingress-shard mapping
+across policies. RPC traffic uses the experiment LAN; the CloudLab hostname is
+used only for SSH control.
 
 See [docs/CLOUDLAB_RUNBOOK.md](docs/CLOUDLAB_RUNBOOK.md) for node preparation,
 network checks, CPU selection, execution order, and result collection. The

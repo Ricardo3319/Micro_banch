@@ -2,18 +2,18 @@
 
 ## Topology
 
-Reserve at least four Linux nodes on one experiment LAN:
+Reserve these two Linux nodes on one experiment LAN:
 
-| Role | Purpose |
-| --- | --- |
-| `server` | UDP ingress shards, workers, and scheduling policy |
-| `client0` | Even flow partition load generator |
-| `client1` | Odd flow partition load generator |
-| `observer` | SSH coordinator and final result archive |
+| CloudLab node | Host | Purpose |
+| --- | --- | --- |
+| `node0` | `amd140.utah.cloudlab.us` | Dedicated server and main experiment machine |
+| `node1` | `amd136.utah.cloudlab.us` | Load generator, observer, and coordinator |
 
 Use the experiment-network IPv4 address, not the CloudLab control-network
-address, for RPC traffic. Keep the same hardware type and OS image for all
-final repetitions.
+address or `*.utah.cloudlab.us` hostname, for RPC traffic. Both machines are
+`c6525-25g`; keep their OS image fixed for all final repetitions. Do not run a
+client on `node0`, because client CPU and network activity would contaminate
+the scheduler and NUMA measurements on the main experiment machine.
 
 ## Prepare Every Node
 
@@ -37,8 +37,8 @@ git rev-parse HEAD
 git status --short
 ```
 
-Run preflight on the server and both clients. Supply the experiment interface
-to capture NIC/RSS information:
+Run preflight on both machines. Supply each machine's experiment interface to
+capture NIC/RSS information:
 
 ```bash
 bash scripts/run_physical_preflight.sh \
@@ -61,19 +61,17 @@ ethtool -i <experiment-interface>
 ethtool -x <experiment-interface>
 ```
 
-From both clients:
+From `node1`:
 
 ```bash
 ping -c 3 <server-experiment-ip>
 ```
 
-Configure key-based SSH aliases on the observer (`server`, `client0`, and
-`client1`) and verify non-interactive access:
+Verify that `node1` can control `node0` non-interactively. The login below is
+the CloudLab control path, not the RPC path:
 
 ```bash
-ssh -o BatchMode=yes server hostname
-ssh -o BatchMode=yes client0 hostname
-ssh -o BatchMode=yes client1 hostname
+ssh -o BatchMode=yes Mingyang@amd140.utah.cloudlab.us hostname
 ```
 
 ## Select Worker CPUs
@@ -89,18 +87,18 @@ Pass the ordered CPU list with `--cpus`, for example:
 Formal runs use strict affinity. `--allow-affinity-failure` is for local smoke
 only.
 
-## Run The Three-Node Gate
+## Run The Two-Node Gate
 
-Build the observer checkout too, then run:
+Run this on `node1 / amd136`. It generates one trace locally, starts two local
+client processes with `--client-index 0|1 --client-count 2`, and starts only
+the RPC server on `node0 / amd140`:
 
 ```bash
 cd ~/Micro_banch
-bash scripts/run_three_node_rpc_smoke.sh \
-  --server-host server \
-  --client0-host client0 \
-  --client1-host client1 \
-  --server-ip <server-experiment-ip> \
-  --repo-dir '~/Micro_banch' \
+bash scripts/run_two_node_rpc_smoke.sh \
+  --server-host Mingyang@amd140.utah.cloudlab.us \
+  --server-ip <node0-experiment-ip> \
+  --server-repo-dir '~/Micro_banch' \
   --build-dir build-cloudlab \
   --workers 16 \
   --cpus 0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30 \
@@ -109,12 +107,14 @@ bash scripts/run_three_node_rpc_smoke.sh \
   --warmup 500 --requests 5000
 ```
 
-The observer refuses a dirty checkout or mismatched remote commits. It creates
-one flow-affine trace, checks its SHA-256 after transfer, runs all four policies
+The coordinator refuses a dirty checkout or mismatched commits. It creates one
+flow-affine trace, checks its SHA-256 after transfer, runs all four policies
 with a shared absolute client start time, collects all outputs, and executes
-`validate_rpc_three_node_run.py`.
+`validate_rpc_two_node_run.py`. The client processes split requests by
+`flow_id % 2`; their deterministic source-port ranges are automatically offset
+by client index, so they can run concurrently on one host without overlap.
 
-The gate is complete only when `THREE_NODE_RPC_STATUS.txt` says `status=PASS`.
+The gate is complete only when `TWO_NODE_RPC_STATUS.txt` says `status=PASS`.
 
 ## Move From Smoke To Final Runs
 
@@ -139,7 +139,7 @@ python3 scripts/generate_cloudlab_run_order.py \
 6. Retain failed attempts and apply the preregistered paired rerun rule. Never
    replace an unfavorable valid run.
 
-The three-node helper is deliberately a smoke coordinator. For the final
+The two-node helper is deliberately a smoke coordinator. For the final
 matrix, invoke it per frozen block or wrap the same server/client commands with
 the archived schedule; do not weaken its trace, status, or ingress-map checks.
 
@@ -152,5 +152,5 @@ Archive together:
 - generated trace, embedded hash, file hash, and run-order CSV;
 - server/client command lines and console logs;
 - request, decision, migration, summary, status, and manifest files;
-- `THREE_NODE_RPC_STATUS.txt` and `SHA256SUMS`;
+- `TWO_NODE_RPC_STATUS.txt` and `SHA256SUMS`;
 - all failed infrastructure attempts and the reason for rerun.

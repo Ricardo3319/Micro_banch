@@ -44,8 +44,10 @@ anchor.
   queues, estimator, handoff primitive, logging, and trace.
 - Kernel `SO_REUSEPORT` selection defines the initial worker. Stable client
   source ports and the same trace preserve flow-to-ingress mapping.
-- Two clients partition by `flow_id % 2`; both use the same source-port base on
-  their separate hosts.
+- Two client processes run together on the dedicated load-generator node and
+  partition by `flow_id % 2`. Both receive the same source-port base; the
+  client index automatically offsets each process into a disjoint source-port
+  range.
 - Clients use one shared absolute start timestamp.
 - The estimator is method-keyed EWMA with alpha 0.05, updated after completion.
 - Destination insertion is FIFO append-tail.

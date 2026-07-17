@@ -10,7 +10,7 @@ scheduler, policy, handoff, and output implementation:
 - `NETWORK_INGRESS` accepts real UDP requests. It records server-side timing
   and returns a UDP response so the client can record end-to-end RTT.
 
-A loopback or short three-node smoke proves implementation readiness only.
+A loopback or short two-node smoke proves implementation readiness only.
 Paper-facing physical evidence requires the frozen CloudLab matrix, host
 metadata, paired repetitions, and archived raw outputs.
 
@@ -62,8 +62,10 @@ accepting a response.
 
 Clients issue requests open-loop from trace arrival timestamps. Stable sockets
 bind deterministic source ports. With multiple clients, trace rows are split by
-`flow_id % client_count`; all clients use the same `source_port_base`, because
-they run on different hosts. A shared `--start-at-unix-ns` aligns submission.
+`flow_id % client_count`. In the two-node topology, both client processes run
+on the load-generator host and receive the same `source_port_base`; each client
+adds `client_index * flow_sockets`, producing disjoint source-port ranges. A
+shared `--start-at-unix-ns` aligns submission.
 
 ## Frozen Trace
 
