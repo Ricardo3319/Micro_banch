@@ -30,7 +30,7 @@ sha256sum "$OUT/node0/manifest.xml" "$OUT/node1/manifest.xml" \
 grep -oE 'expires="[^"]+"' "$OUT"/node*/manifest.xml
 ```
 
-当前证据 `physical-results/wp0-final-review-20260717T163447Z/` 显示两机均为 `2026-07-18T03:00:00Z`，所以本 gate 为 `BLOCKED`。
+最新证据 `physical-results/wp0-wp1-gates-20260718T035213Z/wp0.1/` 显示：2026-07-18T03:52:13Z 两机实时执行 `geni-get -n manifest` 后仍均为 `2026-07-18T03:00:00Z`，所以本 gate 保持 `BLOCKED`。Portal 截图或人工确认不能替代两机 uncached manifest。历史证据目录继续保留，不覆盖、不删除。
 
 ## 2. WP0.2：S3 最小权限闭环
 
@@ -78,6 +78,8 @@ printf 'status=PASS\nobject=%s\nlocal_sha256=%s\nremote_sha256=%s\ndownloaded_sh
   "$OBJECT" "$LOCAL_SHA" "$REMOTE_SHA" "$DOWNLOADED_SHA" > "$OUT/S3_GATE_STATUS.txt"
 rm -f "$TEST_FILE" "$DOWNLOADED"
 ```
+
+当前 2026-07-18 preflight 证据位于 `physical-results/wp0-wp1-gates-20260718T035213Z/wp0.2/`：首选/默认 rclone 配置、remote 和 private bucket/project prefix 均缺失，故所有数据面步骤为 `NOT_RUN`，gate 为 `BLOCKED`。
 
 `S3_GATE_STATUS.txt` 只能包含无 secret 的 remote/object 标识和 hashes。当前没有配置输入，本节尚未执行。
 

@@ -3,7 +3,7 @@
 > **文档状态：EXECUTION STARTED / 以 `PROJECT_STATE.md` 为实时状态源**
 > **计划版本：v1.2**
 > **编制日期：2026-07-17（UTC）**
-> **物理机窗口：负责人预期延期至 2026-07-25，但 2026-07-17 uncached manifest 仍显示 2026-07-18T03:00:00Z**
+> **物理机窗口：负责人/Portal 预期延期至 2026-07-25，但 2026-07-18T03:52:13Z 两机 uncached manifest 仍显示 2026-07-18T03:00:00Z**
 > **计划主时区：UTC；涉及投稿截止时另列 PDT**
 
 本文档将既有计划细化为可审计的工作包、逐日窗口、依赖关系、门禁、交付物、失败分类和退出条件。执行已从 WP0/WP1 开始；实时结果、阻断项和证据位置以 `PROJECT_STATE.md` 与 `EVIDENCE_INDEX.md` 为准。本文档仍不把未执行的 host tuning、pilot、calibration 或 formal run 表述为已完成。
@@ -14,9 +14,11 @@
 
 ### 0.1 已确认事实
 
-- 项目负责人预期 `node0` 和 `node1` 已延期至 **2026-07-25**，但该口头/Portal 预期不能替代机器侧证据。
-- 2026-07-17T16:10:11Z 在两机执行 `geni-get -n manifest` 后，二者仍明确显示 `expires="2026-07-18T03:00:00Z"`。
-- 因此租期门禁当前为 **BLOCKED**；必须在 Portal 修复并由两机 uncached manifest 明确显示 2026-07-25 后才能 PASS。
+- 项目负责人和 Portal 截图表明 `node0` 和 `node1` 预期已延期至 **2026-07-25**，但该信息不能替代机器侧证据。
+- 最新 2026-07-18T03:52:13Z 在两机实时执行 `geni-get -n manifest` 后，二者仍明确显示 `expires="2026-07-18T03:00:00Z"`；两份原始 XML 的 SHA256 均为 `ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8`。
+- 因此 WP0.1 当前仍为 **BLOCKED**；必须由两机新的 uncached manifest 一致明确显示 2026-07-25 后才能 PASS。最新证据：`physical-results/wp0-wp1-gates-20260718T035213Z/wp0.1/`。
+- WP0.2 也为 **BLOCKED**：仓库外 rclone 配置、remote、private bucket/project prefix 缺失，upload/SHA/download/delete 全部未执行。最新证据：`physical-results/wp0-wp1-gates-20260718T035213Z/wp0.2/`。
+- WP1 冻结基线仍为两机 clean/same commit `0a88f03a21802be0eadc3065b93cb97876a6bd2f`，annotated tag `physical-integration-v1` 指向该提交；但 node0/node1 GitHub HTTPS 认证均不可用，远端 branch/tag 均 `ABSENT`，所以远端发布为 **BLOCKED_CREDENTIALS**。
 - 以两机 manifest 中较早的精确时间定义：
   - `T_expire`：两机 manifest 中较早的精确到期时间；
   - `T_no_new_block = T_expire - 12h`：不得再启动新的正式 paired block；
@@ -29,11 +31,11 @@
 
 ```text
 repository: /users/Mingyang/Micro_banch
-current branch: codex/cloudlab-physical
-current commit: 7827d53f549a
-working tree: clean
-intended integration base: codex/rescuesched-baselines @ 5379f1a
-intended integration branch: codex/infocom2027-integration
+current branch: codex/infocom2027-integration
+frozen integration commit: 0a88f03a21802be0eadc3065b93cb97876a6bd2f
+release tag: physical-integration-v1 (annotated, target 0a88f03a21802be0eadc3065b93cb97876a6bd2f)
+integration base: codex/rescuesched-baselines @ 5379f1a
+remote branch/tag publication: BLOCKED_CREDENTIALS; both refs ABSENT as of 2026-07-18T03:55:59Z
 ```
 
 当前物理分支已包含双节点 UDP RPC、固定 worker、trace、两 client coordinator、验证和基础采集脚本，但它是聚焦物理实现的裁剪分支。后续集成不能整体合并导致以下内容丢失：
@@ -257,7 +259,7 @@ node1 缺少可用 `cpufreq` policy 时：
 ## WP0：租期证据与异地备份门禁
 
 **计划窗口：** 2026-07-17 至 18
-**状态：** **BLOCKED**；两机 manifest 仍为 2026-07-18T03:00:00Z，S3 配置缺失
+**状态：** **BLOCKED**；2026-07-18T03:52:13Z 两机 uncached manifest 仍为 2026-07-18T03:00:00Z；S3 rclone 配置、remote、private bucket/project prefix 缺失，数据面闭环全部未执行
 **依赖：** 无
 
 ### WP0.1 租期证据登记
@@ -304,7 +306,7 @@ local test file
 
 ## WP1：集成分支与文档基线
 
-**状态：** **PASS_LOCAL / REMOTE_PUSH_BLOCKED**；两机同提交构建测试完成，GitHub 凭据缺失导致远端 branch/tag 发布待补
+**状态：** **PASS_LOCAL / REMOTE_PUSH_BLOCKED_CREDENTIALS**；两机冻结基线构建测试与 identity 保持通过，node0/node1 GitHub HTTPS 认证不可用，远端 branch/tag 实际均 `ABSENT`，没有执行 push
 **计划窗口：** 2026-07-17 至 18
 **依赖：** WP0 租期确认事实；不依赖 S3 才能编写代码，但部署前须 S3 PASS
 
@@ -381,7 +383,8 @@ YAML 至少包含：
 - Release 构建和全部测试在两机分别通过；
 - 两机 clean 且 commit 完全一致；
 - coordinator 对 commit mismatch 和 dirty tree 能 fail closed；
-- 基线 tag 计划名：`physical-integration-v1`。
+- 基线 tag `physical-integration-v1` 已作为 annotated tag 固定指向 `0a88f03a21802be0eadc3065b93cb97876a6bd2f`，不得移动或重建；
+- 远端发布另行门禁：2026-07-18T03:55:59Z 远端 branch/tag 均 `ABSENT`，两机认证不可用，状态为 `BLOCKED_CREDENTIALS`；证据见 `physical-results/wp0-wp1-gates-20260718T035213Z/wp1/`。
 
 **门禁：** 未达到以上条件，不进入 host tuning。
 
@@ -1205,14 +1208,17 @@ baseline deadline violation rate - M1 deadline violation rate
 截至本文件创建完成：
 
 ```text
-lease date confirmation: CONFIRMED_BY_USER (through 2026-07-25)
+lease gate: BLOCKED (two uncached manifests still 2026-07-18T03:00:00Z at 2026-07-18T03:52:13Z)
+S3 gate: BLOCKED (config/remote/private bucket/project prefix missing; no object operations run)
 plan refinement: COMPLETE
-integration branch creation: NOT_STARTED
-runtime changes: NOT_STARTED
-build/tests: NOT_STARTED
-node deployment: NOT_STARTED
+integration branch creation: COMPLETE
+frozen integration baseline: 0a88f03a21802be0eadc3065b93cb97876a6bd2f
+release tag: physical-integration-v1 (annotated, unchanged)
+build/tests: PASS on node0 and node1 at frozen baseline (Release 24/24 CTest)
+node deployment: COMPLETE at frozen baseline
+remote GitHub publication: BLOCKED_CREDENTIALS (branch/tag ABSENT)
+WP2 runtime changes: NOT_STARTED
 host tuning: NOT_STARTED
-S3 gate: NOT_STARTED
 pilot/calibration: NOT_STARTED
 formal runs: NOT_STARTED
 analysis/paper update: NOT_STARTED
