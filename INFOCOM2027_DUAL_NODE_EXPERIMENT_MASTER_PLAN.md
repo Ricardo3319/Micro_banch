@@ -1,7 +1,7 @@
 # RescueSched INFOCOM 2027 双物理机实验细化实施总计划
 
-> **文档状态：EXECUTION STARTED / 以 `PROJECT_STATE.md` 为实时状态源**
-> **计划版本：v1.3**
+> **文档状态：WP2 CODE-LEVEL COMPLETE / WP3 BLOCKED / 以 `PROJECT_STATE.md` 为实时状态源**
+> **计划版本：v1.4**
 > **编制日期：2026-07-17（UTC）**
 > **物理机窗口：Portal 显示实验 ready、Jul 24, 2026 7:00 PM；负责人已确认延期并批准 WP2-only 租期依据，但精确 expiration UTC 尚未冻结**
 > **计划主时区：UTC；涉及投稿截止时另列 PDT**
@@ -19,6 +19,7 @@
 - 项目负责人于 2026-07-18T15:17:01Z 明确确认延期已经生效，并批准用 Portal+负责人确认形成 `PASS_OWNER_ATTESTED_PORTAL_FOR_WP2`。该限定范围 PASS 只解除 WP2 runtime 代码工作，不把 manifest 改写成 PASS，也不冻结精确 expiration UTC。政策证据：`physical-results/gate-policy-revision-20260718T151701Z/`。
 - WP0.2 状态为 `DEFERRED_UNTIL_PILOT`：rclone 配置、remote、private bucket/project prefix 仍缺失，upload/SHA/download/delete 全部未执行；不阻塞 WP2，但 pilot/formal 前必须 PASS。
 - WP1 冻结基线 `0a88f03a21802be0eadc3065b93cb97876a6bd2f` 的两机 Release 24/24 CTest 证据保持有效；2026-07-18T15:17:01Z 两机均 clean/same status commit `50362f346c7fcdbbc064760e5670841eb5ac5db4`，annotated tag `physical-integration-v1` 仍指向冻结提交。远端 branch/tag 均 `ABSENT`、没有 push；负责人将远端发布设为 `WAIVED_BY_OWNER`。
+- WP2 源码提交 `7db91095c4d0f84a5eb568b980748051f994c4cc` 已完成 WP2.1–WP2.9 代码路径；node0/node1 各自在 clean/same commit 上完成 Release 26/26、ASan/UBSan 26/26、TSan 核心 2/2、本机四策略 UDP mapping/fail-closed gate 和 3×4 synthetic smoke。该状态为 `PASS_CODE_LEVEL_ON_BOTH_NODES`，不是双机 RPC、pilot 或 formal，也不自动授权 WP3。
 - 正式阶段仍须冻结：
   - `T_expire`：经权威来源解释后的精确 UTC 到期时间；
   - `T_no_new_block = T_expire - 12h`：不得再启动新的正式 paired block；
@@ -35,6 +36,7 @@ current branch: codex/infocom2027-integration
 frozen integration commit: 0a88f03a21802be0eadc3065b93cb97876a6bd2f
 release tag: physical-integration-v1 (annotated, target 0a88f03a21802be0eadc3065b93cb97876a6bd2f)
 integration base: codex/rescuesched-baselines @ 5379f1a
+current WP2 source commit: 7db91095c4d0f84a5eb568b980748051f994c4cc
 remote branch/tag publication: WAIVED_BY_OWNER; both refs ABSENT and no push as of 2026-07-18T15:03:28Z
 ```
 
@@ -52,12 +54,12 @@ remote branch/tag publication: WAIVED_BY_OWNER; both refs ABSENT and no push as 
 
 ### 0.4 当前执行边界
 
-WP0/WP1 已完成本轮门禁调整。当前允许开始 WP2 runtime 源码修复和代码级构建、unit/regression/sanitizer 测试。
+WP0/WP1 已完成本轮门禁调整；WP2 runtime 源码提交 `7db91095c4d0f84a5eb568b980748051f994c4cc` 已完成并在两台节点分别通过代码级验证。当前只允许保存 WP2 收尾证据以及解决后续阶段所需的精确 lease UTC 与 S3 门禁；WP3 仍未获授权。
 
 仍明确禁止：
 
 - 修改 governor、IRQ、NIC、sysctl 或正式 affinity profile；
-- 执行两机 RPC smoke、pilot、calibration 或 formal paired block；
+- 执行 WP3、两机 RPC smoke、pilot、calibration 或 formal paired block；
 - 使用正式实验端口或正式结果目录；
 - 生成或解释正式性能结果；
 - 在 remote streaming SHA 验证前清理任何 raw evidence；
@@ -397,12 +399,15 @@ YAML 至少包含：
 
 ## WP2：物理 runtime 正确性修复
 
+**状态：** **PASS_CODE_LEVEL_ON_BOTH_NODES**（源码提交 `7db91095c4d0f84a5eb568b980748051f994c4cc`；不自动授权 WP3）
 **计划窗口：** 2026-07-18 至 19
 **依赖：** WP1 可构建 integration；2026-07-18T15:17:01Z 的负责人调整只允许 WP2 runtime 代码工作和代码级测试，不包含 host tuning、两机 RPC smoke、pilot、calibration 或 formal
 
 修复按以下顺序进行；后项不得掩盖前项失败。
 
 ### WP2.1 receiver idle 竞争
+
+**状态：PASS_CODE_LEVEL_ON_BOTH_NODES。** predicate wait、独立时间读取、饱和减法和 counters 已实现；L0/L1/M0/M1 各 100 次生命周期并发回归纳入 CTest。
 
 - `condition_variable::wait_for` 使用 predicate；
 - `now_ns` 与 `last_receive_ns` 分开读取；
@@ -415,6 +420,8 @@ YAML 至少包含：
 
 ### WP2.2 CPU-time synthetic service
 
+**状态：PASS_CODE_LEVEL_ON_BOTH_NODES。** `CLOCK_THREAD_CPUTIME_ID`、完成后 actual CPU-time EWMA 更新和 5/24/100 µs × contention matrix 已纳入测试。
+
 - payload 使用 `CLOCK_THREAD_CPUTIME_ID` 消耗目标 CPU time；
 - wall start/finish 继续计算 server completion latency；
 - 完成后测量 actual thread CPU service；
@@ -426,6 +433,8 @@ YAML 至少包含：
 
 ### WP2.3 topology 与 affinity validator
 
+**状态：PASS_CODE_LEVEL_ON_BOTH_NODES。** validator 对 duplicate/offline/SMT sibling/role overlap fail closed；formal topology/profile SHA 仍留给 WP3。
+
 - 自动读取 `lscpu`/sysfs；
 - 每个 worker 映射到唯一 `(socket, core)`；
 - 拒绝重复 logical CPU、offline CPU、SMT sibling 重复 physical core；
@@ -435,6 +444,8 @@ YAML 至少包含：
 
 ### WP2.4 L1 distributed polling baseline
 
+**状态：PASS_CODE_LEVEL_ON_BOTH_NODES。** idle worker absolute timed polling、attempt/success/moved-work/cost counters 已实现。
+
 - 由 eligible idle worker 自己发起 steal；
 - 每个 poll period 每个 idle worker最多一次 attempt；
 - 不使用中央 scheduler 模拟 distributed polling；
@@ -442,6 +453,8 @@ YAML 至少包含：
 - 记录 attempts、successes、moved work、poll frequency 和 poll cost。
 
 ### WP2.5 ingress 与 response 解耦
+
+**状态：PASS_CODE_LEVEL_ON_BOTH_NODES。** 两个固定核 epoll receivers、两个固定核 response senders 和 bounded queue 已通过本机 executable gate；这不是双机 RPC。
 
 - 保留一个 `SO_REUSEPORT` socket 对应一个 ingress shard；
 - 16 个未固定 receiver 改为两个固定核 epoll receivers；
@@ -454,6 +467,8 @@ YAML 至少包含：
 
 ### WP2.6 scheduler absolute epoch
 
+**状态：PASS_CODE_LEVEL_ON_BOTH_NODES。** absolute deadline、missed-epoch skip 和 lag counters 已实现并测试。
+
 - 使用 absolute deadline；
 - 错过 epoch 时跳过过期 epoch，不连续追赶；
 - 记录 `scheduled/executed/missed epochs` 和 `max_epoch_lag_us`；
@@ -463,6 +478,8 @@ YAML 至少包含：
 
 ### WP2.7 production handoff
 
+**状态：PASS_CODE_PATH_ON_BOTH_NODES。** production remove/reserve/transfer/append-tail 与完整 handoff duration logging 已实现；formal `handoff_estimate_us` 仍未由后续 microbenchmark 冻结。
+
 - 删除 `std::this_thread::yield()` 等模拟成本；
 - 使用真实 `remove/reserve/transfer/append-tail` 路径；
 - 记录完整 handoff wall distribution；
@@ -470,6 +487,8 @@ YAML 至少包含：
 - P95/P99 只用于 sensitivity 和限制报告。
 
 ### WP2.8 有界日志
+
+**状态：PASS_CODE_LEVEL_ON_BOTH_NODES。** bounded sample cap `100000`、aggregate bucket `1000 µs` 和 `decision_aggregates.csv` 已固定；formal config SHA 仍未冻结。
 
 正式模式固定：
 
@@ -484,6 +503,8 @@ aggregate_bucket: 1 ms
 
 ### WP2.9 ingress mapping freeze
 
+**状态：PASS_CODE_MECHANISM_ON_BOTH_NODES。** `ingress_mapping.csv` 与同节点四方法 mapping projection 比较已 PASS；formal trace/flow map 的最终 freeze 仍待后续阶段。
+
 - 固定 destination port、client source-port base 和 flow-socket 数；
 - formal trace 冻结前保存 `flow/source-port → ingress shard`；
 - 四方法 mapping 必须完全一致；
@@ -491,16 +512,31 @@ aggregate_bucket: 1 ms
 
 ### WP2 总门禁
 
-以下全部 PASS 才能进入两机 pilot：
+**状态：PASS_CODE_LEVEL_ON_BOTH_NODES。** 源码提交 `7db91095c4d0f84a5eb568b980748051f994c4cc` 的结果：
 
-- unit tests；
-- ASan/UBSan；
-- TSan 核心并发测试及已知限制记录；
-- loopback RPC；
-- 并发压力；
-- 四方法 local smoke；
-- topology negative tests；
-- response queue failure injection。
+| 项目 | node0 | node1 |
+| --- | --- | --- |
+| Release CTest | PASS 26/26 | PASS 26/26 |
+| ASan/UBSan | PASS 26/26 | PASS 26/26 |
+| TSan 核心并发 | PASS 2/2 | PASS 2/2 |
+| receiver lifecycle / topology negative / CPU-time / epoch unit-concurrency tests | PASS | PASS |
+| 本机 loopback 四策略 UDP mapping gate | PASS | PASS |
+| response queue failure injection | PASS_EXPECTED_FAIL_CLOSED | PASS_EXPECTED_FAIL_CLOSED |
+| 3 repetitions × 4-policy synthetic stress | PASS 12/12 | PASS 12/12 |
+
+证据：
+
+```text
+physical-results/wp2-runtime-20260718T153855Z/
+physical-results/wp2-final-node0-20260718T163835Z/
+physical-results/wp2-final-node1-20260718T164147Z/
+physical-results/wp2-node1-sync-20260718T164112Z/
+physical-results/wp2-node1-evidence-transfer-20260718T164352Z/
+```
+
+限定：两机只是分别运行相同的代码级 gate；没有运行 node0↔node1 RPC。正式端口 `9000` 未使用，没有 host tuning。TSan 的早期 `pthread_cond_clockwait` 假阳性、一次异常挂起、中断快照、20/20 生命周期压力和最终重试/PASS 证据全部保留。
+
+该 WP2 PASS **不等于“可以立即进入两机 pilot”**：精确 lease expiration UTC 仍未冻结，S3 仍为 `DEFERRED_UNTIL_PILOT`，WP3/host profile 也未执行。必须先满足相应外部门禁并获得明确授权。
 
 ---
 
@@ -1223,8 +1259,14 @@ release tag: physical-integration-v1 (annotated, unchanged)
 build/tests: PASS on node0 and node1 at frozen baseline (Release 24/24 CTest)
 node deployment: COMPLETE at current integration status commit
 remote GitHub publication: WAIVED_BY_OWNER (branch/tag ABSENT; no push)
-WP2 runtime gate: READY_TO_START
-WP2 runtime changes: NOT_STARTED
+WP2 source commit: 7db91095c4d0f84a5eb568b980748051f994c4cc
+WP2.1-WP2.9 code paths: PASS_CODE_LEVEL_ON_BOTH_NODES
+WP2 Release: node0 26/26 PASS; node1 26/26 PASS
+WP2 ASan/UBSan: node0 26/26 PASS; node1 26/26 PASS
+WP2 TSan core: node0 2/2 PASS; node1 2/2 PASS
+WP2 loopback RPC/mapping/fail-closed: PASS on each node independently; no two-node RPC
+WP2 synthetic stress: node0 12/12 PASS; node1 12/12 PASS
+formal port 9000: NOT_USED
 host tuning: NOT_STARTED / NOT_ALLOWED_BY_CURRENT_GATE
 RPC smoke: NOT_STARTED / NOT_ALLOWED_BY_CURRENT_GATE
 pilot/calibration: NOT_STARTED / NOT_ALLOWED_BY_CURRENT_GATE

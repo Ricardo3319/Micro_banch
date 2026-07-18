@@ -1,6 +1,6 @@
-# RescueSched WP0/WP1 操作手册
+# RescueSched WP0/WP1/WP2 操作手册
 
-> 本文覆盖租期/S3 门禁、integration baseline 和 2026-07-18T15:17:01Z 的 WP2 前置门禁调整。当前只允许 WP2 runtime 源码修复和代码级测试；host tuning、两机 RPC smoke、pilot、calibration、formal 入口全部保持停止。所有时间使用 UTC；所有 secret 必须位于仓库外。
+> 本文覆盖租期/S3 门禁、integration baseline、2026-07-18T15:17:01Z 的 WP2 前置门禁调整，以及源码提交 `7db91095c4d0f84a5eb568b980748051f994c4cc` 的 WP2 本机代码级验证入口。WP2 已在两台节点分别通过代码级 gate，但 host tuning、两机 RPC smoke、pilot、calibration、formal 入口全部保持停止。所有时间使用 UTC；所有 secret 必须位于仓库外。
 
 ## 0. 主机约定与 fail-closed 规则
 
@@ -189,7 +189,7 @@ PY
 
 ## 6. Release build 与 CTest
 
-**Host：node0 和 node1，分别执行。Input：** 同一 clean integration commit。**成功条件：** configure/build exit 0，CTest `100% tests passed, 0 tests failed out of 24`。**恢复入口：** 保留失败 build directory/log；修复代码后产生新提交，两机全部重跑，禁止在不同 commit 拼接 PASS。
+**Host：node0 和 node1，分别执行。Input：** 同一 clean integration commit。**当前成功条件：** configure/build exit 0，CTest `100% tests passed, 0 tests failed out of 26`。**恢复入口：** 保留失败 build directory/log；修复代码后产生新提交，两机全部重跑，禁止在不同 commit 拼接 PASS。冻结 tag `physical-integration-v1` 的历史验收仍为 24/24，不得把历史日志改写成 26/26。
 
 ```bash
 cd /users/Mingyang/Micro_banch
@@ -246,19 +246,95 @@ test "$(git rev-list -n1 "$TAG")" = 0a88f03a21802be0eadc3065b93cb97876a6bd2f
 
 禁止运行 `git tag -f`、`git tag -d physical-integration-v1`、重新 `git tag -a` 或 force push。GitHub publication 为 `WAIVED_BY_OWNER`；这不改变本地冻结 tag，也不表示远端 tag 已存在。
 
-## 9. WP2 前置调整后的硬停止线
+## 9. WP2 本机代码级验证入口
 
-WP1 tag 只证明 integration/build/test baseline，不证明网络实验、性能或论文主张。2026-07-18T15:17:01Z 的负责人调整允许：
+以下命令必须在 node0 和 node1 **分别**运行，使用各自新的唯一 `physical-results/` 目录。它们不修改 host profile，也不建立 node0↔node1 数据面。
 
-1. 开始 WP2 runtime 正确性源码修复；
-2. 执行代码级构建、unit/regression/sanitizer 等不修改 host profile 的测试。
+### 9.1 Release 26/26
+
+```bash
+cd /users/Mingyang/Micro_banch
+test -z "$(git status --porcelain)"
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+BUILD="build-wp2-release-$STAMP"
+OUT="physical-results/wp2-release-$STAMP-$(hostname -s)"
+mkdir -p "$OUT"
+printf 'start_utc=%s\ncommit=%s\n' \
+  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(git rev-parse HEAD)" > "$OUT/manifest.env"
+cmake -S . -B "$BUILD" -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  2>&1 | tee "$OUT/configure.log"
+cmake --build "$BUILD" --parallel 2>&1 | tee "$OUT/build.log"
+ctest --test-dir "$BUILD" --output-on-failure 2>&1 | tee "$OUT/ctest.log"
+grep -F '100% tests passed, 0 tests failed out of 26' "$OUT/ctest.log"
+test -z "$(git status --porcelain)"
+```
+
+### 9.2 ASan/UBSan 与 TSan 核心
+
+`scripts/run_sanitizers.sh` 的前两个位置参数是 build directory；该脚本没有 `--help` 入口，不得把 `--help` 作为参数。
+
+```bash
+cd /users/Mingyang/Micro_banch
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+OUT="physical-results/wp2-sanitizers-$STAMP-$(hostname -s)"
+mkdir -p "$OUT"
+scripts/run_sanitizers.sh \
+  "build-wp2-asan-$STAMP" "build-wp2-tsan-$STAMP" \
+  2>&1 | tee "$OUT/full.log"
+```
+
+成功条件：ASan/UBSan 26/26；TSan 正常执行 `physical_runtime_validity` 和 `wp2_runtime_concurrency` 且 2/2 PASS。若环境在测试执行前报告 TSan shadow-memory mapping 不支持，只能登记 `UNSUPPORTED`，不能写成 PASS。
+
+### 9.3 本机四策略 UDP/mapping/fail-closed gate
+
+```bash
+cd /users/Mingyang/Micro_banch
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+scripts/run_local_wp2_rpc_gate.sh \
+  --build-dir "build-wp2-rpc-$STAMP" \
+  --out-dir "physical-results/wp2-rpc-$STAMP-$(hostname -s)" \
+  --port 19184
+```
+
+该入口只允许 loopback 和非正式端口。脚本显式拒绝正式端口 `9000`。成功条件包括四方法 `flow_id/source_port/kernel_reuseport_ingress_shard` projection 在同一节点完全一致，以及 response queue 注入产生预期 fail-closed、无 silent drop。不同节点的 kernel mapping SHA 不要求相同。
+
+### 9.4 三次四策略 synthetic stress
+
+```bash
+cd /users/Mingyang/Micro_banch
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+scripts/run_local_physical_runtime_smoke.sh \
+  --build-dir "build-wp2-synthetic-$STAMP" \
+  --out-dir "physical-results/wp2-synthetic-$STAMP-$(hostname -s)" \
+  --stress-repetitions 3
+```
+
+成功条件：3 repetitions × L0/L1/M0/M1，共 12/12 implementation runs PASS。输出是 in-process synthetic smoke，不是 RPC、双机 CloudLab、pilot 或论文物理证据。
+
+### 9.5 证据完整性
+
+脚本生成的嵌套 `SHA256SUMS` 使用相对路径，应在对应证据目录中验证；WP2 最终聚合根的 `SHA256SUMS` 使用仓库相对路径，应从仓库根验证。失败 attempt、TSan 诊断和意外 invocation 目录一律保留。
+
+已完成证据：
+
+```text
+physical-results/wp2-final-node0-20260718T163835Z/
+physical-results/wp2-final-node1-20260718T164147Z/
+```
+
+这两个目录记录源码提交 `7db91095c4d0f84a5eb568b980748051f994c4cc` 上两机分别完成 Release 26/26、ASan/UBSan 26/26、TSan 2/2、loopback gate 和 synthetic 12/12。
+
+## 10. WP2 完成后的硬停止线
+
+WP2 的 `PASS_CODE_LEVEL_ON_BOTH_NODES` 只证明同一源码在两台节点分别完成代码级测试，不证明双机网络实验、性能或论文主张，也不自动授权 WP3。
 
 仍然禁止：
 
-1. CPU/IRQ/NIC tuning、sysctl/governor 变更或 host profile apply；
+1. WP3、CPU/IRQ/NIC tuning、sysctl/governor 变更或 host profile apply；
 2. 两机 RPC smoke、pilot、calibration 和 formal experiment；
-3. 使用正式实验端口或正式结果目录；
+3. 使用正式实验端口 `9000` 或正式结果目录；
 4. 把 S3 `DEFERRED` 写成 PASS，或把 GitHub `WAIVED` 写成已 push；
-5. 把旧 manifest 值改写成已证明 2026-07-25。
+5. 把旧 manifest 值改写成已证明 2026-07-25；
+6. 把本机 loopback 写成双机 RPC，或把 synthetic smoke 写成正式物理结果。
 
-进入 pilot/formal 前必须完成 S3 upload/remote-stream-SHA/download/local-SHA/delete 闭环，并冻结可审计的精确 lease expiration UTC。
+进入 WP3/pilot/formal 前必须先冻结可审计的精确 lease expiration UTC；进入 pilot/formal 前还必须完成 S3 upload/remote-stream-SHA/download/local-SHA/delete 闭环，并获得相应阶段的明确授权。

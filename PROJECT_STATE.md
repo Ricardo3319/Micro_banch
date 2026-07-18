@@ -1,7 +1,7 @@
 # RescueSched 项目状态
 
 > 单一状态入口。实验合同见 `EXPERIMENT_CONTRACT.md`，操作入口见 `RUNBOOK.md`，证据映射见 `EVIDENCE_INDEX.md`。
-> 最后更新：2026-07-18T15:25:50Z（UTC）
+> 最后更新：2026-07-18T16:59:01Z（UTC）
 
 ## 1. 当前结论
 
@@ -9,13 +9,13 @@
 | --- | --- | --- |
 | WP0.1 租期证据 | **PASS_OWNER_ATTESTED_PORTAL_FOR_WP2** | 项目负责人于 2026-07-18T15:17:01Z 确认采用实时 Portal 实验页作为 WP2 前置租期依据。页面显示实验 `ready`、`Jul 24, 2026 7:00 PM`；两机 manifest 子检查仍显示旧值 `2026-07-18T03:00:00Z`，保持 `BLOCKED_STALE_OR_NON_PROPAGATED_VALUE`，不得描述为 manifest 已证明 2026-07-25。Portal 未显示时区，精确 expiration UTC 仍未冻结。 |
 | WP0.2 S3 闭环 | **DEFERRED_UNTIL_PILOT** | 负责人明确同意 WP2 前暂不执行 S3 闭环。rclone 配置、remote、private bucket/project prefix 仍缺失，upload、remote SHA、download、local SHA 和 delete 全部 `NOT_RUN`；进入 pilot 或 formal 前仍必须完成，不得写成 PASS。 |
-| WP1 集成基线 | **PASS_LOCAL / REMOTE_PUBLICATION_WAIVED_BY_OWNER** | 冻结基线 `0a88f03a21802be0eadc3065b93cb97876a6bd2f` 的两机 Release 24/24 CTest 证据保持有效；2026-07-18T15:17:01Z 两机均 clean/same commit `50362f346c7fcdbbc064760e5670841eb5ac5db4`，annotated tag 未移动。GitHub 远端 branch/tag 实际仍为 `ABSENT`，没有 push；负责人同意该发布不再阻塞 WP2。 |
-| WP2 runtime | **READY_TO_START / NOT_STARTED** | 门禁调整只解除 WP2 runtime 源码修复和代码级测试的前置阻塞；截至本状态时间尚未执行 WP2 修改或测试。 |
+| WP1 集成基线 | **PASS_LOCAL / REMOTE_PUBLICATION_WAIVED_BY_OWNER** | 冻结基线 `0a88f03a21802be0eadc3065b93cb97876a6bd2f` 的两机 Release 24/24 CTest 历史证据保持有效；WP2 源码提交 `7db91095c4d0f84a5eb568b980748051f994c4cc` 已在两机 clean/same commit 上验证。annotated tag 未移动。GitHub 远端 branch/tag 实际仍为 `ABSENT`，没有 push；负责人同意该发布不阻塞 WP2。 |
+| WP2 runtime | **PASS_CODE_LEVEL_ON_BOTH_NODES** | WP2.1–WP2.9 的代码路径已在源码提交 `7db91095c4d0f84a5eb568b980748051f994c4cc` 完成；node0/node1 各自 Release 26/26、ASan/UBSan 26/26、TSan 核心 2/2、本机四策略 UDP mapping/fail-closed gate 和 3×4 synthetic smoke 均 PASS。该状态只证明两机分别完成代码级验证，不是双机 RPC、pilot 或正式物理结果，也不自动授权 WP3。 |
 | WP3 及以后 | **BLOCKED** | 不允许 CPU/IRQ/NIC tuning、host profile apply、两机 RPC smoke、pilot、calibration 或 formal experiment；不得使用正式端口或正式结果目录。 |
 
-**当前允许事项：** 开始 WP2 runtime 正确性修复和代码级测试。
+**当前允许事项：** 保存 WP2 最终身份/测试证据，以及处理后续阶段所需的精确 lease UTC 与 S3 最小权限门禁；任何 WP3 执行仍需新的明确放行。
 
-**当前禁止事项：** host tuning、两机 RPC smoke、pilot、calibration 和 formal paired block。进入这些阶段前必须冻结可审计的精确 lease UTC，并按相应门禁完成 S3 最小权限恢复闭环。
+**当前禁止事项：** WP3、host tuning、host profile apply、两机 RPC smoke、pilot、calibration 和 formal paired block。进入这些阶段前必须冻结可审计的精确 lease UTC，并按相应门禁完成 S3 最小权限恢复闭环。
 
 ## 2. Git 与集成范围
 
@@ -25,6 +25,7 @@ branch: codex/infocom2027-integration
 integration_base: 5379f1af94a042814493a6329386b056738bfeaf
 frozen_integration_commit: 0a88f03a21802be0eadc3065b93cb97876a6bd2f
 current_status_commit: SELF
+wp2_source_commit: 7db91095c4d0f84a5eb568b980748051f994c4cc
 release_tag: physical-integration-v1
 release_tag_object: 2fb914080bc63d357e38b8f4e21a6d5add34dc8e
 release_tag_target: 0a88f03a21802be0eadc3065b93cb97876a6bd2f
@@ -144,26 +145,58 @@ remote URL modified: no
 
 远端发布状态现为 `WAIVED_BY_OWNER`，含义是“不要求于 WP2 前完成”，而不是已经 push。若以后发布，仍只能普通非 force push，并验证远端 branch/tag；冻结 tag 不得移动、删除或重建。
 
-## 7. 已完成、证据保留与下一步
+## 7. WP2 代码级双机验证
+
+WP2 源码提交：
+
+```text
+7db91095c4d0f84a5eb568b980748051f994c4cc
+```
+
+两台节点是在同一 clean 源码提交上**分别**完成代码级验证；没有运行 node0↔node1 RPC：
+
+| 验证项 | node0 | node1 | 范围说明 |
+| --- | --- | --- | --- |
+| Release CTest | PASS 26/26 | PASS 26/26 | 全量当前测试集；冻结 WP1 tag 的历史值仍是 24/24 |
+| ASan/UBSan | PASS 26/26 | PASS 26/26 | Debug sanitizer 全量测试 |
+| TSan 核心 | PASS 2/2 | PASS 2/2 | `physical_runtime_validity`、`wp2_runtime_concurrency` |
+| 本机 UDP gate | PASS | PASS | loopback `127.0.0.1:19184`；正式端口 `9000` 未使用 |
+| 四方法 ingress mapping | PASS | PASS | 各节点内部 L0/L1/M0/M1 projection 完全一致；不要求跨节点 SHA 相同 |
+| response queue failure injection | PASS_EXPECTED_FAIL_CLOSED | PASS_EXPECTED_FAIL_CLOSED | 212 次 enqueue failure 被显式报告，无 silent drop |
+| synthetic stress | PASS 12/12 | PASS 12/12 | 3 repetitions × 4 policies；仅 in-process implementation smoke |
+
+关键证据根：
+
+```text
+physical-results/wp2-runtime-20260718T153855Z/
+physical-results/wp2-final-node0-20260718T163835Z/
+physical-results/wp2-final-node1-20260718T164147Z/
+physical-results/wp2-node1-sync-20260718T164112Z/
+physical-results/wp2-node1-evidence-transfer-20260718T164352Z/
+```
+
+TSan 诊断历史没有删除：GCC 11/glibc 2.35 `pthread_cond_clockwait` 假阳性复现、一次异常生命周期测试挂起、中断快照、20/20 生命周期压力 PASS、sanitizer 重试 PASS 和最终两机 clean-commit PASS 均保留。误将 `--help` 作为 sanitizer build-dir 参数而产生的仓库根 `--help/` 目录也保留，并仅通过本地 `.git/info/exclude` 排除。
+
+## 8. 已完成、证据保留与下一步
 
 本次完成：
 
-1. 记录项目负责人在 2026-07-18T15:17:01Z 对 WP0.1/WP0.2/WP1 门禁调整的明确确认；
-2. 保存新的唯一证据目录 `physical-results/gate-policy-revision-20260718T151701Z/`，包含 Portal 截图、负责人决定、门禁范围、两机 Git identity 和 SHA256 清单；
-3. 将 WP0.1 调整为仅对 WP2 生效的 `PASS_OWNER_ATTESTED_PORTAL_FOR_WP2`，同时保留 manifest 子检查失败事实；
-4. 将 WP0.2 调整为 `DEFERRED_UNTIL_PILOT`，没有虚构任何 S3 数据面 PASS；
-5. 将 WP1 GitHub publication 调整为 `WAIVED_BY_OWNER`，保留远端 refs `ABSENT` 和未 push 的事实；
-6. 2026-07-18T15:25:03Z 至 2026-07-18T15:25:04Z，两机现有 Release build 各自再次完成 24/24 CTest；
-7. 未改写、移动、删除或重建 `physical-integration-v1`；所有旧 BLOCKED、失败 attempt 和 coordinator bug 证据继续保留。
+1. 在源码提交 `7db91095c4d0f84a5eb568b980748051f994c4cc` 完成 WP2.1–WP2.9 代码路径和新增单元/并发测试；
+2. node0/node1 均在 clean/same commit 上完成 Release 26/26、ASan/UBSan 26/26、TSan 核心 2/2；
+3. 两机分别完成本机四策略 UDP/mapping gate、response queue fail-closed 注入和 3×4 synthetic stress；
+4. 使用 Git bundle over SCP 将 WP2 源码 fast-forward 同步到 node1，未使用 GitHub、未 force push；
+5. 安全复制 node1 WP2 原始证据到 node0，并验证 archive SHA；node1 原始目录继续保留；
+6. 未改写、移动、删除或重建 `physical-integration-v1`；所有旧 BLOCKED、失败 attempt、TSan 诊断和 coordinator bug 证据继续保留；
+7. 没有执行 WP3、CPU/IRQ/NIC tuning、host profile apply、双机 RPC、pilot、calibration 或 formal experiment，正式端口 `9000` 未使用。
 
 下一步：
 
-1. 可以开始 WP2 runtime 正确性代码工作和代码级测试；
-2. WP2 完成前后均不得顺带执行 host tuning 或两机 RPC smoke；
-3. 进入 pilot/formal 前，必须完成 S3 最小权限闭环并冻结可审计的精确 lease UTC；
-4. GitHub publication 保持可选，若执行必须有认证且禁止 force push。
+1. 精确 lease expiration UTC 仍需以可审计来源冻结；manifest 子检查仍为 `BLOCKED_STALE_OR_NON_PROPAGATED_VALUE`；
+2. 进入 pilot/formal 前必须完成 S3 最小权限 upload/remote-SHA/download/local-SHA/delete 闭环；
+3. WP3 及两机 RPC 需在外部门禁完成后另行明确授权，WP2 的代码级 PASS 不构成自动放行；
+4. GitHub publication 保持 `WAIVED_BY_OWNER`；远端 refs 仍 `ABSENT`，没有 push。
 
-## 8. 未冻结合同值
+## 9. 未冻结合同值
 
 以下字段保持 `PENDING`/`null`，不得从 smoke 或仿真结果臆测：
 
@@ -171,7 +204,7 @@ remote URL modified: no
 - scheduler/poll period；
 - handoff estimate；
 - 四个 anchor 的 physical arrival scale；
-- decision logging mode/cap/bucket；
+- decision logging 的代码默认已固定为 bounded / 100000 / 1000 µs，但包含这些值的 formal config SHA 尚未冻结；
 - formal host-profile SHA；
 - formal config SHA；
 - S3 remote/bucket/prefix/object；
