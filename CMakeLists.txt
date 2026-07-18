@@ -25,6 +25,7 @@ find_package(Threads REQUIRED)
 
 add_library(physical_runtime_core
     src/physical/runtime.cpp
+    src/physical/runtime_support.cpp
     src/physical/trace.cpp
 )
 target_include_directories(physical_runtime_core PUBLIC
@@ -63,6 +64,16 @@ add_executable(physical_runtime_tests
 )
 target_link_libraries(physical_runtime_tests PRIVATE physical_runtime_core)
 
+add_executable(wp2_runtime_support_tests
+    tests/unit/wp2_runtime_support_tests.cpp
+)
+target_link_libraries(wp2_runtime_support_tests PRIVATE physical_runtime_core)
+
+add_executable(wp2_runtime_concurrency_tests
+    tests/unit/wp2_runtime_concurrency_tests.cpp
+)
+target_link_libraries(wp2_runtime_concurrency_tests PRIVATE physical_runtime_core)
+
 add_executable(rescuesched_handoff_microbench
     src/app/handoff_microbench_main.cpp
 )
@@ -92,6 +103,8 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang
     target_compile_options(physical_runtime_core PRIVATE -O2 -Wall -Wextra -Wpedantic)
     target_compile_options(rescuesched_physical_runtime PRIVATE -O2 -Wall -Wextra -Wpedantic)
     target_compile_options(physical_runtime_tests PRIVATE -O2 -Wall -Wextra -Wpedantic)
+    target_compile_options(wp2_runtime_support_tests PRIVATE -O2 -Wall -Wextra -Wpedantic)
+    target_compile_options(wp2_runtime_concurrency_tests PRIVATE -O2 -Wall -Wextra -Wpedantic)
     target_compile_options(rescuesched_handoff_microbench PRIVATE -O2 -Wall -Wextra -Wpedantic)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         target_compile_options(rescuesched_rpc_server PRIVATE -O2 -Wall -Wextra -Wpedantic)
@@ -103,8 +116,12 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang
         target_compile_options(physical_runtime_core PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
         target_compile_options(rescuesched_physical_runtime PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
         target_compile_options(physical_runtime_tests PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
+        target_compile_options(wp2_runtime_support_tests PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
+        target_compile_options(wp2_runtime_concurrency_tests PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
         target_link_options(rescuesched_physical_runtime PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
         target_link_options(physical_runtime_tests PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
+        target_link_options(wp2_runtime_support_tests PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
+        target_link_options(wp2_runtime_concurrency_tests PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
         if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
             target_compile_options(rescuesched_rpc_server PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
             target_compile_options(rescuesched_rpc_client PRIVATE ${RESCUESCHED_SANITIZER_FLAGS})
@@ -119,8 +136,12 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang
         target_compile_options(physical_runtime_core PRIVATE ${RESCUESCHED_TSAN_FLAGS})
         target_compile_options(rescuesched_physical_runtime PRIVATE ${RESCUESCHED_TSAN_FLAGS})
         target_compile_options(physical_runtime_tests PRIVATE ${RESCUESCHED_TSAN_FLAGS})
+        target_compile_options(wp2_runtime_support_tests PRIVATE ${RESCUESCHED_TSAN_FLAGS})
+        target_compile_options(wp2_runtime_concurrency_tests PRIVATE ${RESCUESCHED_TSAN_FLAGS})
         target_link_options(rescuesched_physical_runtime PRIVATE ${RESCUESCHED_TSAN_FLAGS})
         target_link_options(physical_runtime_tests PRIVATE ${RESCUESCHED_TSAN_FLAGS})
+        target_link_options(wp2_runtime_support_tests PRIVATE ${RESCUESCHED_TSAN_FLAGS})
+        target_link_options(wp2_runtime_concurrency_tests PRIVATE ${RESCUESCHED_TSAN_FLAGS})
         if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
             target_compile_options(rescuesched_rpc_server PRIVATE ${RESCUESCHED_TSAN_FLAGS})
             target_compile_options(rescuesched_rpc_client PRIVATE ${RESCUESCHED_TSAN_FLAGS})
@@ -191,6 +212,16 @@ add_test(NAME physical_runtime_validity
     COMMAND $<TARGET_FILE:physical_runtime_tests>
 )
 set_tests_properties(physical_runtime_validity PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_test(NAME wp2_runtime_support
+    COMMAND $<TARGET_FILE:wp2_runtime_support_tests>
+)
+add_test(NAME wp2_runtime_concurrency
+    COMMAND $<TARGET_FILE:wp2_runtime_concurrency_tests>
+)
+set_tests_properties(wp2_runtime_support wp2_runtime_concurrency PROPERTIES
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

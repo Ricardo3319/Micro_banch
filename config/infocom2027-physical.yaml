@@ -65,6 +65,10 @@ nodes:
     housekeeping_cpus: [22, 23]
     experiment_irq_cpus: [24, 25, 26, 27, 28, 29, 30, 31]
     smt_sibling_map: "cpu[16+n] is sibling of cpu[n], n=0..15"
+    topology_validator_exception:
+      status: PLANNED_NOT_APPLIED
+      allow_control_irq_smt_siblings: true
+      scope: "node0 control and IRQ logical CPUs are planned SMT siblings of worker physical cores"
   node1:
     role: load_generator_observer_coordinator
     control_hostname: amd136.utah.cloudlab.us
@@ -138,9 +142,9 @@ runtime:
   fallback_decision_deadline_utc: "2026-07-20T12:00:00Z"
 
 logging:
-  decision_mode: PENDING
-  decision_record_cap: null
-  decision_bucket_us: null
+  decision_mode: bounded
+  decision_record_cap: 100000
+  decision_bucket_us: 1000
   server_completion_and_client_rtt_separate: true
   preserve_failed_attempts: true
 
@@ -156,6 +160,8 @@ output:
     - client_requests.csv
     - client_summary.csv
     - decisions.csv
+    - decision_aggregates.csv
+    - ingress_mapping.csv
     - migrations.csv
     - summary.csv
     - stdout.log

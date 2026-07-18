@@ -26,7 +26,7 @@ cmake --build "$tsan_build_dir" --parallel
 set +e
 TSAN_OPTIONS="halt_on_error=1:history_size=7" \
     ctest --test-dir "$tsan_build_dir" \
-        --output-on-failure -R '^physical_runtime_validity$' \
+        --output-on-failure -R '^(physical_runtime_validity|wp2_runtime_concurrency)$' \
         2>&1 | tee "$tsan_build_dir/tsan-ctest.log"
 tsan_rc=$?
 set -e

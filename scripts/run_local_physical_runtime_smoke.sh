@@ -107,6 +107,8 @@ for (( repetition = 1; repetition <= repetitions; ++repetition )); do
             --cpus "$cpu_list" \
             --warmup-requests "$warmup" \
             --time-scale "$time_scale" \
+            --decision-sample-cap 100000 \
+            --decision-bucket-us 1000 \
             --workload-label W3 \
             --rho-label 0.85 \
             --seed-label 11 \
@@ -125,6 +127,8 @@ done
     echo "warmup_requests=$warmup"
     echo "measurement_requests=$requests"
     echo "time_scale=$time_scale"
+    echo "decision_sample_cap=100000"
+    echo "decision_bucket_us=1000"
     echo "repetitions=$repetitions"
 } > "$out_dir/metadata/manifest.env"
 

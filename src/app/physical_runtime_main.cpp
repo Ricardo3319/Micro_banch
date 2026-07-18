@@ -55,7 +55,11 @@ void print_usage(const char* executable) {
         << "  --policy NAME             L0_RandomCore, L1_WorkStealingPolling,\n"
         << "                            M0_AltoThreshold, or M1_RescueSched\n"
         << "  --workers N               Worker count (default: 16)\n"
-        << "  --cpus A,B,...            Explicit unique CPU affinity list\n"
+        << "  --cpus A,B,...            Explicit unique worker CPU affinity list\n"
+        << "  --control-cpus A,B,...    Receiver/sender/scheduler control CPUs\n"
+        << "  --irq-cpus A,B,...        Planned IRQ CPUs for topology validation\n"
+        << "  --allow-control-irq-smt-siblings\n"
+        << "                            Permit explicit SMT-sibling isolation layout\n"
         << "  --allow-affinity-failure  Continue if pinning is unavailable\n"
         << "  --warmup-requests N       Excluded prefix (default: 0)\n"
         << "  --time-scale X            Wall/logical time multiplier (default: 1)\n"
@@ -70,6 +74,8 @@ void print_usage(const char* executable) {
         << "  --ewma-alpha X            Completion-updated EWMA alpha (default: 0.05)\n"
         << "  --alto-threshold-us X     ALTO source work threshold (default: 40)\n"
         << "  --alto-min-gain-us X      ALTO minimum predicted gain (default: 0)\n"
+        << "  --decision-sample-cap N   Deterministic decision prefix (default: 100000)\n"
+        << "  --decision-bucket-us X    Full aggregate bucket width (default: 1000)\n"
         << "\nAudit labels:\n"
         << "  --workload-label TEXT     Workload identifier recorded verbatim\n"
         << "  --rho-label TEXT          Offered-load label recorded verbatim\n"
@@ -97,6 +103,16 @@ Options parse_options(int argc, char** argv) {
         } else if (argument == "--cpus" || argument.rfind("--cpus=", 0) == 0) {
             options.runtime.cpu_ids = parse_cpu_list(
                 option_value(index, argc, argv, argument, "--cpus"));
+        } else if (argument == "--control-cpus"
+                   || argument.rfind("--control-cpus=", 0) == 0) {
+            options.runtime.control_cpu_ids = parse_cpu_list(
+                option_value(index, argc, argv, argument, "--control-cpus"));
+        } else if (argument == "--irq-cpus"
+                   || argument.rfind("--irq-cpus=", 0) == 0) {
+            options.runtime.irq_cpu_ids = parse_cpu_list(
+                option_value(index, argc, argv, argument, "--irq-cpus"));
+        } else if (argument == "--allow-control-irq-smt-siblings") {
+            options.runtime.allow_control_irq_smt_siblings = true;
         } else if (argument == "--allow-affinity-failure") {
             options.runtime.strict_affinity = false;
         } else if (argument == "--warmup-requests"
@@ -151,6 +167,14 @@ Options parse_options(int argc, char** argv) {
                    || argument.rfind("--alto-min-gain-us=", 0) == 0) {
             options.runtime.alto_min_gain_us = std::stod(option_value(
                 index, argc, argv, argument, "--alto-min-gain-us"));
+        } else if (argument == "--decision-sample-cap"
+                   || argument.rfind("--decision-sample-cap=", 0) == 0) {
+            options.runtime.decision_sample_cap = std::stoull(option_value(
+                index, argc, argv, argument, "--decision-sample-cap"));
+        } else if (argument == "--decision-bucket-us"
+                   || argument.rfind("--decision-bucket-us=", 0) == 0) {
+            options.runtime.decision_bucket_us = std::stod(option_value(
+                index, argc, argv, argument, "--decision-bucket-us"));
         } else if (argument == "--workload-label"
                    || argument.rfind("--workload-label=", 0) == 0) {
             options.runtime.workload_label = option_value(

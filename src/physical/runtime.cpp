@@ -1,4 +1,5 @@
 #include "physical/runtime.h"
+#include "physical/runtime_support.h"
 
 #include "sim/workloads/trace.h"
 
@@ -13,6 +14,7 @@
 #include <fstream>
 #include <iomanip>
 #include <limits>
+#include <map>
 #include <mutex>
 #include <numeric>
 #include <optional>
@@ -51,57 +53,32 @@ std::string lower_copy(std::string value) {
     return value;
 }
 
-bool pin_current_thread(int cpu_id) {
-#if defined(__linux__)
-    cpu_set_t set;
-    CPU_ZERO(&set);
-    CPU_SET(cpu_id, &set);
-    return pthread_setaffinity_np(pthread_self(), sizeof(set), &set) == 0;
-#else
-    (void)cpu_id;
-    return false;
-#endif
-}
-
-std::vector<int> allowed_cpu_ids() {
-    std::vector<int> cpus;
-#if defined(__linux__)
-    cpu_set_t set;
-    CPU_ZERO(&set);
-    if (sched_getaffinity(0, sizeof(set), &set) == 0) {
-        for (int cpu = 0; cpu < CPU_SETSIZE; ++cpu) {
-            if (CPU_ISSET(cpu, &set)) cpus.push_back(cpu);
-        }
-    }
-#endif
-    if (cpus.empty()) {
-        const unsigned count = std::max(1U, std::thread::hardware_concurrency());
-        for (unsigned cpu = 0; cpu < count; ++cpu)
-            cpus.push_back(static_cast<int>(cpu));
-    }
-    return cpus;
-}
-
-void execute_synthetic_work(double duration_us) {
-    if (!(duration_us > 0.0)) return;
-    const auto duration_ns = static_cast<int64_t>(std::ceil(duration_us * 1000.0));
-    const auto deadline = Clock::now() + std::chrono::nanoseconds(duration_ns);
-    uint64_t state = 0x9e3779b97f4a7c15ULL;
-    while (Clock::now() < deadline) {
-        state ^= state << 7U;
-        state ^= state >> 9U;
-        state *= 0xbf58476d1ce4e5b9ULL;
-        std::atomic_signal_fence(std::memory_order_seq_cst);
-    }
-    if (state == 0) std::atomic_signal_fence(std::memory_order_seq_cst);
-}
-
 double percentile(std::vector<double> values, double quantile) {
     if (values.empty()) return 0.0;
     std::sort(values.begin(), values.end());
     const double rank = std::ceil(quantile * static_cast<double>(values.size()));
     const size_t index = static_cast<size_t>(std::max(1.0, rank)) - 1;
     return values[std::min(index, values.size() - 1)];
+}
+
+template <typename Predicate>
+void wait_until_steady(std::condition_variable& cv,
+                       std::unique_lock<std::mutex>& lock,
+                       Clock::time_point deadline,
+                       Predicate predicate) {
+    // libstdc++ implements steady_clock waits with pthread_cond_clockwait on
+    // glibc >= 2.34. GCC 11 ThreadSanitizer does not model that symbol when
+    // multiple condition variables share a mutex, producing false double-lock
+    // and follow-on race reports. Keep epoch accounting on steady_clock, but
+    // translate each blocking wait to the TSan-visible CLOCK_REALTIME API.
+    while (!predicate()) {
+        const auto steady_now = Clock::now();
+        if (steady_now >= deadline) return;
+        const auto remaining = deadline - steady_now;
+        const auto wall_deadline = std::chrono::system_clock::now()
+            + std::chrono::ceil<std::chrono::system_clock::duration>(remaining);
+        cv.wait_until(lock, wall_deadline);
+    }
 }
 
 std::string join_ints(const std::vector<int>& values) {
@@ -212,6 +189,8 @@ struct PhysicalRuntime::Impl {
         double enqueue_us = 0.0;
         double start_us = 0.0;
         double finish_us = 0.0;
+        double actual_thread_cpu_service_us = 0.0;
+        double service_wall_us = 0.0;
         uint32_t execution_count = 0;
         uint32_t completion_count = 0;
         bool measurement_eligible = false;
@@ -246,6 +225,8 @@ struct PhysicalRuntime::Impl {
     std::vector<int> worker_cpu_ids;
     std::vector<bool> worker_affinity_ok;
     std::mutex mutex;
+    std::mutex decision_mutex;
+    std::mutex ready_mutex;
     std::condition_variable ready_cv;
     std::condition_variable terminal_cv;
     std::mutex scheduler_wait_mutex;
@@ -263,7 +244,20 @@ struct PhysicalRuntime::Impl {
     double max_submit_lag_us = 0.0;
     uint64_t submitted_count = 0;
     uint64_t check_counter = 0;
+    uint64_t scheduler_epochs_scheduled = 0;
+    uint64_t scheduler_epochs_executed = 0;
+    uint64_t scheduler_epochs_missed = 0;
+    double scheduler_max_epoch_lag_us = 0.0;
+    uint64_t l1_poll_epochs_scheduled = 0;
+    uint64_t l1_poll_attempts = 0;
+    uint64_t l1_poll_successes = 0;
+    uint64_t l1_poll_epochs_missed = 0;
+    double l1_moved_work_us = 0.0;
+    uint64_t l1_poll_total_cost_ns = 0;
+    uint64_t l1_poll_max_cost_ns = 0;
+    uint64_t decision_records_total = 0;
     std::vector<DecisionRecord> decisions;
+    std::map<std::pair<uint64_t, std::string>, DecisionAggregateRecord> decision_aggregates;
     std::vector<MigrationRecord> migrations;
 
     Impl(FrozenTrace input_trace, RuntimeConfig input_config)
@@ -280,7 +274,7 @@ struct PhysicalRuntime::Impl {
         for (int worker = 0; worker < config.worker_count; ++worker)
             worker_cvs.push_back(std::make_unique<std::condition_variable>());
 
-        worker_cpu_ids = config.cpu_ids.empty() ? allowed_cpu_ids() : config.cpu_ids;
+        worker_cpu_ids = config.cpu_ids.empty() ? process_allowed_cpu_ids() : config.cpu_ids;
         if (worker_cpu_ids.size() < static_cast<size_t>(config.worker_count))
             throw std::invalid_argument("not enough allowed CPU IDs for requested workers");
         worker_cpu_ids.resize(static_cast<size_t>(config.worker_count));
@@ -288,6 +282,20 @@ struct PhysicalRuntime::Impl {
         if (std::adjacent_find(worker_cpu_ids.begin(), worker_cpu_ids.end())
             != worker_cpu_ids.end())
             throw std::invalid_argument("worker CPU IDs must be unique");
+        TopologyValidationRequest topology_request;
+        topology_request.worker_cpus = worker_cpu_ids;
+        topology_request.control_cpus = config.control_cpu_ids;
+        topology_request.irq_cpus = config.irq_cpu_ids;
+        topology_request.allow_control_irq_smt_siblings =
+            config.allow_control_irq_smt_siblings;
+        const auto topology_result = validate_cpu_topology(
+            load_linux_cpu_topology(), topology_request);
+        if (!topology_result.pass) {
+            std::ostringstream message;
+            message << "INFRASTRUCTURE_FAILURE: CPU topology validation failed";
+            for (const auto& error : topology_result.errors) message << "; " << error;
+            throw std::invalid_argument(message.str());
+        }
         worker_affinity_ok.assign(static_cast<size_t>(config.worker_count), false);
 
         descriptors.reserve(trace.entries().size());
@@ -322,7 +330,7 @@ struct PhysicalRuntime::Impl {
             config.handoff_estimate_us, config.host_overhead_us,
             config.alto_queue_threshold_us, config.alto_min_gain_us,
             config.ewma_alpha, config.initial_short_service_us,
-            config.initial_long_service_us
+            config.initial_long_service_us, config.decision_bucket_us
         };
         if (std::any_of(std::begin(finite_values), std::end(finite_values),
                         [](double value) { return !std::isfinite(value); }))
@@ -337,7 +345,8 @@ struct PhysicalRuntime::Impl {
                 "runtime audit labels must be non-empty CSV-safe tokens");
         if (!(config.time_scale > 0.0) || !(config.check_period_us > 0.0)
             || config.scan_depth <= 0 || config.max_candidates <= 0
-            || config.target_count <= 0 || config.moves_per_check <= 0)
+            || config.target_count <= 0 || config.moves_per_check <= 0
+            || !(config.decision_bucket_us > 0.0))
             throw std::invalid_argument("runtime periods and bounds must be positive");
         if (config.epsilon_us < 0.0 || config.handoff_estimate_us < 0.0
             || config.host_overhead_us < 0.0
@@ -416,20 +425,17 @@ struct PhysicalRuntime::Impl {
         return risk;
     }
 
-    Choice choose_work_stealing(double now) const {
+    Choice choose_work_stealing_for_target(int target, double now) const {
         Choice choice;
-        choice.reason = "no_idle_target";
-        int target = -1;
-        for (int core = 0; core < config.worker_count; ++core) {
-            if (!running[static_cast<size_t>(core)]
-                && queues[static_cast<size_t>(core)].empty()
-                && reservations_us[static_cast<size_t>(core)] == 0.0) {
-                target = core;
-                break;
-            }
+        choice.target_core = target;
+        choice.reason = "no_queued_source";
+        if (target < 0 || target >= config.worker_count
+            || running[static_cast<size_t>(target)]
+            || !queues[static_cast<size_t>(target)].empty()
+            || reservations_us[static_cast<size_t>(target)] != 0.0) {
+            choice.reason = "target_not_idle";
+            return choice;
         }
-        if (target < 0) return choice;
-
         int source = -1;
         double largest_work = -1.0;
         for (int core = 0; core < config.worker_count; ++core) {
@@ -440,13 +446,9 @@ struct PhysicalRuntime::Impl {
                 source = core;
             }
         }
-        if (source < 0) {
-            choice.reason = "no_queued_source";
-            return choice;
-        }
+        if (source < 0) return choice;
         choice.descriptor = queues[static_cast<size_t>(source)].front();
         choice.source_core = source;
-        choice.target_core = target;
         choice.scanned_entries = 1;
         choice.local_completion_us = local_completion_us(
             source, *choice.descriptor, now);
@@ -570,7 +572,7 @@ struct PhysicalRuntime::Impl {
     Choice choose(double now) const {
         switch (config.policy) {
             case PolicyKind::L1_WORK_STEALING_POLLING:
-                return choose_work_stealing(now);
+                return Choice{};
             case PolicyKind::M0_ALTO_THRESHOLD:
                 return choose_alto(now);
             case PolicyKind::M1_RESCUE_SCHED:
@@ -603,9 +605,6 @@ struct PhysicalRuntime::Impl {
                 estimated_work(descriptor);
         }
 
-        std::atomic_thread_fence(std::memory_order_seq_cst);
-        std::this_thread::yield();
-        std::atomic_thread_fence(std::memory_order_seq_cst);
 
         std::string outcome = "committed_append_tail";
         {
@@ -645,20 +644,52 @@ struct PhysicalRuntime::Impl {
         return outcome == "committed_append_tail";
     }
 
+    void record_decision(DecisionRecord record) {
+        std::lock_guard<std::mutex> lock(decision_mutex);
+        ++decision_records_total;
+        const uint64_t bucket = static_cast<uint64_t>(std::floor(
+            std::max(0.0, record.timestamp_us) / config.decision_bucket_us));
+        auto& aggregate = decision_aggregates[{bucket, record.reason}];
+        aggregate.bucket_index = bucket;
+        aggregate.bucket_start_us = static_cast<double>(bucket) * config.decision_bucket_us;
+        aggregate.reason = record.reason;
+        ++aggregate.count;
+        aggregate.total_duration_ns += record.decision_duration_ns;
+        aggregate.max_duration_ns = std::max(
+            aggregate.max_duration_ns, record.decision_duration_ns);
+        if (decisions.size() < config.decision_sample_cap)
+            decisions.push_back(std::move(record));
+    }
+
     void scheduler_loop() {
         const auto period = std::chrono::duration_cast<Clock::duration>(
             std::chrono::duration<double, std::micro>(
                 config.check_period_us * config.time_scale));
-        auto next_check = Clock::now() + period;
+        auto next_epoch = Clock::now() + period;
         while (!stopping.load(std::memory_order_acquire)) {
             {
                 std::unique_lock<std::mutex> wait_lock(scheduler_wait_mutex);
-                scheduler_wait_cv.wait_until(wait_lock, next_check, [&] {
+                wait_until_steady(scheduler_wait_cv, wait_lock, next_epoch, [&] {
                     return stopping.load(std::memory_order_acquire);
                 });
             }
             if (stopping.load(std::memory_order_acquire)) break;
-            next_check += period;
+            const auto epoch_now = Clock::now();
+            if (epoch_now < next_epoch) continue;
+            const auto late = epoch_now - next_epoch;
+            const uint64_t missed = static_cast<uint64_t>(late / period);
+            const uint64_t scheduled = missed + 1;
+            const double lag_us = std::chrono::duration<double, std::micro>(late).count()
+                                / config.time_scale;
+            {
+                std::lock_guard<std::mutex> lock(decision_mutex);
+                scheduler_epochs_scheduled += scheduled;
+                ++scheduler_epochs_executed;
+                scheduler_epochs_missed += missed;
+                scheduler_max_epoch_lag_us = std::max(
+                    scheduler_max_epoch_lag_us, lag_us);
+            }
+            next_epoch += period * static_cast<Clock::duration::rep>(scheduled);
 
             for (int move = 0; move < config.moves_per_check; ++move) {
                 const auto decision_start = Clock::now();
@@ -666,42 +697,42 @@ struct PhysicalRuntime::Impl {
                 Choice choice;
                 double logical_now = 0.0;
                 uint64_t check_id = 0;
+                uint64_t request_id = 0;
+                double deadline_abs_us = 0.0;
                 {
                     std::lock_guard<std::mutex> lock(mutex);
                     logical_now = now_us();
                     check_id = ++check_counter;
                     choice = choose(logical_now);
+                    if (choice.descriptor) {
+                        request_id = descriptors[*choice.descriptor].view.id;
+                        deadline_abs_us = descriptors[*choice.descriptor].view.deadline_abs_us;
+                    }
                 }
                 const uint64_t cycles_end = read_cycles();
                 const auto decision_end = Clock::now();
                 DecisionRecord record;
                 record.check_id = check_id;
                 record.timestamp_us = logical_now;
+                record.request_id = request_id;
                 record.source_core = choice.source_core;
                 record.target_core = choice.target_core;
                 record.scanned_entries = choice.scanned_entries;
                 record.evaluated_targets = choice.evaluated_targets;
                 record.predicted_local_completion_us = choice.local_completion_us;
                 record.predicted_remote_completion_us = choice.remote_completion_us;
+                record.deadline_abs_us = deadline_abs_us;
                 record.reason = choice.reason.empty() ? "no_candidate" : choice.reason;
                 record.decision_cycles = cycles_end >= cycles_start
                     ? cycles_end - cycles_start : 0;
                 record.decision_duration_ns = static_cast<uint64_t>(
                     std::chrono::duration_cast<std::chrono::nanoseconds>(
                         decision_end - decision_start).count());
-                if (choice.descriptor) {
-                    std::lock_guard<std::mutex> lock(mutex);
-                    record.request_id = descriptors[*choice.descriptor].view.id;
-                    record.deadline_abs_us =
-                        descriptors[*choice.descriptor].view.deadline_abs_us;
-                }
                 bool committed = false;
                 if (choice.descriptor) committed = handoff(choice);
-                if (choice.descriptor && !committed) record.reason = "source_revalidation_reject";
-                {
-                    std::lock_guard<std::mutex> lock(mutex);
-                    decisions.push_back(std::move(record));
-                }
+                if (choice.descriptor && !committed)
+                    record.reason = "source_revalidation_reject";
+                record_decision(std::move(record));
                 if (!choice.descriptor || !committed) break;
             }
         }
@@ -727,6 +758,8 @@ struct PhysicalRuntime::Impl {
         const auto found = index_by_id.find(descriptor.view.id);
         outcome.synthetic_service_us = found == index_by_id.end()
             ? 0.0 : synthetic_payload_service_us[found->second];
+        outcome.actual_thread_cpu_service_us = descriptor.actual_thread_cpu_service_us;
+        outcome.service_wall_us = descriptor.service_wall_us;
         outcome.estimated_service_us = descriptor.view.estimated_service_us;
         outcome.estimator_prior_samples = descriptor.view.estimator_prior_samples;
         outcome.measurement_eligible = descriptor.measurement_eligible;
@@ -737,48 +770,145 @@ struct PhysicalRuntime::Impl {
     }
 
     void worker_loop(int worker_id) {
-        const bool affinity_ok = pin_current_thread(
+        const bool affinity_ok = pin_current_thread_to_cpu(
             worker_cpu_ids[static_cast<size_t>(worker_id)]);
         {
-            std::lock_guard<std::mutex> lock(mutex);
+            std::lock_guard<std::mutex> lock(ready_mutex);
             worker_affinity_ok[static_cast<size_t>(worker_id)] = affinity_ok;
             ++ready_workers;
-            ready_cv.notify_all();
         }
+        ready_cv.notify_all();
 
+        const auto poll_period = std::chrono::duration_cast<Clock::duration>(
+            std::chrono::duration<double, std::micro>(
+                config.check_period_us * config.time_scale));
+        auto next_poll = Clock::now() + poll_period;
         while (true) {
             size_t index = 0;
             double work_us = 0.0;
+            bool perform_l1_poll = false;
+            Choice poll_choice;
+            double poll_now_us = 0.0;
+            uint64_t poll_check_id = 0;
+            uint64_t poll_request_id = 0;
+            double poll_deadline_us = 0.0;
+            double poll_moved_work_us = 0.0;
+            auto poll_start = Clock::now();
+            uint64_t poll_cycles_start = 0;
             {
                 std::unique_lock<std::mutex> lock(mutex);
-                worker_cvs[static_cast<size_t>(worker_id)]->wait(lock, [&] {
-                    return stopping.load(std::memory_order_acquire)
-                        || !queues[static_cast<size_t>(worker_id)].empty();
-                });
-                if (stopping.load(std::memory_order_acquire)
-                    && queues[static_cast<size_t>(worker_id)].empty())
-                    return;
-                index = queues[static_cast<size_t>(worker_id)].front();
-                queues[static_cast<size_t>(worker_id)].pop_front();
-                Descriptor& descriptor = descriptors[index];
-                if (descriptor.view.state != DescriptorState::QUEUED
-                    || descriptor.view.current_core != worker_id) {
-                    ++duplicate_execution_count;
-                    continue;
+                if (config.policy == PolicyKind::L1_WORK_STEALING_POLLING) {
+                    while (!stopping.load(std::memory_order_acquire)
+                           && queues[static_cast<size_t>(worker_id)].empty()) {
+                        wait_until_steady(
+                            *worker_cvs[static_cast<size_t>(worker_id)], lock,
+                            next_poll, [&] {
+                                return stopping.load(std::memory_order_acquire)
+                                    || !queues[static_cast<size_t>(worker_id)].empty();
+                            });
+                        if (stopping.load(std::memory_order_acquire)
+                            || !queues[static_cast<size_t>(worker_id)].empty()) break;
+                        const auto poll_now = Clock::now();
+                        if (poll_now < next_poll) continue;
+                        const uint64_t missed = static_cast<uint64_t>(
+                            (poll_now - next_poll) / poll_period);
+                        const uint64_t scheduled = missed + 1;
+                        next_poll += poll_period
+                            * static_cast<Clock::duration::rep>(scheduled);
+                        poll_start = Clock::now();
+                        poll_cycles_start = read_cycles();
+                        poll_now_us = now_us();
+                        poll_check_id = ++check_counter;
+                        poll_choice = choose_work_stealing_for_target(
+                            worker_id, poll_now_us);
+                        if (poll_choice.descriptor) {
+                            const auto& descriptor = descriptors[*poll_choice.descriptor];
+                            poll_request_id = descriptor.view.id;
+                            poll_deadline_us = descriptor.view.deadline_abs_us;
+                            poll_moved_work_us = estimated_work(descriptor);
+                        }
+                        {
+                            std::lock_guard<std::mutex> decision_lock(decision_mutex);
+                            l1_poll_epochs_scheduled += scheduled;
+                            ++l1_poll_attempts;
+                            l1_poll_epochs_missed += missed;
+                        }
+                        perform_l1_poll = true;
+                        break;
+                    }
+                } else {
+                    worker_cvs[static_cast<size_t>(worker_id)]->wait(lock, [&] {
+                        return stopping.load(std::memory_order_acquire)
+                            || !queues[static_cast<size_t>(worker_id)].empty();
+                    });
                 }
-                descriptor.view.state = DescriptorState::RUNNING;
-                descriptor.start_us = now_us();
-                ++descriptor.execution_count;
-                if (descriptor.execution_count > 1) ++duplicate_execution_count;
-                running[static_cast<size_t>(worker_id)] = index;
-                running_estimated_finish_us[static_cast<size_t>(worker_id)] =
-                    descriptor.start_us + estimated_work(descriptor);
-                work_us = (synthetic_payload_service_us[index]
-                           + config.host_overhead_us)
-                        * config.time_scale;
+                if (stopping.load(std::memory_order_acquire)
+                    && queues[static_cast<size_t>(worker_id)].empty()
+                    && !perform_l1_poll)
+                    return;
+                if (!perform_l1_poll) {
+                    index = queues[static_cast<size_t>(worker_id)].front();
+                    queues[static_cast<size_t>(worker_id)].pop_front();
+                    Descriptor& descriptor = descriptors[index];
+                    if (descriptor.view.state != DescriptorState::QUEUED
+                        || descriptor.view.current_core != worker_id) {
+                        ++duplicate_execution_count;
+                        continue;
+                    }
+                    descriptor.view.state = DescriptorState::RUNNING;
+                    descriptor.start_us = now_us();
+                    ++descriptor.execution_count;
+                    if (descriptor.execution_count > 1) ++duplicate_execution_count;
+                    running[static_cast<size_t>(worker_id)] = index;
+                    running_estimated_finish_us[static_cast<size_t>(worker_id)] =
+                        descriptor.start_us + estimated_work(descriptor);
+                    work_us = (synthetic_payload_service_us[index]
+                               + config.host_overhead_us) * config.time_scale;
+                }
             }
 
-            execute_synthetic_work(work_us);
+            if (perform_l1_poll) {
+                bool committed = false;
+                if (poll_choice.descriptor) committed = handoff(poll_choice);
+                const uint64_t cycles_end = read_cycles();
+                const auto poll_end = Clock::now();
+                DecisionRecord record;
+                record.check_id = poll_check_id;
+                record.timestamp_us = poll_now_us;
+                record.request_id = poll_request_id;
+                record.source_core = poll_choice.source_core;
+                record.target_core = poll_choice.target_core;
+                record.scanned_entries = poll_choice.scanned_entries;
+                record.evaluated_targets = poll_choice.evaluated_targets;
+                record.predicted_local_completion_us = poll_choice.local_completion_us;
+                record.predicted_remote_completion_us = poll_choice.remote_completion_us;
+                record.deadline_abs_us = poll_deadline_us;
+                record.reason = poll_choice.reason.empty()
+                    ? "no_candidate" : poll_choice.reason;
+                if (poll_choice.descriptor && !committed)
+                    record.reason = "source_revalidation_reject";
+                record.decision_cycles = cycles_end >= poll_cycles_start
+                    ? cycles_end - poll_cycles_start : 0;
+                record.decision_duration_ns = static_cast<uint64_t>(
+                    std::chrono::duration_cast<std::chrono::nanoseconds>(
+                        poll_end - poll_start).count());
+                {
+                    std::lock_guard<std::mutex> lock(decision_mutex);
+                    if (committed) {
+                        ++l1_poll_successes;
+                        l1_moved_work_us += poll_moved_work_us;
+                    }
+                    l1_poll_total_cost_ns += record.decision_duration_ns;
+                    l1_poll_max_cost_ns = std::max(
+                        l1_poll_max_cost_ns, record.decision_duration_ns);
+                }
+                record_decision(std::move(record));
+                continue;
+            }
+
+            const CpuWorkMeasurement measurement = execute_thread_cpu_work(work_us);
+            const double actual_cpu_us = measurement.actual_cpu_us / config.time_scale;
+            const double service_wall_us = measurement.wall_us / config.time_scale;
 
             CompletionCallback callback;
             RequestOutcome completed_outcome;
@@ -791,8 +921,9 @@ struct PhysicalRuntime::Impl {
                     ++duplicate_completion_count;
                     continue;
                 }
-                estimator.observe(
-                    descriptor.view.method, synthetic_payload_service_us[index]);
+                descriptor.actual_thread_cpu_service_us = actual_cpu_us;
+                descriptor.service_wall_us = service_wall_us;
+                estimator.observe(descriptor.view.method, actual_cpu_us);
                 descriptor.finish_us = now_us();
                 ++descriptor.completion_count;
                 if (descriptor.completion_count > 1) ++duplicate_completion_count;
@@ -812,24 +943,25 @@ struct PhysicalRuntime::Impl {
     void start_threads() {
         for (int worker = 0; worker < config.worker_count; ++worker)
             workers.emplace_back([this, worker] { worker_loop(worker); });
+        bool affinity_failed = false;
         {
-            std::unique_lock<std::mutex> lock(mutex);
+            std::unique_lock<std::mutex> lock(ready_mutex);
             ready_cv.wait(lock, [&] {
                 return ready_workers == static_cast<size_t>(config.worker_count);
             });
-            const bool affinity_failed = std::any_of(
+            affinity_failed = std::any_of(
                 worker_affinity_ok.begin(), worker_affinity_ok.end(),
                 [](bool ok) { return !ok; });
-            if (config.strict_affinity && affinity_failed) {
-                stopping.store(true, std::memory_order_release);
-                for (auto& cv : worker_cvs) cv->notify_all();
-                lock.unlock();
-                for (auto& worker : workers) worker.join();
-                workers.clear();
-                throw std::runtime_error("strict worker affinity setup failed");
-            }
         }
-        if (config.policy != PolicyKind::L0_RANDOM_CORE)
+        if (config.strict_affinity && affinity_failed) {
+            stopping.store(true, std::memory_order_release);
+            for (auto& cv : worker_cvs) cv->notify_all();
+            for (auto& worker : workers) worker.join();
+            workers.clear();
+            throw std::runtime_error("strict worker affinity setup failed");
+        }
+        if (config.policy == PolicyKind::M0_ALTO_THRESHOLD
+            || config.policy == PolicyKind::M1_RESCUE_SCHED)
             scheduler = std::thread([this] { scheduler_loop(); });
     }
 
@@ -849,7 +981,27 @@ struct PhysicalRuntime::Impl {
         std::lock_guard<std::mutex> lock(mutex);
         result.worker_cpu_ids = worker_cpu_ids;
         result.worker_affinity_ok = worker_affinity_ok;
-        result.decisions = decisions;
+        {
+            std::lock_guard<std::mutex> decision_lock(decision_mutex);
+            result.decisions = decisions;
+            result.decision_aggregates.reserve(decision_aggregates.size());
+            for (const auto& item : decision_aggregates)
+                result.decision_aggregates.push_back(item.second);
+            result.summary.scheduler_epochs_scheduled = scheduler_epochs_scheduled;
+            result.summary.scheduler_epochs_executed = scheduler_epochs_executed;
+            result.summary.scheduler_epochs_missed = scheduler_epochs_missed;
+            result.summary.scheduler_max_epoch_lag_us = scheduler_max_epoch_lag_us;
+            result.summary.l1_poll_epochs_scheduled = l1_poll_epochs_scheduled;
+            result.summary.l1_poll_attempts = l1_poll_attempts;
+            result.summary.l1_poll_successes = l1_poll_successes;
+            result.summary.l1_poll_epochs_missed = l1_poll_epochs_missed;
+            result.summary.l1_moved_work_us = l1_moved_work_us;
+            result.summary.l1_poll_total_cost_ns = l1_poll_total_cost_ns;
+            result.summary.l1_poll_max_cost_ns = l1_poll_max_cost_ns;
+            result.summary.decision_records_total = decision_records_total;
+            result.summary.decision_records_sampled = decisions.size();
+            result.summary.decision_records_dropped = decision_records_total - decisions.size();
+        }
         result.migrations = migrations;
         result.requests.reserve(descriptors.size());
         std::vector<double> latencies;
@@ -905,12 +1057,17 @@ struct PhysicalRuntime::Impl {
             result.summary.goodput_rps = static_cast<double>(successful_measurement)
                 * 1e6 / duration_us;
         }
+        result.summary.infrastructure_failure =
+            result.summary.affinity_failure_count != 0;
         result.summary.invariants_pass =
             result.summary.lost_descriptor_count == 0
             && result.summary.duplicate_execution_count == 0
             && result.summary.duplicate_completion_count == 0
             && result.summary.nonzero_reservation_count == 0
-            && (!config.strict_affinity || result.summary.affinity_failure_count == 0);
+            && !result.summary.infrastructure_failure;
+        result.summary.classification = result.summary.infrastructure_failure
+            ? "INFRASTRUCTURE_FAILURE"
+            : (result.summary.invariants_pass ? "VALID_COMPLETE" : "INCOMPLETE");
         return result;
     }
 };
@@ -1113,7 +1270,8 @@ void PhysicalRuntime::write_outputs(const RuntimeResult& result) const {
                "enqueue_us,service_start_us,finish_us,deadline_abs_us,"
                "server_completion_us,client_rtt_us,client_rtt_status,initial_core,"
                "final_core,migration_count,execution_count,completion_count,"
-               "synthetic_service_us,estimated_service_us,estimator_prior_samples,"
+               "synthetic_service_us,actual_thread_cpu_service_us,service_wall_us,"
+               "estimated_service_us,estimator_prior_samples,"
                "deadline_violation,cancel_requested_after_start\n";
         csv << std::setprecision(17);
         for (const auto& request : result.requests) {
@@ -1130,7 +1288,9 @@ void PhysicalRuntime::write_outputs(const RuntimeResult& result) const {
                 << ",,unavailable_server_log," << request.initial_core << ','
                 << request.final_core << ',' << request.migration_count << ','
                 << request.execution_count << ',' << request.completion_count << ','
-                << request.synthetic_service_us << ',' << request.estimated_service_us << ','
+                << request.synthetic_service_us << ','
+                << request.actual_thread_cpu_service_us << ','
+                << request.service_wall_us << ',' << request.estimated_service_us << ','
                 << request.estimator_prior_samples << ','
                 << (request.deadline_violation ? 1 : 0) << ','
                 << (request.cancel_requested_after_start ? 1 : 0) << '\n';
@@ -1157,6 +1317,20 @@ void PhysicalRuntime::write_outputs(const RuntimeResult& result) const {
     }
 
     {
+        std::ofstream csv(root / "decision_aggregates.csv");
+        csv << "bucket_index,bucket_start_us,bucket_width_us,policy,reason,count,"
+               "total_decision_duration_ns,max_decision_duration_ns\n";
+        csv << std::setprecision(17);
+        for (const auto& aggregate : result.decision_aggregates) {
+            csv << aggregate.bucket_index << ',' << aggregate.bucket_start_us << ','
+                << impl_->config.decision_bucket_us << ','
+                << policy_name(impl_->config.policy) << ',' << aggregate.reason << ','
+                << aggregate.count << ',' << aggregate.total_duration_ns << ','
+                << aggregate.max_duration_ns << '\n';
+        }
+    }
+
+    {
         std::ofstream csv(root / "migrations.csv");
         csv << "request_id,source_core,target_core,handoff_start_us,handoff_end_us,"
                "handoff_duration_ns,target_insert_policy,outcome\n";
@@ -1179,7 +1353,13 @@ void PhysicalRuntime::write_outputs(const RuntimeResult& result) const {
                "P99_server_completion_us,P999_server_completion_us,migrated_requests,"
                "migration_count,duplicate_execution_count,duplicate_completion_count,"
                "lost_descriptor_count,nonzero_reservation_count,affinity_failure_count,"
-               "max_submit_lag_us,mean_submit_lag_us,invariants_pass\n";
+               "scheduler_epochs_scheduled,scheduler_epochs_executed,"
+               "scheduler_epochs_missed,scheduler_max_epoch_lag_us,"
+               "l1_poll_epochs_scheduled,l1_poll_attempts,l1_poll_successes,"
+               "l1_poll_epochs_missed,l1_moved_work_us,l1_poll_total_cost_ns,"
+               "l1_poll_max_cost_ns,decision_records_total,decision_records_sampled,"
+               "decision_records_dropped,max_submit_lag_us,mean_submit_lag_us,"
+               "classification,invariants_pass\n";
         const auto& summary = result.summary;
         csv << std::setprecision(17)
             << (impl_->config.arrival_mode == ArrivalMode::NETWORK_INGRESS
@@ -1201,9 +1381,18 @@ void PhysicalRuntime::write_outputs(const RuntimeResult& result) const {
             << summary.duplicate_completion_count << ','
             << summary.lost_descriptor_count << ','
             << summary.nonzero_reservation_count << ','
-            << summary.affinity_failure_count << ',' << summary.max_submit_lag_us << ','
-            << summary.mean_submit_lag_us << ','
-            << (summary.invariants_pass ? 1 : 0) << '\n';
+            << summary.affinity_failure_count << ','
+            << summary.scheduler_epochs_scheduled << ','
+            << summary.scheduler_epochs_executed << ','
+            << summary.scheduler_epochs_missed << ','
+            << summary.scheduler_max_epoch_lag_us << ','
+            << summary.l1_poll_epochs_scheduled << ',' << summary.l1_poll_attempts << ','
+            << summary.l1_poll_successes << ',' << summary.l1_poll_epochs_missed << ','
+            << summary.l1_moved_work_us << ',' << summary.l1_poll_total_cost_ns << ','
+            << summary.l1_poll_max_cost_ns << ',' << summary.decision_records_total << ','
+            << summary.decision_records_sampled << ',' << summary.decision_records_dropped << ','
+            << summary.max_submit_lag_us << ',' << summary.mean_submit_lag_us << ','
+            << summary.classification << ',' << (summary.invariants_pass ? 1 : 0) << '\n';
     }
 
     {
@@ -1239,6 +1428,11 @@ void PhysicalRuntime::write_outputs(const RuntimeResult& result) const {
                  << "handoff_estimate_us=" << impl_->config.handoff_estimate_us << '\n'
                  << "host_overhead_us=" << impl_->config.host_overhead_us << '\n'
                  << "ewma_alpha=" << impl_->config.ewma_alpha << '\n'
+                 << "synthetic_service_clock=CLOCK_THREAD_CPUTIME_ID\n"
+                 << "ewma_observation=completed_measured_thread_cpu_service\n"
+                 << "decision_logging=bounded\n"
+                 << "decision_sample_cap=" << impl_->config.decision_sample_cap << '\n'
+                 << "decision_bucket_us=" << impl_->config.decision_bucket_us << '\n'
                  << "estimator_scope=shared_global_method_keyed_completion_updated\n"
                  << "target_insert_policy=append_tail\n"
                  << "arrival_model="
@@ -1254,7 +1448,10 @@ void PhysicalRuntime::write_outputs(const RuntimeResult& result) const {
                                    : "local_synthetic_runtime_implementation_validation")
            << '\n'
            << "physical_rpc_runtime=" << (network ? "IMPLEMENTED" : "NOT_ACTIVE")
-           << '\n';
+           << '\n'
+           << "classification=" << result.summary.classification << '\n'
+           << "infrastructure_failure="
+           << (result.summary.infrastructure_failure ? 1 : 0) << '\n';
 }
 
 } // namespace physical

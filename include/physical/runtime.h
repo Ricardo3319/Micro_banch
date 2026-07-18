@@ -2,6 +2,7 @@
 
 #include "physical/trace.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -60,6 +61,9 @@ struct RuntimeConfig {
     ArrivalMode arrival_mode = ArrivalMode::TRACE_REPLAY;
     int worker_count = 16;
     std::vector<int> cpu_ids;
+    std::vector<int> control_cpu_ids;
+    std::vector<int> irq_cpu_ids;
+    bool allow_control_irq_smt_siblings = false;
     bool strict_affinity = true;
     int warmup_requests = 0;
     double time_scale = 1.0;
@@ -80,6 +84,8 @@ struct RuntimeConfig {
     std::string rho_label = "UNSPECIFIED";
     std::string seed_label = "UNSPECIFIED";
     int repetition = 0;
+    size_t decision_sample_cap = 100000;
+    double decision_bucket_us = 1000.0;
     std::string output_dir;
 };
 
@@ -99,6 +105,8 @@ struct RequestOutcome {
     double deadline_abs_us = 0.0;
     double server_completion_us = 0.0;
     double synthetic_service_us = 0.0;
+    double actual_thread_cpu_service_us = 0.0;
+    double service_wall_us = 0.0;
     double estimated_service_us = 0.0;
     uint64_t estimator_prior_samples = 0;
     bool measurement_eligible = false;
@@ -120,6 +128,15 @@ struct DecisionRecord {
     std::string reason;
     uint64_t decision_cycles = 0;
     uint64_t decision_duration_ns = 0;
+};
+
+struct DecisionAggregateRecord {
+    uint64_t bucket_index = 0;
+    double bucket_start_us = 0.0;
+    std::string reason;
+    uint64_t count = 0;
+    uint64_t total_duration_ns = 0;
+    uint64_t max_duration_ns = 0;
 };
 
 struct MigrationRecord {
@@ -145,6 +162,22 @@ struct RuntimeSummary {
     uint64_t lost_descriptor_count = 0;
     uint64_t nonzero_reservation_count = 0;
     uint64_t affinity_failure_count = 0;
+    uint64_t scheduler_epochs_scheduled = 0;
+    uint64_t scheduler_epochs_executed = 0;
+    uint64_t scheduler_epochs_missed = 0;
+    double scheduler_max_epoch_lag_us = 0.0;
+    uint64_t l1_poll_epochs_scheduled = 0;
+    uint64_t l1_poll_attempts = 0;
+    uint64_t l1_poll_successes = 0;
+    uint64_t l1_poll_epochs_missed = 0;
+    double l1_moved_work_us = 0.0;
+    uint64_t l1_poll_total_cost_ns = 0;
+    uint64_t l1_poll_max_cost_ns = 0;
+    uint64_t decision_records_total = 0;
+    uint64_t decision_records_sampled = 0;
+    uint64_t decision_records_dropped = 0;
+    bool infrastructure_failure = false;
+    std::string classification = "INCOMPLETE";
     double deadline_violation_rate = 0.0;
     double goodput_rps = 0.0;
     double p50_server_completion_us = 0.0;
@@ -159,6 +192,7 @@ struct RuntimeResult {
     RuntimeSummary summary;
     std::vector<RequestOutcome> requests;
     std::vector<DecisionRecord> decisions;
+    std::vector<DecisionAggregateRecord> decision_aggregates;
     std::vector<MigrationRecord> migrations;
     std::vector<int> worker_cpu_ids;
     std::vector<bool> worker_affinity_ok;
