@@ -192,14 +192,36 @@ classification:
   rerun_rule: rerun_entire_four_method_block_after_infrastructure_fix
 
 lease_and_backup_gate:
+  lease_checked_at_utc: "2026-07-18T14:44:32Z"
   manifest_required_date: "2026-07-25"
   observed_node0_expiration_utc: "2026-07-18T03:00:00Z"
   observed_node1_expiration_utc: "2026-07-18T03:00:00Z"
+  node0_manifest_sha256: "ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8"
+  node1_manifest_sha256: "ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8"
+  supplemental_am_v3_geni_expires: "2026-07-24 05:00:00"
+  supplemental_portal_displayed_expiration: "Jul 24, 2026 7:00 PM"
+  supplemental_portal_timezone: null
+  lease_source_consistency: CONFLICT
+  lease_evidence_root: "physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.1"
   lease_status: BLOCKED
+  s3_checked_at_utc: "2026-07-18T14:54:03Z"
   s3_region: us-west-2
   rclone_config_path: null
   s3_remote: null
   s3_bucket: null
   s3_prefix: null
   s3_gate_status: BLOCKED
+  s3_evidence_root: "physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.2"
   formal_execution_allowed: false
+
+remote_publication_gate:
+  checked_at_utc: "2026-07-18T14:54:48Z"
+  frozen_commit: "0a88f03a21802be0eadc3065b93cb97876a6bd2f"
+  current_node0_commit: "09de5b5ecca4987bd04ab44fe4a65461a24625fe"
+  current_node1_commit: "09de5b5ecca4987bd04ab44fe4a65461a24625fe"
+  node0_authentication_available: false
+  node1_authentication_available: false
+  remote_branch_commit: null
+  remote_tag_commit: null
+  status: BLOCKED_CREDENTIALS
+  evidence_root: "physical-results/wp0-wp1-unblock-20260718T144404Z/wp1"

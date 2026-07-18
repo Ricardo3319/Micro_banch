@@ -28,9 +28,14 @@ ssh -o BatchMode=yes node1 'geni-get -n manifest' > "$OUT/node1/manifest.xml"
 sha256sum "$OUT/node0/manifest.xml" "$OUT/node1/manifest.xml" \
   > "$OUT/MANIFEST_SHA256SUMS"
 grep -oE 'expires="[^"]+"' "$OUT"/node*/manifest.xml
+# 仅在 manifest 与 Portal 认知冲突时补采诊断；这些输出不自动替代 manifest 门禁。
+geni-get -n status > "$OUT/node0/status.raw"
+geni-get -n portalmanifest > "$OUT/node0/portalmanifest.xml"
+ssh -o BatchMode=yes node1 'geni-get -n status' > "$OUT/node1/status.raw"
+ssh -o BatchMode=yes node1 'geni-get -n portalmanifest' > "$OUT/node1/portalmanifest.xml"
 ```
 
-最新证据 `physical-results/wp0-wp1-gates-20260718T035213Z/wp0.1/` 显示：2026-07-18T03:52:13Z 两机实时执行 `geni-get -n manifest` 后仍均为 `2026-07-18T03:00:00Z`，所以本 gate 保持 `BLOCKED`。Portal 截图或人工确认不能替代两机 uncached manifest。历史证据目录继续保留，不覆盖、不删除。
+最新证据 `physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.1/` 显示：2026-07-18T14:44:32Z 两机实时执行 `geni-get -n manifest` 后仍均为 `2026-07-18T03:00:00Z`。安装的客户端源码表明 `-n` 不读取本地缓存（该版本客户端本身不缓存）；补采 AM v3 `status` 为 `2026-07-24 05:00:00`，Portal 截图为 `Jul 24, 2026 7:00 PM` 且不含时区。来源不一致时保持 gate `BLOCKED`，不得自行选择较晚值；若要改用其他权威源，必须先正式修订合同、记录精确 UTC 语义并重新验收两机。历史证据目录继续保留，不覆盖、不删除。
 
 ## 2. WP0.2：S3 最小权限闭环
 
@@ -79,7 +84,7 @@ printf 'status=PASS\nobject=%s\nlocal_sha256=%s\nremote_sha256=%s\ndownloaded_sh
 rm -f "$TEST_FILE" "$DOWNLOADED"
 ```
 
-当前 2026-07-18 preflight 证据位于 `physical-results/wp0-wp1-gates-20260718T035213Z/wp0.2/`：首选/默认 rclone 配置、remote 和 private bucket/project prefix 均缺失，故所有数据面步骤为 `NOT_RUN`，gate 为 `BLOCKED`。
+当前 2026-07-18T14:54:03Z preflight 证据位于 `physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.2/`：两机首选/默认 rclone 配置、remote 和 private bucket/project prefix 均缺失，故所有数据面步骤为 `NOT_RUN`，gate 为 `BLOCKED`。
 
 `S3_GATE_STATUS.txt` 只能包含无 secret 的 remote/object 标识和 hashes。当前没有配置输入，本节尚未执行。
 

@@ -1,15 +1,15 @@
 # RescueSched 项目状态
 
 > 单一状态入口。实验合同见 `EXPERIMENT_CONTRACT.md`，操作入口见 `RUNBOOK.md`，证据映射见 `EVIDENCE_INDEX.md`。
-> 最后更新：2026-07-18T03:55:59Z（UTC）
+> 最后更新：2026-07-18T14:54:48Z（UTC）
 
 ## 1. 当前结论
 
 | 项目 | 状态 | 结论 |
 | --- | --- | --- |
-| WP0.1 租期证据 | **BLOCKED** | 2026-07-18T03:52:13Z 在两机实时执行 `geni-get -n manifest`；两份 manifest 仍一致显示 `2026-07-18T03:00:00Z`，没有机器侧证明租期已延期到 2026-07-25。Portal 截图/负责人确认不能替代此门禁。 |
-| WP0.2 S3 闭环 | **BLOCKED** | 首选及默认仓库外 `rclone.conf` 均不存在，未发现 configured remote，private bucket/项目专用 prefix 也未提供；upload、remote SHA、download、local SHA 和 delete 均未执行。 |
-| WP1 集成基线 | **PASS_LOCAL / REMOTE_PUSH_BLOCKED_CREDENTIALS** | 冻结基线 `0a88f03a21802be0eadc3065b93cb97876a6bd2f`、两机 Release + 24/24 CTest、clean/same-commit 和本地 annotated tag 均保持有效；node0/node1 的 GitHub HTTPS 认证均不可用，远端 branch/tag 实际均为 `ABSENT`，没有执行 push。 |
+| WP0.1 租期证据 | **BLOCKED** | 2026-07-18T14:44:32Z 在两机实时执行 `geni-get -n manifest`；两份 manifest 仍一致显示 `2026-07-18T03:00:00Z`。补充的 AM API v3 `status` 一致显示两个 sliver 的 `geni_expires=2026-07-24 05:00:00`，用户 Portal 截图显示 `Jul 24, 2026 7:00 PM` 但未显示时区；三个来源不一致，且未满足既定的“两机 manifest 明确证明 2026-07-25”条件。 |
+| WP0.2 S3 闭环 | **BLOCKED** | 2026-07-18T14:54:03Z 两机复核：首选及默认仓库外 `rclone.conf` 均不存在，configured remote、private bucket 和项目专用 prefix 均未提供；没有读取 credential，upload、remote SHA、download、local SHA 和 delete 全部 `NOT_RUN`。 |
+| WP1 集成基线 | **PASS_LOCAL / REMOTE_PUSH_BLOCKED_CREDENTIALS** | 冻结基线 `0a88f03a21802be0eadc3065b93cb97876a6bd2f` 的两机 Release + 24/24 CTest 证据保持有效；2026-07-18T14:44:05Z 两机当前均 clean/same commit `09de5b5ecca4987bd04ab44fe4a65461a24625fe`，annotated tag 仍指向冻结提交。node0/node1 GitHub HTTPS 认证均不可用，2026-07-18T14:54:48Z 远端 branch/tag 实际均为 `ABSENT`，没有执行 push。 |
 | WP2 及以后 | **NOT_STARTED** | 本次未执行 WP2、CPU/IRQ/NIC tuning、RPC smoke、pilot、calibration 或 formal experiment。 |
 
 **当前禁止事项：** WP0 未通过时，不得开始 WP2、host tuning、pilot、calibration 或 formal paired block；不得把 2026-07-25 写成已由 manifest 证明的租期。
@@ -43,13 +43,13 @@ remote_publication: BLOCKED_CREDENTIALS
 
 | 节点 | 角色 | hostname | 实验地址 | 实验 NIC | 实时采集 UTC | manifest expiration | manifest SHA256 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| node0 | server/main experiment | `amd140.utah.cloudlab.us` | `10.10.1.1` | `enp65s0f0np0` / `mlx5_core` | `2026-07-18T03:52:13Z` | `2026-07-18T03:00:00Z` | `ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8` |
-| node1 | load generator/coordinator | `amd136.utah.cloudlab.us` | `10.10.1.2` | `enp65s0f0np0` / `mlx5_core` | `2026-07-18T03:52:13Z` | `2026-07-18T03:00:00Z` | `ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8` |
+| node0 | server/main experiment | `amd140.utah.cloudlab.us` | `10.10.1.1` | `enp65s0f0np0` / `mlx5_core` | `2026-07-18T14:44:32Z` | `2026-07-18T03:00:00Z` | `ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8` |
+| node1 | load generator/coordinator | `amd136.utah.cloudlab.us` | `10.10.1.2` | `enp65s0f0np0` / `mlx5_core` | `2026-07-18T14:44:32Z` | `2026-07-18T03:00:00Z` | `ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8` |
 
-本轮命令均为实时 `geni-get -n manifest`，没有用旧缓存或旧证据推断当前租期。完整原始 XML、命令、exit code、UTC 时间和 SHA 清单位于：
+本轮命令均为实时 `geni-get -n manifest`，没有用旧证据推断当前租期。安装的 `geni-get` 客户端源码明确表明 `-n` 不读取本地缓存（当前客户端本身不缓存），请求直接发往配置的 boss/tmcd 服务。完整原始 XML、命令、exit code、UTC 时间和 SHA 清单位于：
 
 ```text
-physical-results/wp0-wp1-gates-20260718T035213Z/wp0.1/
+physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.1/
 ```
 
 按 manifest 中较早值计算：
@@ -60,7 +60,7 @@ T_no_new_block = 2026-07-17T15:00:00Z
 T_restore      = 2026-07-17T21:00:00Z
 ```
 
-机器当前仍可访问不等于租期延期已由 manifest 证明。只有两机新的 uncached manifest 一致明确显示 2026-07-25，WP0.1 才能改为 `PASS`。
+机器当前仍可访问，以及 AM `status`/Portal 显示较晚时间，说明旧 manifest 很可能没有反映 Portal 延期；但这不能消除当前证据源的矛盾。保持既定验收不变：只有两机新的 manifest 一致明确显示 2026-07-25，或负责人先正式修订实验合同并给出可审计的权威替代源与精确 UTC 解释，WP0.1 才能改为 `PASS`。本次未做这种合同变更。
 
 ## 4. 主机事实与计划布局
 
@@ -91,7 +91,7 @@ jq zstd rclone tmux
 
 ## 6. S3 状态
 
-2026-07-18T03:52:55Z 至 03:53:15Z 的非敏感 preflight 结果：
+2026-07-18T14:54:03Z 的非敏感 preflight 结果：
 
 ```yaml
 rclone_config_preferred: ~/.config/rescuesched/rclone.conf
@@ -119,21 +119,21 @@ s3_gate_status: BLOCKED
 没有读取、打印、复制或提交 access key、secret key、session token；没有创建或删除任何 S3 对象。脱敏证据位于：
 
 ```text
-physical-results/wp0-wp1-gates-20260718T035213Z/wp0.2/
+physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.2/
 ```
 
 ## 7. WP1 远端发布状态
 
-2026-07-18T03:53:53Z 在 push 认证探测前复核：
+2026-07-18T14:44:05Z 在 push 认证探测前复核：
 
 ```text
-node0 HEAD: 0a88f03a21802be0eadc3065b93cb97876a6bd2f, clean, branch codex/infocom2027-integration
-node1 HEAD: 0a88f03a21802be0eadc3065b93cb97876a6bd2f, clean, branch codex/infocom2027-integration
+node0 HEAD: 09de5b5ecca4987bd04ab44fe4a65461a24625fe, clean, branch codex/infocom2027-integration
+node1 HEAD: 09de5b5ecca4987bd04ab44fe4a65461a24625fe, clean, branch codex/infocom2027-integration
 node0 physical-integration-v1: annotated tag -> 0a88f03a21802be0eadc3065b93cb97876a6bd2f
 node1 physical-integration-v1: annotated tag -> 0a88f03a21802be0eadc3065b93cb97876a6bd2f
 ```
 
-node0 与 node1 的非交互 `git push --dry-run` 均在没有输出 credential 的情况下以 `could not read Username ... terminal prompts disabled` 失败。2026-07-18T03:55:59Z 再次 `git ls-remote` 的实际结果：
+node0 与 node1 的非交互 `git push --dry-run` 均在没有输出 credential 的情况下以 `could not read Username ... terminal prompts disabled` 失败。2026-07-18T14:54:48Z 再次 `git ls-remote` 的实际结果：
 
 ```text
 refs/heads/codex/infocom2027-integration: ABSENT
@@ -143,18 +143,18 @@ refs/tags/physical-integration-v1: ABSENT
 因此远端发布为 `BLOCKED_CREDENTIALS`：没有 push、没有 force push、没有修改 remote URL。证据位于：
 
 ```text
-physical-results/wp0-wp1-gates-20260718T035213Z/wp1/
+physical-results/wp0-wp1-unblock-20260718T144404Z/wp1/
 ```
 
 ## 8. 已完成、保留证据与下一步
 
 最近完成：
 
-1. 再次实时采集两机 uncached manifest，并按机器侧事实保持 WP0.1 `BLOCKED`。
+1. 再次实时采集两机 manifest，并补采 AM v3 `status`、`portalmanifest`、客户端行为和用户 Portal 截图；来源互相矛盾，按未修改的验收条件保持 WP0.1 `BLOCKED`。
 2. 在不访问 secret 的前提下完成 S3 preflight；因配置与非敏感 routing inputs 缺失保持 WP0.2 `BLOCKED`。
-3. 再次证明冻结基线时两机 same full commit、clean，且 annotated tag 未改写。
+3. 复核两机当前均 clean/same commit `09de5b5ecca4987bd04ab44fe4a65461a24625fe`，且 annotated tag 未改写、仍指向冻结基线 `0a88f03a21802be0eadc3065b93cb97876a6bd2f`。
 4. 对两台机器分别执行安全的 GitHub 认证 dry-run；认证不可用，远端 refs 为空，没有冒充 push 成功。
-5. 本轮新证据统一保存在 `physical-results/wp0-wp1-gates-20260718T035213Z/`；旧 BLOCKED、失败 attempt 和 coordinator bug 证据均保留。
+5. 本轮新证据统一保存在 `physical-results/wp0-wp1-unblock-20260718T144404Z/`；旧 BLOCKED、失败 attempt 和 coordinator bug 证据均保留。
 
 下一步（外部前置条件解除后）：
 

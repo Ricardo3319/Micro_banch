@@ -1,6 +1,6 @@
 # RescueSched Evidence Index
 
-> 索引版本：`evidence-index-v0.1`。最后更新：2026-07-18T03:55:59Z（UTC）。只登记真实存在的证据；`PENDING`/`null` 不代表 PASS。节点本地 `physical-results/` 被 Git 忽略，正式 archive 必须在 WP0 S3 门禁通过后登记 remote object。
+> 索引版本：`evidence-index-v0.1`。最后更新：2026-07-18T14:54:48Z（UTC）。只登记真实存在的证据；`PENDING`/`null` 不代表 PASS。节点本地 `physical-results/` 被 Git 忽略，正式 archive 必须在 WP0 S3 门禁通过后登记 remote object。
 
 ## 1. 字段定义
 
@@ -37,6 +37,10 @@
 | `E-WP0-S3-20260718-02` | `GATE-REMOTE-RECOVERY` | N/A | N/A | `physical-results/wp0-wp1-gates-20260718T035213Z/wp0.2/GATE_STATUS.txt` | N/A | `20260718T035213Z` | N/A | N/A | N/A | `0a88f03a21802be0eadc3065b93cb97876a6bd2f` | null | null | null | **BLOCKED**：rclone 配置、remote、private bucket/project prefix 缺失；upload/SHA/download/delete 全部 `NOT_RUN` |
 | `E-WP1-IDENTITY-20260718-02` | `GATE-SAME-COMMIT-CLEAN` | N/A | N/A | `physical-results/wp0-wp1-gates-20260718T035213Z/wp1/IDENTITY_STATUS.txt` | N/A | `20260718T035213Z` | N/A | N/A | N/A | `0a88f03a21802be0eadc3065b93cb97876a6bd2f` | null | null | null | PASS：认证探测前两机 clean、same baseline commit，annotated tag 均指向冻结提交 |
 | `E-WP1-REMOTE-PUBLICATION-20260718-01` | `GATE-REMOTE-PUBLICATION` | N/A | N/A | `physical-results/wp0-wp1-gates-20260718T035213Z/wp1/REMOTE_PUBLICATION_STATUS.txt` | N/A | `20260718T035213Z` | N/A | N/A | N/A | `0a88f03a21802be0eadc3065b93cb97876a6bd2f` | null | null | null | **BLOCKED_CREDENTIALS**：node0/node1 HTTPS 认证不可用；远端 branch/tag 均 `ABSENT`；没有 push 或 force push |
+| `E-WP0-LEASE-20260718-03` | `GATE-LEASE` | N/A | N/A | `physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.1/GATE_STATUS.txt`；`physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.1/LEASE_SOURCE_DISCREPANCY.txt` | N/A | `20260718T144404Z` | N/A | N/A | N/A | `09de5b5ecca4987bd04ab44fe4a65461a24625fe` | null | null | null | **BLOCKED**：2026-07-18T14:44:32Z 两机实时 manifest 仍为 `2026-07-18T03:00:00Z`；AM status 为 `2026-07-24 05:00:00`，Portal 截图为 `Jul 24, 2026 7:00 PM`（时区未显示），来源不一致 |
+| `E-WP0-S3-20260718-03` | `GATE-REMOTE-RECOVERY` | N/A | N/A | `physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.2/GATE_STATUS.txt` | N/A | `20260718T144404Z` | N/A | N/A | N/A | `09de5b5ecca4987bd04ab44fe4a65461a24625fe` | null | null | null | **BLOCKED**：两机仓库外 rclone 配置、remote、private bucket/project prefix 缺失；对象创建/upload/SHA/download/delete 全部 `NOT_RUN` |
+| `E-WP1-IDENTITY-20260718-03` | `GATE-SAME-COMMIT-CLEAN` | N/A | N/A | `physical-results/wp0-wp1-unblock-20260718T144404Z/wp1/PRECHECK_STATUS.txt` | N/A | `20260718T144404Z` | N/A | N/A | N/A | `09de5b5ecca4987bd04ab44fe4a65461a24625fe` | null | null | null | PASS：2026-07-18T14:44:05Z 两机 clean/same current status commit；annotated tag 均仍指向冻结 `0a88f03a21802be0eadc3065b93cb97876a6bd2f` |
+| `E-WP1-REMOTE-PUBLICATION-20260718-02` | `GATE-REMOTE-PUBLICATION` | N/A | N/A | `physical-results/wp0-wp1-unblock-20260718T144404Z/wp1/REMOTE_PUBLICATION_STATUS.txt` | N/A | `20260718T144404Z` | N/A | N/A | N/A | `0a88f03a21802be0eadc3065b93cb97876a6bd2f` | null | null | null | **BLOCKED_CREDENTIALS**：node0/node1 HTTPS 认证不可用；远端 branch/tag 均 `ABSENT`；push `NOT_RUN`，无 force push 或 remote URL 修改 |
 
 ## 3. 租期 manifest 完整性
 
@@ -47,18 +51,20 @@ node0 ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8
 node1 ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8
 ```
 
-最新 2026-07-18T03:52:13Z 实时复核：
+最新 2026-07-18T14:44:32Z 实时复核：
 
 ```text
 node0 expiration=2026-07-18T03:00:00Z sha256=ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8
 node1 expiration=2026-07-18T03:00:00Z sha256=ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8
 ```
 
-完整原始 XML 与逐文件 SHA 清单：
+完整原始 XML、补充状态源、Portal 截图与逐文件 SHA 清单：
 
 ```text
-physical-results/wp0-wp1-gates-20260718T035213Z/wp0.1/
+physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.1/
 ```
+
+补充诊断（不替代 manifest 门禁）：两机 AM API v3 `status` 均列出两个 ready/provisioned sliver，`geni_expires=2026-07-24 05:00:00`；用户 Portal 截图显示 `Jul 24, 2026 7:00 PM`，但截图不含时区。manifest、AM status 与 Portal 展示互不一致，详见 `physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.1/LEASE_SOURCE_DISCREPANCY.txt`；因此没有把 2026-07-25 登记为已证明。
 
 ## 4. 正式证据模板（尚无记录）
 
