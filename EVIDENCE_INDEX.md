@@ -1,6 +1,6 @@
 # RescueSched Evidence Index
 
-> 索引版本：`evidence-index-v0.1`。最后更新：2026-07-18T14:54:48Z（UTC）。只登记真实存在的证据；`PENDING`/`null` 不代表 PASS。节点本地 `physical-results/` 被 Git 忽略，正式 archive 必须在 WP0 S3 门禁通过后登记 remote object。
+> 索引版本：`evidence-index-v0.2`。最后更新：2026-07-18T15:25:50Z（UTC）。只登记真实存在的证据；`PENDING`/`null` 不代表 PASS。节点本地 `physical-results/` 被 Git 忽略，正式 archive 必须在 WP0 S3 门禁通过后登记 remote object。
 
 ## 1. 字段定义
 
@@ -18,7 +18,7 @@
 | `host_profile_sha256` | host profile SHA；未 apply 为 `null` |
 | `archive_sha256` | immutable archive SHA；未归档为 `null` |
 | `s3_object_key` | private remote object；未上传为 `null` |
-| `validation_status` | `PASS`/`BLOCKED`/`PENDING`/正式分类 |
+| `validation_status` | `PASS`/`BLOCKED`/`PENDING`/`DEFERRED`/`WAIVED`/限定范围 PASS/正式分类 |
 
 正式结果必须能够从 claim/figure/table 追溯到 CSV 行、block/attempt、trace/config/commit/profile/archive SHA 和 S3 object。失败 attempts 与有效 attempts 同等级索引。
 
@@ -41,6 +41,10 @@
 | `E-WP0-S3-20260718-03` | `GATE-REMOTE-RECOVERY` | N/A | N/A | `physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.2/GATE_STATUS.txt` | N/A | `20260718T144404Z` | N/A | N/A | N/A | `09de5b5ecca4987bd04ab44fe4a65461a24625fe` | null | null | null | **BLOCKED**：两机仓库外 rclone 配置、remote、private bucket/project prefix 缺失；对象创建/upload/SHA/download/delete 全部 `NOT_RUN` |
 | `E-WP1-IDENTITY-20260718-03` | `GATE-SAME-COMMIT-CLEAN` | N/A | N/A | `physical-results/wp0-wp1-unblock-20260718T144404Z/wp1/PRECHECK_STATUS.txt` | N/A | `20260718T144404Z` | N/A | N/A | N/A | `09de5b5ecca4987bd04ab44fe4a65461a24625fe` | null | null | null | PASS：2026-07-18T14:44:05Z 两机 clean/same current status commit；annotated tag 均仍指向冻结 `0a88f03a21802be0eadc3065b93cb97876a6bd2f` |
 | `E-WP1-REMOTE-PUBLICATION-20260718-02` | `GATE-REMOTE-PUBLICATION` | N/A | N/A | `physical-results/wp0-wp1-unblock-20260718T144404Z/wp1/REMOTE_PUBLICATION_STATUS.txt` | N/A | `20260718T144404Z` | N/A | N/A | N/A | `0a88f03a21802be0eadc3065b93cb97876a6bd2f` | null | null | null | **BLOCKED_CREDENTIALS**：node0/node1 HTTPS 认证不可用；远端 branch/tag 均 `ABSENT`；push `NOT_RUN`，无 force push 或 remote URL 修改 |
+| `E-GATE-POLICY-20260718-01` | `GATE-POLICY-REVISION` | N/A | N/A | `physical-results/gate-policy-revision-20260718T151701Z/OWNER_DECISION.txt`；`GATE_POLICY_STATUS.txt`；`validation/VALIDATION_STATUS.txt` | N/A | `20260718T151701Z` | N/A | N/A | N/A | `50362f346c7fcdbbc064760e5670841eb5ac5db4` | null | null | null | PASS：负责人于 2026-07-18T15:17:01Z 明确确认采用 WP2 前置门禁调整；范围和禁止事项已审计记录 |
+| `E-WP0-LEASE-20260718-04` | `GATE-LEASE` | N/A | N/A | `physical-results/gate-policy-revision-20260718T151701Z/GATE_POLICY_STATUS.txt`；`owner-portal-expiration-screenshot.png` | N/A | `20260718T151701Z` | N/A | N/A | N/A | `50362f346c7fcdbbc064760e5670841eb5ac5db4` | null | null | null | **PASS_OWNER_ATTESTED_PORTAL_FOR_WP2**：Portal 显示 ready/`Jul 24, 2026 7:00 PM` 且负责人确认延期；manifest 子检查仍 BLOCKED，精确 UTC 未冻结 |
+| `E-WP0-S3-20260718-04` | `GATE-REMOTE-RECOVERY` | N/A | N/A | `physical-results/gate-policy-revision-20260718T151701Z/GATE_POLICY_STATUS.txt` | N/A | `20260718T151701Z` | N/A | N/A | N/A | `50362f346c7fcdbbc064760e5670841eb5ac5db4` | null | null | null | **DEFERRED_UNTIL_PILOT**：不阻塞 WP2；配置仍缺失，对象操作和三段 SHA/delete 全部 `NOT_RUN`，pilot/formal 前必须完成 |
+| `E-WP1-REMOTE-PUBLICATION-20260718-03` | `GATE-REMOTE-PUBLICATION` | N/A | N/A | `physical-results/gate-policy-revision-20260718T151701Z/GATE_POLICY_STATUS.txt` | N/A | `20260718T151701Z` | N/A | N/A | N/A | `0a88f03a21802be0eadc3065b93cb97876a6bd2f` | null | null | null | **WAIVED_BY_OWNER**：不阻塞 WP2；远端 branch/tag 实际仍 `ABSENT`，没有 push，冻结 tag 未移动 |
 
 ## 3. 租期 manifest 完整性
 
@@ -64,7 +68,9 @@ node1 expiration=2026-07-18T03:00:00Z sha256=ca30afc0937b830d2dbaf6594ea7af878ed
 physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.1/
 ```
 
-补充诊断（不替代 manifest 门禁）：两机 AM API v3 `status` 均列出两个 ready/provisioned sliver，`geni_expires=2026-07-24 05:00:00`；用户 Portal 截图显示 `Jul 24, 2026 7:00 PM`，但截图不含时区。manifest、AM status 与 Portal 展示互不一致，详见 `physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.1/LEASE_SOURCE_DISCREPANCY.txt`；因此没有把 2026-07-25 登记为已证明。
+补充诊断：两机 AM API v3 `status` 均列出两个 ready/provisioned sliver，`geni_expires=2026-07-24 05:00:00`；用户 Portal 截图显示 `Jul 24, 2026 7:00 PM`，但截图不含时区。manifest、AM status 与 Portal 展示互不一致，详见 `physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.1/LEASE_SOURCE_DISCREPANCY.txt`。
+
+2026-07-18T15:17:01Z，项目负责人正式确认采用实时 Portal 页面加负责人确认作为 **WP2-only** 的替代租期依据，证据见 `physical-results/gate-policy-revision-20260718T151701Z/`（`SHA256SUMS` SHA256 `29e6f6fece0463c10bd97153cacb1f529c9d95f9e82e0d676684375e5cd8d918`）。因此有效状态为 `PASS_OWNER_ATTESTED_PORTAL_FOR_WP2`；这不改变 manifest 子检查的 BLOCKED 事实，也没有把 2026-07-25 或精确 UTC 登记为已由 manifest 证明。
 
 ## 4. 正式证据模板（尚无记录）
 
@@ -88,4 +94,4 @@ s3_object_key:
 validation_status:
 ```
 
-当前没有 formal block、formal trace、formal config SHA、host-profile SHA、archive SHA 或 S3 object，因此不得在索引中填入推测值。
+当前没有 formal block、formal trace、formal config SHA、host-profile SHA、archive SHA 或 S3 object，因此不得在索引中填入推测值。S3 的 `DEFERRED_UNTIL_PILOT` 不是数据面 PASS。

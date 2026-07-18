@@ -1,9 +1,9 @@
 # RescueSched INFOCOM 2027 双物理机实验细化实施总计划
 
 > **文档状态：EXECUTION STARTED / 以 `PROJECT_STATE.md` 为实时状态源**
-> **计划版本：v1.2**
+> **计划版本：v1.3**
 > **编制日期：2026-07-17（UTC）**
-> **物理机窗口：负责人/Portal 表明已延期，但 2026-07-18T14:44:32Z 两机实时 manifest 仍显示 2026-07-18T03:00:00Z，且 AM status/Portal/manifest 三个来源不一致**
+> **物理机窗口：Portal 显示实验 ready、Jul 24, 2026 7:00 PM；负责人已确认延期并批准 WP2-only 租期依据，但精确 expiration UTC 尚未冻结**
 > **计划主时区：UTC；涉及投稿截止时另列 PDT**
 
 本文档将既有计划细化为可审计的工作包、逐日窗口、依赖关系、门禁、交付物、失败分类和退出条件。执行已从 WP0/WP1 开始；实时结果、阻断项和证据位置以 `PROJECT_STATE.md` 与 `EVIDENCE_INDEX.md` 为准。本文档仍不把未执行的 host tuning、pilot、calibration 或 formal run 表述为已完成。
@@ -14,16 +14,16 @@
 
 ### 0.1 已确认事实
 
-- 项目负责人和 Portal 截图表明 `node0` 和 `node1` 预期已延期至 **2026-07-25**，但该信息不能替代机器侧证据。
-- 最新 2026-07-18T14:44:32Z 在两机实时执行 `geni-get -n manifest` 后，二者仍明确显示 `expires="2026-07-18T03:00:00Z"`；两份原始 XML 的 SHA256 均为 `ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8`。
-- 补采的两机 AM API v3 `status` 均显示两个 sliver 的 `geni_expires=2026-07-24 05:00:00`，用户 Portal 截图显示 `Jul 24, 2026 7:00 PM` 但不含时区。三个来源不一致；未修改的 WP0.1 验收仍要求两机 manifest 明确证明 2026-07-25，所以当前为 **BLOCKED**。最新证据：`physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.1/`。
-- WP0.2 也为 **BLOCKED**：2026-07-18T14:54:03Z 两机复核仍缺仓库外 rclone 配置、remote、private bucket/project prefix，upload/SHA/download/delete 全部未执行。最新证据：`physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.2/`。
-- WP1 冻结基线 `0a88f03a21802be0eadc3065b93cb97876a6bd2f` 的两机 Release 24/24 CTest 证据保持有效；两机当前均 clean/same status commit `09de5b5ecca4987bd04ab44fe4a65461a24625fe`，annotated tag `physical-integration-v1` 仍指向冻结提交。node0/node1 GitHub HTTPS 认证均不可用，远端 branch/tag 均 `ABSENT`，所以远端发布为 **BLOCKED_CREDENTIALS**。
-- 以两机 manifest 中较早的精确时间定义：
-  - `T_expire`：两机 manifest 中较早的精确到期时间；
+- 2026-07-18T14:44:32Z 在两机实时执行 `geni-get -n manifest` 后，二者仍明确显示 `expires="2026-07-18T03:00:00Z"`；两份原始 XML 的 SHA256 均为 `ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8`。该 manifest 子检查继续登记为 `BLOCKED_STALE_OR_NON_PROPAGATED_VALUE`。
+- 补采的两机 AM API v3 `status` 均显示两个 sliver 的 `geni_expires=2026-07-24 05:00:00`；实时 Portal 实验页显示 `ready`、`Jul 24, 2026 7:00 PM`，但截图不含时区。三个来源仍不一致。原始证据：`physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.1/`。
+- 项目负责人于 2026-07-18T15:17:01Z 明确确认延期已经生效，并批准用 Portal+负责人确认形成 `PASS_OWNER_ATTESTED_PORTAL_FOR_WP2`。该限定范围 PASS 只解除 WP2 runtime 代码工作，不把 manifest 改写成 PASS，也不冻结精确 expiration UTC。政策证据：`physical-results/gate-policy-revision-20260718T151701Z/`。
+- WP0.2 状态为 `DEFERRED_UNTIL_PILOT`：rclone 配置、remote、private bucket/project prefix 仍缺失，upload/SHA/download/delete 全部未执行；不阻塞 WP2，但 pilot/formal 前必须 PASS。
+- WP1 冻结基线 `0a88f03a21802be0eadc3065b93cb97876a6bd2f` 的两机 Release 24/24 CTest 证据保持有效；2026-07-18T15:17:01Z 两机均 clean/same status commit `50362f346c7fcdbbc064760e5670841eb5ac5db4`，annotated tag `physical-integration-v1` 仍指向冻结提交。远端 branch/tag 均 `ABSENT`、没有 push；负责人将远端发布设为 `WAIVED_BY_OWNER`。
+- 正式阶段仍须冻结：
+  - `T_expire`：经权威来源解释后的精确 UTC 到期时间；
   - `T_no_new_block = T_expire - 12h`：不得再启动新的正式 paired block；
   - `T_restore = T_expire - 6h`：必须进入备份复核与主机恢复；
-  - 无论 `T_expire` 为何，日历目标仍是 **2026-07-24 完成物理证据冻结，2026-07-25 仅作恢复和应急缓冲**。
+  - 在这些值冻结前，不得执行 pilot、calibration 或 formal。
 
 ### 0.2 当前仓库基线（仅用于规划）
 
@@ -35,7 +35,7 @@ current branch: codex/infocom2027-integration
 frozen integration commit: 0a88f03a21802be0eadc3065b93cb97876a6bd2f
 release tag: physical-integration-v1 (annotated, target 0a88f03a21802be0eadc3065b93cb97876a6bd2f)
 integration base: codex/rescuesched-baselines @ 5379f1a
-remote branch/tag publication: BLOCKED_CREDENTIALS; both refs ABSENT as of 2026-07-18T14:54:48Z
+remote branch/tag publication: WAIVED_BY_OWNER; both refs ABSENT and no push as of 2026-07-18T15:03:28Z
 ```
 
 当前物理分支已包含双节点 UDP RPC、固定 worker、trace、两 client coordinator、验证和基础采集脚本，但它是聚焦物理实现的裁剪分支。后续集成不能整体合并导致以下内容丢失：
@@ -52,15 +52,17 @@ remote branch/tag publication: BLOCKED_CREDENTIALS; both refs ABSENT as of 2026-
 
 ### 0.4 当前执行边界
 
-WP0/WP1 已开始执行，允许租期/S3 门禁检查、integration 分支、选择性代码集成、依赖安装、Release 构建和 CTest。
+WP0/WP1 已完成本轮门禁调整。当前允许开始 WP2 runtime 源码修复和代码级构建、unit/regression/sanitizer 测试。
 
-在 WP0 未 PASS 前仍明确禁止：
+仍明确禁止：
 
 - 修改 governor、IRQ、NIC、sysctl 或正式 affinity profile；
-- 执行 pilot、calibration 或 formal paired block；
+- 执行两机 RPC smoke、pilot、calibration 或 formal paired block；
+- 使用正式实验端口或正式结果目录；
 - 生成或解释正式性能结果；
 - 在 remote streaming SHA 验证前清理任何 raw evidence；
-- 把负责人预期的 2026-07-25 当作 manifest 已证明的事实。
+- 把负责人确认写成 `PASS_MANIFEST`，或把 2026-07-25/精确 UTC 写成已由旧 manifest 证明；
+- 把 S3 `DEFERRED_UNTIL_PILOT` 写成 PASS，或把 GitHub `WAIVED_BY_OWNER` 写成已 push。
 
 ---
 
@@ -259,7 +261,7 @@ node1 缺少可用 `cpufreq` policy 时：
 ## WP0：租期证据与异地备份门禁
 
 **计划窗口：** 2026-07-17 至 18
-**状态：** **BLOCKED**；2026-07-18T14:44:32Z 两机实时 manifest 仍为 2026-07-18T03:00:00Z，AM status 与 Portal 显示较晚但互不一致；2026-07-18T14:54:03Z S3 rclone 配置、remote、private bucket/project prefix 仍缺失，数据面闭环全部未执行
+**状态：** **WP0.1 PASS_OWNER_ATTESTED_PORTAL_FOR_WP2 / WP0.2 DEFERRED_UNTIL_PILOT**；负责人于 2026-07-18T15:17:01Z 接受实时 Portal 页面加负责人确认作为 WP2-only 租期依据。manifest 子检查仍为旧值且精确 UTC 未冻结；S3 配置仍缺失、数据面闭环全部未执行
 **依赖：** 无
 
 ### WP0.1 租期证据登记
@@ -271,8 +273,11 @@ node1 缺少可用 `cpufreq` policy 时：
 3. 将较早值设为 `T_expire`。
 4. 写入 `PROJECT_STATE.md`、formal manifest 和恢复日程。
 
-**验收：** 两机均明确显示 2026-07-25 到期日期，且精确时间已存档。
-**注意：** 本项是留证，不是再次申请延期。
+**标准验收：** 两机均明确显示 2026-07-25 到期日期，且精确时间已存档，状态记为 `PASS_MANIFEST`。
+
+**负责人调整：** 2026-07-18T15:17:01Z，负责人确认实时 Portal 实验页显示 `ready`、`Jul 24, 2026 7:00 PM`，并批准对 WP2 使用 `PASS_OWNER_ATTESTED_PORTAL_FOR_WP2`。两机 manifest 子检查仍为 `BLOCKED_STALE_OR_NON_PROPAGATED_VALUE`，Portal 时区和精确 expiration UTC 仍未冻结；此调整不授权 host tuning、RPC smoke、pilot、calibration 或 formal。证据见 `physical-results/gate-policy-revision-20260718T151701Z/`。
+
+**注意：** 本项是留证和负责人范围豁免，不是再次申请延期，也不是把 manifest 失败改写成 PASS。
 
 ### WP0.2 S3 安全与可恢复性
 
@@ -299,16 +304,16 @@ local test file
 ```
 
 **交付物：** S3 gate report、bucket/prefix 标识、无 secret 的配置摘要。
-**门禁：** 上传、远端流式校验、下载和本地校验全部 PASS。
-**停止条件：** 任一 SHA 不一致、权限过宽或 secret 进入仓库时立即停止。
+**门禁：** 上传、远端流式校验、下载、本地校验和只删除本次对象全部 PASS。负责人已将本项调整为 `DEFERRED_UNTIL_PILOT`，所以不阻塞 WP2 runtime 源码修复；进入 pilot/formal 前仍必须完成。
+**停止条件：** 任一 SHA 不一致、权限过宽或 secret 进入仓库时立即停止。当前所有对象步骤仍为 `NOT_RUN`，不得写成 PASS。
 
 ---
 
 ## WP1：集成分支与文档基线
 
-**状态：** **PASS_LOCAL / REMOTE_PUSH_BLOCKED_CREDENTIALS**；冻结基线 `0a88f03a21802be0eadc3065b93cb97876a6bd2f` 的两机构建测试保持通过，两机当前 clean/same commit `09de5b5ecca4987bd04ab44fe4a65461a24625fe` 且 tag 未移动；node0/node1 GitHub HTTPS 认证不可用，远端 branch/tag 实际均 `ABSENT`，没有执行 push
+**状态：** **PASS_LOCAL / REMOTE_PUBLICATION_WAIVED_BY_OWNER**；冻结基线 `0a88f03a21802be0eadc3065b93cb97876a6bd2f` 的两机构建测试保持通过，2026-07-18T15:17:01Z 两机 clean/same commit `50362f346c7fcdbbc064760e5670841eb5ac5db4` 且 tag 未移动；远端 branch/tag 实际均 `ABSENT`，没有执行 push，负责人同意远端发布不阻塞 WP2
 **计划窗口：** 2026-07-17 至 18
-**依赖：** WP0 租期确认事实；不依赖 S3 才能编写代码，但部署前须 S3 PASS
+**依赖：** WP0.1 的 Portal+负责人 WP2-only 确认；S3 不阻塞 WP2 代码工作，但进入 pilot/formal 前须 PASS
 
 ### WP1.1 分支策略
 
@@ -384,16 +389,16 @@ YAML 至少包含：
 - 两机 clean 且 commit 完全一致；
 - coordinator 对 commit mismatch 和 dirty tree 能 fail closed；
 - 基线 tag `physical-integration-v1` 已作为 annotated tag 固定指向 `0a88f03a21802be0eadc3065b93cb97876a6bd2f`，不得移动或重建；
-- 远端发布另行门禁：2026-07-18T14:54:48Z 远端 branch/tag 均 `ABSENT`，两机认证不可用，状态为 `BLOCKED_CREDENTIALS`；证据见 `physical-results/wp0-wp1-unblock-20260718T144404Z/wp1/`。
+- 远端发布另行记录：2026-07-18T15:03:28Z 远端 branch/tag 均 `ABSENT`，两机认证不可用且没有 push；负责人于 2026-07-18T15:17:01Z 将其设为 `WAIVED_BY_OWNER`，不阻塞 WP2，但不得冒充已发布。证据见 `physical-results/wp0-wp1-unblock-20260718T144404Z/wp1/` 和 `physical-results/gate-policy-revision-20260718T151701Z/`。
 
-**门禁：** 未达到以上条件，不进入 host tuning。
+**门禁：** 本地 integration/build/test 条件已满足，可进入 WP2；仍不得进入 host tuning。
 
 ---
 
 ## WP2：物理 runtime 正确性修复
 
 **计划窗口：** 2026-07-18 至 19
-**依赖：** WP1 可构建 integration
+**依赖：** WP1 可构建 integration；2026-07-18T15:17:01Z 的负责人调整只允许 WP2 runtime 代码工作和代码级测试，不包含 host tuning、两机 RPC smoke、pilot、calibration 或 formal
 
 修复按以下顺序进行；后项不得掩盖前项失败。
 
@@ -1129,8 +1134,9 @@ baseline deadline violation rate - M1 deadline violation rate
 
 ### 11.2 用户负责
 
-- 用户已确认 Portal 中实验已延期；机器侧 manifest 传播/权威时间源矛盾仍需解除，当前不能登记 WP0.1 PASS；
-- 创建并提供 AWS S3 私有 bucket/最小权限凭据；
+- 用户已确认 Portal 中实验已延期，并于 2026-07-18T15:17:01Z 批准 `PASS_OWNER_ATTESTED_PORTAL_FOR_WP2`；manifest 子检查和精确 UTC 仍保持未解决，不得写成 `PASS_MANIFEST`；
+- 用户已批准 S3 `DEFERRED_UNTIL_PILOT` 和 GitHub publication `WAIVED_BY_OWNER`；
+- pilot/formal 前创建并提供 AWS S3 私有 bucket/最小权限凭据；
 - 通过仓库外 secret 文件提供访问；
 - 审核以下冻结点：
   1. integration 与研究合同；
@@ -1208,19 +1214,21 @@ baseline deadline violation rate - M1 deadline violation rate
 截至本文件创建完成：
 
 ```text
-lease gate: BLOCKED (two live manifests still 2026-07-18T03:00:00Z at 2026-07-18T14:44:32Z; AM status and Portal show conflicting later values)
-S3 gate: BLOCKED (config/remote/private bucket/project prefix missing; no object operations run)
+lease gate: PASS_OWNER_ATTESTED_PORTAL_FOR_WP2 (manifest subcheck remains BLOCKED; exact UTC unresolved)
+S3 gate: DEFERRED_UNTIL_PILOT (config/remote/private bucket/project prefix missing; no object operations run)
 plan refinement: COMPLETE
 integration branch creation: COMPLETE
 frozen integration baseline: 0a88f03a21802be0eadc3065b93cb97876a6bd2f
 release tag: physical-integration-v1 (annotated, unchanged)
 build/tests: PASS on node0 and node1 at frozen baseline (Release 24/24 CTest)
-node deployment: COMPLETE at frozen baseline
-remote GitHub publication: BLOCKED_CREDENTIALS (branch/tag ABSENT)
+node deployment: COMPLETE at current integration status commit
+remote GitHub publication: WAIVED_BY_OWNER (branch/tag ABSENT; no push)
+WP2 runtime gate: READY_TO_START
 WP2 runtime changes: NOT_STARTED
-host tuning: NOT_STARTED
-pilot/calibration: NOT_STARTED
-formal runs: NOT_STARTED
+host tuning: NOT_STARTED / NOT_ALLOWED_BY_CURRENT_GATE
+RPC smoke: NOT_STARTED / NOT_ALLOWED_BY_CURRENT_GATE
+pilot/calibration: NOT_STARTED / NOT_ALLOWED_BY_CURRENT_GATE
+formal runs: NOT_STARTED / NOT_ALLOWED_BY_CURRENT_GATE
 analysis/paper update: NOT_STARTED
 host restore: NOT_STARTED
 ```

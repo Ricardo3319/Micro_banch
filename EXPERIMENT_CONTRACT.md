@@ -1,8 +1,20 @@
 # RescueSched INFOCOM 2027 物理实验合同
 
-> `contract_version: infocom2027-physical-v0.1`
+> `contract_version: infocom2027-physical-v0.2`
 > `contract_status: DRAFT_UNFROZEN`
 > WP1 建立合同结构；带 `PENDING` 或 `null` 的字段必须在对应工作包中冻结后提升版本。任何正式结果可见后的合同变化都要求重跑所有受影响 paired blocks。
+
+## 0. WP2 前置门禁修订（2026-07-18T15:17:01Z）
+
+项目负责人在 2026-07-18T15:17:01Z 明确确认采用门禁调整。审计证据位于 `physical-results/gate-policy-revision-20260718T151701Z/`（`SHA256SUMS` SHA256 `29e6f6fece0463c10bd97153cacb1f529c9d95f9e82e0d676684375e5cd8d918`）；此前的 manifest、S3 和 GitHub 失败/BLOCKED 证据继续保留，不被覆盖或改写。
+
+| Gate | 生效状态 | 约束 |
+| --- | --- | --- |
+| WP0.1 lease | `PASS_OWNER_ATTESTED_PORTAL_FOR_WP2` | 实时 Portal 实验页显示 `ready`、`Jul 24, 2026 7:00 PM`，负责人确认延期已生效。两机 manifest 子检查仍为 `BLOCKED_STALE_OR_NON_PROPAGATED_VALUE`，其 `2026-07-18T03:00:00Z` 不得改写为已证明 2026-07-25；Portal 未显示时区，精确 UTC 仍为 `UNRESOLVED`。 |
+| WP0.2 S3 | `DEFERRED_UNTIL_PILOT` | 不要求于 WP2 runtime 源码修复和代码级测试前完成；upload、remote SHA、download、local SHA、delete 仍全部 `NOT_RUN`。进入 pilot 或 formal 前必须完成原最小权限闭环。 |
+| WP1 GitHub publication | `WAIVED_BY_OWNER` | 不要求于 WP2 前完成；远端 branch/tag 的实际值仍为 `ABSENT`，没有执行 push。两机 bundle 同步只证明本地部署，不冒充远端发布。 |
+
+本修订只允许开始 **WP2 runtime 正确性代码工作和代码级测试**。它不授权 CPU/IRQ/NIC tuning、host profile apply、两机 RPC smoke、pilot、calibration 或 formal experiment，也不授权使用正式端口或正式结果目录。进入这些阶段前必须重新冻结精确 lease UTC，并按相应门禁完成 S3 恢复闭环。冻结 annotated tag `physical-integration-v1` 继续只指向 `0a88f03a21802be0eadc3065b93cb97876a6bd2f`，不得移动、删除或重建。
 
 ## 1. 研究边界
 

@@ -1,6 +1,6 @@
 # RescueSched WP0/WP1 操作手册
 
-> 本文只覆盖租期/S3 门禁和 integration baseline。WP0 当前 `BLOCKED`，所以本手册中的 host tuning、pilot、calibration、formal 入口全部保持停止。所有时间使用 UTC；所有 secret 必须位于仓库外。
+> 本文覆盖租期/S3 门禁、integration baseline 和 2026-07-18T15:17:01Z 的 WP2 前置门禁调整。当前只允许 WP2 runtime 源码修复和代码级测试；host tuning、两机 RPC smoke、pilot、calibration、formal 入口全部保持停止。所有时间使用 UTC；所有 secret 必须位于仓库外。
 
 ## 0. 主机约定与 fail-closed 规则
 
@@ -9,11 +9,11 @@
 | node0 | server | 本机 / `amd140.utah.cloudlab.us` | `10.10.1.1` | `/users/Mingyang/Micro_banch` |
 | node1 | coordinator/client | SSH alias `node1` / `amd136.utah.cloudlab.us` | `10.10.1.2` | `/users/Mingyang/Micro_banch` |
 
-全局成功条件：命令 exit code 0、要求的 status 文件为 `PASS`、identity 一致且输出被保留。恢复入口：任何一步失败即停止后续 gate，保存 stdout/stderr 和目录；不删除失败证据，不执行主机调优。
+全局成功条件：命令 exit code 0、要求的 status/限定范围 owner waiver 明确、identity 一致且输出被保留。恢复入口：任何一步失败即停止后续 gate，保存 stdout/stderr 和目录；不删除失败证据，不执行主机调优。`DEFERRED`/`WAIVED` 不得写成数据面或远端发布 PASS。
 
 ## 1. WP0.1：采集 uncached lease manifest
 
-**Host：node0。Input：** node1 SSH 可用。**成功条件：** 两份原始 XML、采集时间和 SHA256 存在，且 expiration 明确显示 2026-07-25 才能判租期 PASS。**恢复入口：** 若不是 7 月 25 日，停止新 formal block，在 Portal 修正延期后创建新证据目录重跑；禁止覆盖旧目录。
+**Host：node0。Input：** node1 SSH 可用。**标准成功条件：** 两份原始 XML、采集时间和 SHA256 存在，且 expiration 明确显示 2026-07-25，才能判 `PASS_MANIFEST`。**恢复入口：** 若不满足，保存差异并停止受影响阶段；禁止覆盖旧目录。当前负责人调整只允许以 Portal+负责人确认形成 `PASS_OWNER_ATTESTED_PORTAL_FOR_WP2`，不得冒充 `PASS_MANIFEST`。
 
 ```bash
 cd /users/Mingyang/Micro_banch
@@ -35,7 +35,9 @@ ssh -o BatchMode=yes node1 'geni-get -n status' > "$OUT/node1/status.raw"
 ssh -o BatchMode=yes node1 'geni-get -n portalmanifest' > "$OUT/node1/portalmanifest.xml"
 ```
 
-最新证据 `physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.1/` 显示：2026-07-18T14:44:32Z 两机实时执行 `geni-get -n manifest` 后仍均为 `2026-07-18T03:00:00Z`。安装的客户端源码表明 `-n` 不读取本地缓存（该版本客户端本身不缓存）；补采 AM v3 `status` 为 `2026-07-24 05:00:00`，Portal 截图为 `Jul 24, 2026 7:00 PM` 且不含时区。来源不一致时保持 gate `BLOCKED`，不得自行选择较晚值；若要改用其他权威源，必须先正式修订合同、记录精确 UTC 语义并重新验收两机。历史证据目录继续保留，不覆盖、不删除。
+最新 manifest 证据 `physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.1/` 显示：2026-07-18T14:44:32Z 两机实时执行 `geni-get -n manifest` 后仍均为 `2026-07-18T03:00:00Z`。安装的客户端源码表明 `-n` 不读取本地缓存（该版本客户端本身不缓存）；补采 AM v3 `status` 为 `2026-07-24 05:00:00`，Portal 截图为 `Jul 24, 2026 7:00 PM` 且不含时区。
+
+项目负责人于 2026-07-18T15:17:01Z 正式确认采用调整，证据位于 `physical-results/gate-policy-revision-20260718T151701Z/`：对 WP2 runtime 工作，以实时 Portal 实验页加负责人确认判为 `PASS_OWNER_ATTESTED_PORTAL_FOR_WP2`；manifest 子检查继续登记为 `BLOCKED_STALE_OR_NON_PROPAGATED_VALUE`，精确 expiration UTC 继续为 `UNRESOLVED`。因此当前可进入 WP2 代码工作，但不得进入 host tuning、两机 RPC smoke、pilot、calibration 或 formal。历史证据目录继续保留，不覆盖、不删除。
 
 ## 2. WP0.2：S3 最小权限闭环
 
@@ -84,9 +86,9 @@ printf 'status=PASS\nobject=%s\nlocal_sha256=%s\nremote_sha256=%s\ndownloaded_sh
 rm -f "$TEST_FILE" "$DOWNLOADED"
 ```
 
-当前 2026-07-18T14:54:03Z preflight 证据位于 `physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.2/`：两机首选/默认 rclone 配置、remote 和 private bucket/project prefix 均缺失，故所有数据面步骤为 `NOT_RUN`，gate 为 `BLOCKED`。
+当前 2026-07-18T14:54:03Z preflight 证据位于 `physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.2/`：两机首选/默认 rclone 配置、remote 和 private bucket/project prefix 均缺失，故所有数据面步骤为 `NOT_RUN`。负责人调整后状态为 `DEFERRED_UNTIL_PILOT`：它不再阻塞 WP2，但进入 pilot/formal 前仍必须按本节完成全部闭环。
 
-`S3_GATE_STATUS.txt` 只能包含无 secret 的 remote/object 标识和 hashes。当前没有配置输入，本节尚未执行。
+`S3_GATE_STATUS.txt` 只能包含无 secret 的 remote/object 标识和 hashes。当前没有配置输入，本节尚未执行，不能写成 PASS。
 
 ## 3. 安装 WP1 依赖
 
@@ -166,7 +168,7 @@ test "$(git rev-parse HEAD)" = "$COMMIT"
 test -z "$(git status --porcelain)"
 ```
 
-远端 branch/tag 仍须之后在有 GitHub 认证的环境执行普通、非 force push。
+负责人已将 GitHub publication 设为 `WAIVED_BY_OWNER`，所以它不阻塞 WP2。远端 branch/tag 实际仍为 `ABSENT`；若以后选择发布，必须在有认证的环境执行普通、非 force push，并验证精确 refs。
 
 ## 5. 分析 Python 环境
 
@@ -230,23 +232,33 @@ bash scripts/run_two_node_rpc_smoke.sh --help >/dev/null
 
 在当前 CloudLab 配置中，从 node1 到 node0 的可用 SSH alias 可能是 `node0` 或 control hostname；按实际 SSH config 使用，但 RPC server IP 必须是 `10.10.1.1`。
 
-## 8. 创建 integration tag
+## 8. 验证冻结 integration tag（已完成，禁止重建）
 
-**Host：node0。Input：** 两机同 full commit、clean、Release/24 CTest PASS。**成功条件：** annotated tag 指向当前 HEAD；有认证时 push 成功。**恢复入口：** 任一验收未满足时不创建 tag；若远端同名 tag 已存在且目标不同，停止并人工审计，禁止强推覆盖。节点没有 GitHub credential 时保留本地 tag 并把 remote publication 标为 `BLOCKED_CREDENTIALS`，不得冒充已 push。
+`physical-integration-v1` 已是冻结 annotated tag。任何后续状态或文档提交都不得移动、删除或重新创建它。这里只允许只读验证：
 
 ```bash
 cd /users/Mingyang/Micro_banch
 TAG=physical-integration-v1
-test -z "$(git status --porcelain)"
-test -z "$(git tag -l "$TAG")"
-git tag -a "$TAG" -m 'WP1 dual-node physical integration baseline'
-git push origin "$TAG"
-test "$(git rev-list -n1 "$TAG")" = "$(git rev-parse HEAD)"
+test "$(git cat-file -t "$TAG")" = tag
+test "$(git rev-parse "$TAG")" = 2fb914080bc63d357e38b8f4e21a6d5add34dc8e
+test "$(git rev-list -n1 "$TAG")" = 0a88f03a21802be0eadc3065b93cb97876a6bd2f
 ```
 
-## 9. WP1 完成后的硬停止线
+禁止运行 `git tag -f`、`git tag -d physical-integration-v1`、重新 `git tag -a` 或 force push。GitHub publication 为 `WAIVED_BY_OWNER`；这不改变本地冻结 tag，也不表示远端 tag 已存在。
 
-WP1 tag 只证明 integration/build/test baseline，不证明网络实验、性能或论文主张。只有以下两项都 PASS 才允许进入 WP2/WP3：
+## 9. WP2 前置调整后的硬停止线
 
-1. 两机 manifest 明确显示 2026-07-25 的精确 expiration；
-2. S3 upload/remote-stream-SHA/download/local-SHA/delete 闭环 PASS。
+WP1 tag 只证明 integration/build/test baseline，不证明网络实验、性能或论文主张。2026-07-18T15:17:01Z 的负责人调整允许：
+
+1. 开始 WP2 runtime 正确性源码修复；
+2. 执行代码级构建、unit/regression/sanitizer 等不修改 host profile 的测试。
+
+仍然禁止：
+
+1. CPU/IRQ/NIC tuning、sysctl/governor 变更或 host profile apply；
+2. 两机 RPC smoke、pilot、calibration 和 formal experiment；
+3. 使用正式实验端口或正式结果目录；
+4. 把 S3 `DEFERRED` 写成 PASS，或把 GitHub `WAIVED` 写成已 push；
+5. 把旧 manifest 值改写成已证明 2026-07-25。
+
+进入 pilot/formal 前必须完成 S3 upload/remote-stream-SHA/download/local-SHA/delete 闭环，并冻结可审计的精确 lease expiration UTC。

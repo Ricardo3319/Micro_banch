@@ -1,9 +1,12 @@
 contract:
-  version: infocom2027-physical-v0.1
+  version: infocom2027-physical-v0.2
   status: DRAFT_UNFROZEN
   timezone: UTC
   repository_commit: SELF
   integration_tag: physical-integration-v1
+  gate_policy_revision_at_utc: "2026-07-18T15:17:01Z"
+  gate_policy_evidence_root: "physical-results/gate-policy-revision-20260718T151701Z"
+  gate_policy_sha256s_sha256: "29e6f6fece0463c10bd97153cacb1f529c9d95f9e82e0d676684375e5cd8d918"
 
 methods:
   - L0_RandomCore
@@ -193,6 +196,7 @@ classification:
 
 lease_and_backup_gate:
   lease_checked_at_utc: "2026-07-18T14:44:32Z"
+  owner_policy_recorded_at_utc: "2026-07-18T15:17:01Z"
   manifest_required_date: "2026-07-25"
   observed_node0_expiration_utc: "2026-07-18T03:00:00Z"
   observed_node1_expiration_utc: "2026-07-18T03:00:00Z"
@@ -201,27 +205,45 @@ lease_and_backup_gate:
   supplemental_am_v3_geni_expires: "2026-07-24 05:00:00"
   supplemental_portal_displayed_expiration: "Jul 24, 2026 7:00 PM"
   supplemental_portal_timezone: null
+  lease_exact_expiration_utc: null
   lease_source_consistency: CONFLICT
+  lease_manifest_subcheck: BLOCKED_STALE_OR_NON_PROPAGATED_VALUE
+  lease_authority_override: LIVE_PORTAL_PLUS_OWNER_ATTESTATION
   lease_evidence_root: "physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.1"
-  lease_status: BLOCKED
+  gate_policy_evidence_root: "physical-results/gate-policy-revision-20260718T151701Z"
+  lease_status: PASS_OWNER_ATTESTED_PORTAL_FOR_WP2
+  lease_scope: WP2_RUNTIME_CODE_AND_CODE_LEVEL_TESTS_ONLY
   s3_checked_at_utc: "2026-07-18T14:54:03Z"
   s3_region: us-west-2
   rclone_config_path: null
   s3_remote: null
   s3_bucket: null
   s3_prefix: null
-  s3_gate_status: BLOCKED
+  s3_gate_status: DEFERRED_UNTIL_PILOT
+  s3_required_for_wp2: false
+  s3_required_before_pilot_or_formal: true
   s3_evidence_root: "physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.2"
+  wp2_runtime_work_allowed: true
+  host_tuning_allowed: false
+  rpc_smoke_allowed: false
+  pilot_allowed: false
+  calibration_allowed: false
   formal_execution_allowed: false
 
 remote_publication_gate:
-  checked_at_utc: "2026-07-18T14:54:48Z"
+  checked_at_utc: "2026-07-18T15:03:28Z"
+  owner_policy_recorded_at_utc: "2026-07-18T15:17:01Z"
   frozen_commit: "0a88f03a21802be0eadc3065b93cb97876a6bd2f"
-  current_node0_commit: "09de5b5ecca4987bd04ab44fe4a65461a24625fe"
-  current_node1_commit: "09de5b5ecca4987bd04ab44fe4a65461a24625fe"
+  policy_evidence_node0_commit: "50362f346c7fcdbbc064760e5670841eb5ac5db4"
+  policy_evidence_node1_commit: "50362f346c7fcdbbc064760e5670841eb5ac5db4"
   node0_authentication_available: false
   node1_authentication_available: false
   remote_branch_commit: null
   remote_tag_commit: null
-  status: BLOCKED_CREDENTIALS
+  remote_branch_actual: ABSENT
+  remote_tag_actual: ABSENT
+  push_performed: false
+  required_for_wp2: false
+  status: WAIVED_BY_OWNER
   evidence_root: "physical-results/wp0-wp1-unblock-20260718T144404Z/wp1"
+  gate_policy_evidence_root: "physical-results/gate-policy-revision-20260718T151701Z"
