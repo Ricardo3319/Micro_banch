@@ -6,7 +6,7 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 source "$script_dir/lib/host_profile_common.sh"
 
 usage() {
-    echo "Usage: $0 --profile FILE --plan DIR --log-dir DIR [--repo-root DIR] [--dry-run]" >&2
+    echo "Usage: $0 --profile FILE --log-dir DIR [--repo-root DIR] [--dry-run | --plan DIR]" >&2
 }
 profile=""; plan=""; log_dir=""; dry_run=false
 repo_root=$(git -C "$script_dir/.." rev-parse --show-toplevel 2>/dev/null || pwd)
@@ -21,10 +21,11 @@ while (( $# )); do
         *) usage; exit 2 ;;
     esac
 done
-[[ -n "$profile" && -n "$plan" && -n "$log_dir" ]] || { usage; exit 2; }
+[[ -n "$profile" && -n "$log_dir" ]] || { usage; exit 2; }
+if [[ "$dry_run" != true && -z "$plan" ]]; then hp_die "--plan is required for actual apply"; fi
 [[ ! -e "$log_dir" ]] || hp_die "apply log directory already exists: $log_dir"
 profile=$(readlink -f "$profile")
-plan=$(readlink -f "$plan")
+if [[ -n "$plan" ]]; then plan=$(readlink -f "$plan"); fi
 repo_root=$(readlink -f "$repo_root")
 hp_load_profile "$profile"
 for cmd in ethtool ip systemctl sysctl sha256sum python3 sudo; do hp_require_command "$cmd"; done
@@ -93,13 +94,40 @@ on_error() {
 }
 trap on_error ERR
 
+run_logged topology_validator python3 "$script_dir/validate_host_profile.py" --profile "$profile" --repo-root "$repo_root" --out-dir "$log_dir/topology-validator"
+run_logged sudo_noninteractive sudo -n true
+
+if [[ "$dry_run" == true ]]; then
+    hp_current_tunable_state "$EXPERIMENT_IFACE" >"$log_dir/dryrun_current_canonical.tsv"
+    hp_control_identity_state "$CONTROL_IFACE" >"$log_dir/dryrun_control.tsv"
+    cat >"$log_dir/DRY_RUN_PLAN.txt" <<PLAN
+No mutations performed. This dry-run intentionally precedes final restore-plan capture.
+1. stop irqbalance (experiment host only)
+2. governor mode: $GOVERNOR_MODE
+3. sysctl rmem/wmem/backlog: $NET_CORE_RMEM_MAX/$NET_CORE_WMEM_MAX/$NET_CORE_NETDEV_MAX_BACKLOG
+4. experiment NIC $EXPERIMENT_IFACE combined queues: $COMBINED_QUEUES
+5. experiment NIC ring RX/TX: $RING_RX/$RING_TX (ring 4096 forbidden)
+6. experiment NIC offloads RX/TX checksum=$RX_CHECKSUM/$TX_CHECKSUM, TSO/GSO/GRO/LRO=$TSO/$GSO/$GRO/$LRO
+7. preserve the node-specific RSS key; equal indirection over $COMBINED_QUEUES queues
+8. completion IRQs -> $EXPERIMENT_IRQ_CPUS; async IRQs -> $ASYNC_IRQ_CPUS
+9. RPS off; XPS CPUs -> $XPS_CPUS
+10. verify effective state and control interface; run no workload
+11. after this dry-run, capture an independent restore plan and verify restore_host_state.sh before actual apply
+Control interface $CONTROL_IFACE is never a mutation target.
+PLAN
+    {
+        printf 'status=PASS_DRY_RUN\nstart_utc=%q\nend_utc=%q\nprofile_sha256=%q\nmutation_count=0\nrestore_plan_used=false\n' "$start_utc" "$(hp_utc_now)" "$(hp_profile_sha256 "$profile")"
+    } >"$log_dir/RESULT.env"
+    trap - ERR
+    (cd "$log_dir" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum >SHA256SUMS)
+    exit 0
+fi
+
 run_logged restore_plan_check "$script_dir/restore_host_state.sh" --plan "$plan" --check-plan
 # shellcheck disable=SC1091
 source "$plan/plan.env"
 check_sha=$(hp_profile_sha256 "$profile")
 [[ "$check_sha" == "$PLAN_PROFILE_SHA256" ]] || hp_die "profile SHA drift: current=$check_sha plan=$PLAN_PROFILE_SHA256"
-run_logged topology_validator python3 "$script_dir/validate_host_profile.py" --profile "$profile" --repo-root "$repo_root" --out-dir "$log_dir/topology-validator"
-run_logged sudo_noninteractive sudo -n true
 
 hp_current_tunable_state "$EXPERIMENT_IFACE" >"$log_dir/preapply_canonical.tsv"
 hp_control_identity_state "$CONTROL_IFACE" >"$log_dir/preapply_control.tsv"
@@ -107,30 +135,6 @@ diff -u "$plan/canonical_before.tsv" "$log_dir/preapply_canonical.tsv" >"$log_di
 diff -u "$plan/control_before.tsv" "$log_dir/preapply_control.tsv" >"$log_dir/preapply_control.diff" || true
 cmp -s "$plan/canonical_before.tsv" "$log_dir/preapply_canonical.tsv" || hp_die "host state drifted after restore plan creation; refuse apply"
 cmp -s "$plan/control_before.tsv" "$log_dir/preapply_control.tsv" || hp_die "control interface state drifted; refuse apply"
-
-if [[ "$dry_run" == true ]]; then
-    cat >"$log_dir/DRY_RUN_PLAN.txt" <<PLAN
-No mutations performed.
-1. stop irqbalance (experiment host only)
-2. governor mode: $GOVERNOR_MODE
-3. sysctl rmem/wmem/backlog: $NET_CORE_RMEM_MAX/$NET_CORE_WMEM_MAX/$NET_CORE_NETDEV_MAX_BACKLOG
-4. experiment NIC $EXPERIMENT_IFACE combined queues: $COMBINED_QUEUES
-5. experiment NIC ring RX/TX: $RING_RX/$RING_TX (ring 4096 forbidden)
-6. experiment NIC offloads RX/TX checksum=$RX_CHECKSUM/$TX_CHECKSUM, TSO/GSO/GRO/LRO=$TSO/$GSO/$GRO/$LRO
-7. preserve RSS key; equal indirection over $COMBINED_QUEUES queues
-8. completion IRQs -> $EXPERIMENT_IRQ_CPUS; async IRQs -> $ASYNC_IRQ_CPUS
-9. RPS off; XPS CPUs -> $XPS_CPUS
-10. verify effective state and control interface; run no workload
-11. independent restore is $script_dir/restore_host_state.sh --plan $plan --log-dir UNIQUE_DIR
-Control interface $CONTROL_IFACE is never a mutation target.
-PLAN
-    {
-        printf 'status=PASS_DRY_RUN\nstart_utc=%q\nend_utc=%q\nprofile_sha256=%q\nmutation_count=0\n' "$start_utc" "$(hp_utc_now)" "$check_sha"
-    } >"$log_dir/RESULT.env"
-    trap - ERR
-    (cd "$log_dir" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum >SHA256SUMS)
-    exit 0
-fi
 
 mutated=true
 current=$(systemctl is-active irqbalance 2>/dev/null || true)
