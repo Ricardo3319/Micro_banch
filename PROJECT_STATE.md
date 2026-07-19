@@ -1,22 +1,23 @@
 # RescueSched 项目状态
 
 > 单一状态入口。实验合同见 `EXPERIMENT_CONTRACT.md`，操作入口见 `RUNBOOK.md`，证据映射见 `EVIDENCE_INDEX.md`。
-> 最后更新：2026-07-19T08:27:23Z（UTC）
+> 最后更新：2026-07-19T13:54:25Z（UTC）
 
 ## 1. 当前结论
 
 | 项目 | 状态 | 结论 |
 | --- | --- | --- |
-| WP0.1 租期证据 | **PASS_EXACT_UTC_FROZEN_FOR_WP3** | 2026-07-19 在 node0/node1 重新实时执行 `geni-get -n manifest` 与 `geni-get -n status`。manifest 仍为旧值 `2026-07-18T03:00:00Z`，子检查保持 `BLOCKED_STALE_OR_NON_PROPAGATED_VALUE`；两机 live AM status 均为 `2026-07-24 05:00:00`。依据实时 Utah CloudLab 官方站点 `-0600` 时区、精确部署源码和 `America/Denver` 站点配置，冻结 `T_expire=2026-07-24T11:00:00Z`、`T_no_new_block=2026-07-23T23:00:00Z`。该 PASS 的授权范围仅为 WP3 host profile apply/restore。 |
-| WP0.2 S3 闭环 | **DEFERRED_UNTIL_PILOT_BLOCKED_MISSING_INPUTS** | 两机首选仓库外配置 `~/.config/rescuesched/rclone.conf` 均不存在；expected remote、private bucket、project-dedicated prefix 未提供。未读取或记录 credential，upload、remote SHA、download、download SHA、delete、absence confirmation 全部 `NOT_RUN`。该项不阻塞已授权的 WP3，但继续硬阻塞 WP4/pilot/formal。 |
+| WP4-A 双机身份 | **PASS** | 2026-07-19T13:29:49Z 实时确认 node0=`amd140.utah.cloudlab.us`、node1=`amd136.utah.cloudlab.us`；两机 branch 均为 `codex/infocom2027-integration`，初始 HEAD 均为 `77f06874de97d06ded41b2bd647e02e16973fb9c`，working tree clean；annotated tag `physical-integration-v1` 的 kind/object/target 仍为 `tag`、`2fb914080bc63d357e38b8f4e21a6d5add34dc8e`、`0a88f03a21802be0eadc3065b93cb97876a6bd2f`；profile SHA 未漂移；未发现未知实验可执行进程、端口 9000 listener 或未知 dirty。上一轮 `SHA256SUMS` SHA256 复核为 `456820bdf445c24c5502e6794249d972b57f7e6f319415f5f97e88158a9edd5f`，2755 项全部通过。 |
+| WP0.1 租期证据 | **PASS_EXACT_UTC_FROZEN_FOR_WP4** | 两机重新实时执行 `geni-get -n manifest/status/getversion`。manifest 仍为旧值 `2026-07-18T03:00:00Z`，子检查保持 `BLOCKED_STALE_OR_NON_PROPAGATED_VALUE`；两机 live status 均为 `2026-07-24 05:00:00`。依据实时 Utah CloudLab 官方站点 `-0600`、live deployed AM commit 与保存的 exact source，冻结 `T_expire=2026-07-24T11:00:00Z`、`T_no_new_block=2026-07-23T23:00:00Z`。2026-07-19T13:40:14Z 距到期 `4d 21h 19m 46s`，距安全线 `4d 09h 19m 46s`。该 PASS 只关闭 WP4 的 lease 子门禁，不授权或表示 WP4 workload 已执行。 |
+| WP0.2 S3 闭环 | **BLOCKED_MISSING_INPUTS** | 2026-07-19T13:42:15Z 实时确认两机首选仓库外配置 `~/.config/rescuesched/rclone.conf` 均不存在，无法满足 `0600`；用户提供的是 expected remote、private bucket、project-dedicated prefix 占位符而非可用值。未读取或记录 credential，remote list、upload、remote SHA、download、download SHA、exact delete、absence confirmation 全部 `NOT_RUN`。 |
 | WP1 集成基线 | **PASS_LOCAL / REMOTE_PUBLICATION_WAIVED_BY_OWNER** | 冻结 annotated tag `physical-integration-v1` 的 object/target 保持 `2fb914080bc63d357e38b8f4e21a6d5add34dc8e` → `0a88f03a21802be0eadc3065b93cb97876a6bd2f`。GitHub publication 仍为 owner waiver；本次没有 push、force push 或 remote URL 修改。 |
-| WP2 runtime | **PASS_CODE_LEVEL_ON_BOTH_NODES** | WP2 源码提交 `7db91095c4d0f84a5eb568b980748051f994c4cc` 的两机代码级验证保持有效：Release 26/26、ASan/UBSan 26/26、TSan 核心 2/2、本机 loopback/mapping/fail-closed gate 和 synthetic 12/12。它仍不是双机 RPC、pilot 或正式物理结果。 |
-| WP3 host profile | **PASS_APPLY_EFFECTIVE_RESTORE_REGRESSION_ON_BOTH_NODES** | node0/node1 topology validator、profile freeze、before capture、dry-run、atomic apply、89 项 effective verification、management SSH、独立 restore、第二次零修改 restore 和 restored semantic diff 均 PASS。两机均已恢复到 before 状态，未保持调优态。 |
-| WP4 及以后 | **BLOCKED_NOT_AUTHORIZED_AND_S3_NOT_PASS** | 不允许双机 RPC、pilot、scheduler period calibration、arrival calibration、formal paired block 或正式性能结论；正式端口 `9000`、ring `4096` 条件和正式结果目录不得使用。 |
+| WP2 runtime | **PASS_CODE_LEVEL_ON_BOTH_NODES** | WP2 源码提交 `7db91095c4d0f84a5eb568b980748051f994c4cc` 的代码级验证保持有效；它仍不是双机 RPC、pilot 或正式物理结果。 |
+| WP3 host profile | **PASS_APPLY_EFFECTIVE_RESTORE_REGRESSION_ON_BOTH_NODES** | 历史 WP3 apply/effective/restore regression 保持有效；两机当前均为 restored/before 状态。本次 WP4-A 没有 apply profile、host tuning 或 workload。 |
+| WP4 workload 及以后 | **BLOCKED_S3_NOT_PASS_AND_NOT_AUTHORIZED** | identity 与 lease 子门禁已实时关闭，但 S3 最小权限恢复闭环未通过；本次硬停止于 WP4-A。不得运行双机 RPC、short cohort、infrastructure pilot、scheduler period、calibration、WP5 或 formal；端口 `9000` 与 ring `4096` 未使用。 |
 
-**当前允许事项：** 保存并复核 WP0.1/WP0.2/WP3 证据、同步同一文档提交、只读验证两机 identity/tag，以及补齐进入 WP4 前的非敏感 S3 输入。
+**当前允许事项：** 保存并复核本轮 WP4-A identity/lease/S3 证据，提交和同步同一状态文档，或由负责人在仓库外补齐 S3 的非敏感 remote/bucket/prefix 与 `0600` 配置后另行重新授权门禁任务。
 
-**当前禁止事项：** WP4、双机 RPC、pilot、calibration、formal experiment、正式端口 `9000`、ring `4096` pilot 条件和正式结果目录。WP3 已完成恢复，不得把本次结果描述为性能实验。
+**当前禁止事项：** host profile apply、host tuning、双机 RPC、WP4 short cohort/pilot、scheduler period 测试、calibration、WP5、formal experiment、端口 `9000`、ring `4096`。identity/lease PASS 不得写成 WP4 workload PASS。
 
 ## 2. Git 与集成范围
 
@@ -26,6 +27,7 @@ branch: codex/infocom2027-integration
 integration_base: 5379f1af94a042814493a6329386b056738bfeaf
 frozen_integration_commit: 0a88f03a21802be0eadc3065b93cb97876a6bd2f
 current_status_commit: SELF
+current_documentation_parent_commit: 77f06874de97d06ded41b2bd647e02e16973fb9c
 wp2_source_commit: 7db91095c4d0f84a5eb568b980748051f994c4cc
 wp3_tooling_commit_1: b8eec4768d9dc556f43af925a9520e05c503b7a5
 wp3_tooling_commit_2: 90c5ff6d774cea0e06563e92681570727b079933
@@ -55,60 +57,68 @@ scripts/restore_host_state.sh
 
 选择性集成保留了 `src/core/simulator.cpp`、`paper/main.tex`、`artifacts/step-21-corrected-full/manifest.md`、`scripts/corrected_eval_analysis.py` 和所有旧失败/BLOCKED/TSan/coordinator 证据。
 
-## 3. WP0.1：精确租期 UTC freeze
+## 3. WP0.1：WP4 精确租期 UTC freeze
 
-2026-07-19 的两机实时采集结果：
+2026-07-19 WP4-A 两机实时采集结果：
 
-| 节点 | hostname | manifest expiration | manifest SHA256 | live AM status raw expiration | live status SHA256 |
+| 节点 | hostname | manifest expiration | manifest SHA256 | live status raw expiration | live status SHA256 |
 | --- | --- | --- | --- | --- | --- |
 | node0 | `amd140.utah.cloudlab.us` | `2026-07-18T03:00:00Z` | `ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8` | `2026-07-24 05:00:00` | `1743b02feed164f002441a93ce6461991046b3eb7bf0442aab5a89d0622e8a12` |
 | node1 | `amd136.utah.cloudlab.us` | `2026-07-18T03:00:00Z` | `ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8` | `2026-07-24 05:00:00` | `1743b02feed164f002441a93ce6461991046b3eb7bf0442aab5a89d0622e8a12` |
 
-解释和冻结依据：
+两机 status 均包含 slice `urn:publicid:IDN+emulab.net:micro3319+slice+Racked` 和 sliver `2419568`、`2419569`，均为 `geni_provisioned` / `geni_ready`。manifest、status、getversion 和 live timezone 响应在两机逐字节一致。
 
-1. manifest 原始 XML、开始/结束 UTC、hostname、exit code、expiration 和 SHA 均重新实时采集，未使用旧缓存；manifest 子检查仍保持旧值事实。
-2. 两机 `geni-get -n status` 返回相同 sliver expiration 原始字段 `2026-07-24 05:00:00`。
-3. 实时 Utah CloudLab 官方 RSS 响应给出数字偏移 `-0600`；实时 `geni-get -n getversion` 对应部署源码提交 `0b1fdb15cd434591f3fab98799d78189698686fc`，保存的 exact source 和站点配置证明该字段按站点 `America/Denver` 本地时间解释。
-4. 2026-07-24 位于 MDT，偏移 `-06:00`，所以 `2026-07-24 05:00:00 America/Denver = 2026-07-24T11:00:00Z`。旧 Portal `Jul 24, 2026 7:00 PM` 截图无时区，只作为保留的历史补充事实，不用于精确 UTC 计算。
+权威来源与时区审计：
 
-冻结结果：
+1. manifest 原始 XML、开始/结束 UTC、hostname、exit code、expiration 和 SHA 均本轮实时采集；其过期旧值保留为 stale/non-propagated contradiction，不作为当前 lease authority。
+2. 两机 live `geni-get -n status` 返回相同原始数据库时间 `2026-07-24 05:00:00`。
+3. 两机 live `geni-get -n getversion` 均指向 Utah CloudLab AM v3 endpoint 和 deployed commit `0b1fdb15cd434591f3fab98799d78189698686fc`，输出 SHA256 均为 `132ba180bcbc64a659aca4f9ed6d3b3d15e8e78053731c55f620f54ca679b33c`。
+4. 本轮实时官方 Utah CloudLab RSS 的 `pubDate` 为 `Sun, 19 Jul 2026 07:33:37 -0600`，与 HTTP GMT Date 表示同一时刻；RSS SHA256 两机均为 `287601b9d33155778e70c8d62dd9ee32eea334601817854299494cfce53a48f4`。本地 CA 链导致首次 TLS 验证 exit 60，失败 attempt 原样保留；重试仅对公开时区响应使用 `curl --insecure` 并明确记录，未涉及 credential。
+5. 上一轮完整证据根已重新执行 `sha256sum -c`，2755 项全部通过；其 exact deployed source 证明 tmcd 原样输出 DB datetime、站点配置为 `America/Denver`。2026-07-24 的偏移为 `-0600`，故原始值精确映射为 `2026-07-24T11:00:00Z`。
+
+本轮冻结结果：
 
 ```text
-decision_utc=2026-07-19T07:28:13Z
+decision_utc=2026-07-19T13:40:14Z
 T_expire=2026-07-24T11:00:00Z
 T_no_new_block=2026-07-23T23:00:00Z
-remaining_at_decision=5d 03h 31m 47s
-wp3_apply_restore_safety=PASS_SUFFICIENT_TIME
-scope=WP3_HOST_PROFILE_APPLY_RESTORE_ONLY
+remaining_to_T_expire=4d 21h 19m 46s (422386 seconds)
+remaining_to_T_no_new_block=4d 09h 19m 46s (379186 seconds)
+status=PASS_EXACT_UTC_FROZEN_FOR_WP4
+safe_execution_window_for_wp4=true
+wp4_workload_authorized_or_run=false
 ```
 
 证据根：
 
 ```text
-physical-results/wp0-wp3-20260719T070542Z/wp0.1/
+physical-results/wp4-a-gates-20260719T132156Z/03-lease/
 ```
 
-关键入口为 `GATE_STATUS.env`、`LEASE_DECISION.txt`、`authority-analysis/deployed-source-0b1fdb15/` 和 `authority-analysis/live-site-timezone/`。AM 直连 403、remote wrapper 和 SCP dot-path 等失败 attempts 全部保留。
+关键入口为 `decision/GATE_STATUS.env`、`decision/decision.json`、两机 `manifest/`、`status/`、`authority/getversion/` 和 `authority/live-site-timezone/`。所有 TLS、parser 和 wrapper 失败 attempts 均保留。
 
 ## 4. WP0.2：S3 最小权限闭环
 
-状态：`DEFERRED_UNTIL_PILOT_BLOCKED_MISSING_INPUTS`。
+状态：`BLOCKED_MISSING_INPUTS`；decision UTC=`2026-07-19T13:42:15Z`。
 
-只检查了以下非敏感事实：
+本轮只实时检查非敏感事实，未读取配置内容：
 
-- node0/node1 的 `~/.config/rescuesched/rclone.conf` 均不存在；
-- `rclone` binary 可用；
+- node0/node1 的首选仓库外配置 `~/.config/rescuesched/rclone.conf` 均不存在；
+- 因配置不存在，required mode `0600` 不满足，remote list 未执行；
+- 两机 `rclone` binary 可用；
 - expected remote name 缺失；
 - private bucket name 缺失；
 - project-dedicated prefix 缺失。
 
-没有读取、打印、复制或提交任何 credential；没有创建测试对象，没有 upload/download/delete。该状态 `blocks_wp3=false`、`blocks_wp4_pilot_formal=true`。
+没有读取、打印、复制或提交 credential；没有创建随机文件或 S3 对象；upload、remote streaming SHA、download、download SHA、三 SHA 比对、exact object delete 和 absence confirmation 均为 `NOT_RUN`。不得把该状态写成 S3 PASS，也不得把 lease 子门禁 PASS 扩写为 WP4 整体 PASS。
 
 证据根：
 
 ```text
-physical-results/wp0-wp3-20260719T070542Z/wp0.2/
+physical-results/wp4-a-gates-20260719T132156Z/04-s3/
 ```
+
+缺失项只登记于 `MISSING_INPUTS.txt`；门禁判定为 `GATE_STATUS.env`。
 
 ## 5. WP3.0：实际 topology 与 NIC
 
@@ -271,19 +281,29 @@ physical-results/wp0-wp3-20260719T070542Z/final-validation-20260719T082516Z/
 
 其中保留了两次不影响测试结论的证据核验调用问题：一次外层 wrapper 报告 exit 1 但捕获的 SSH/远端 CTest 均为 exit 0；一次在错误 cwd 校验 repository-relative `SHA256SUMS` 导致 readback 失败。两者均保留为 `failed-attempt-*`，随后已从 repository root 独立复核并复制 node1 Release 证据，SHA 校验 PASS。
 
-所有旧 BLOCKED、失败 attempt、TSan 诊断、coordinator bug 和意外 invocation 证据继续保留。新的唯一证据根：
+所有旧 BLOCKED、失败 attempt、TSan 诊断、coordinator bug 和意外 invocation 证据继续保留；上一轮证据未修改且 2755 项 SHA 校验全部通过。
+
+本轮 WP4-A 新证据根：
 
 ```text
-physical-results/wp0-wp3-20260719T070542Z/
+physical-results/wp4-a-gates-20260719T132156Z/
 ```
+
+本轮只执行 identity、lease 与 S3 非敏感门禁检查。identity=`PASS`，lease=`PASS_EXACT_UTC_FROZEN_FOR_WP4`，S3=`BLOCKED_MISSING_INPUTS`，所以 WP4 整体仍未获准启动。
+
+本轮 tracked 文档/config 的最终静态验证证据位于 `physical-results/wp4-a-gates-20260719T132156Z/05-git/validation-final/`：`git diff --check`、YAML parse/exact assertions、credential-pattern scan、Git ignore、frozen tag 与 profile SHA 复核 PASS；无 tracked shell/Python 变更，相关语法/compile 检查为 `NOT_APPLICABLE`；`shellcheck` 不可用并如实记录。首次 YAML validator 使用错误顶层 key 的失败 invocation 保留于 `05-git/validation-20260719T135240Z/`，未修改 tracked 文件。
 
 继续未执行、未授权：
 
 ```text
+host_tuning=NOT_RUN
+profile_apply=NOT_RUN
 WP4=NOT_RUN
 two_node_RPC=NOT_RUN
 pilot=NOT_RUN
-scheduler_period_calibration=NOT_RUN
+scheduler_period_test=NOT_RUN
+calibration=NOT_RUN
+WP5=NOT_RUN
 formal_experiment=NOT_RUN
 formal_port_9000=NOT_USED
 ring_4096=NOT_USED

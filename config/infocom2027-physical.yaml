@@ -228,53 +228,103 @@ classification:
   rerun_rule: rerun_entire_four_method_block_after_infrastructure_fix
 
 lease_and_backup_gate:
-  lease_checked_at_utc: "2026-07-19T07:28:13Z"
+  wp4_a_identity_checked_at_utc: "2026-07-19T13:29:49Z"
+  wp4_a_identity_status: PASS
+  identity_branch: codex/infocom2027-integration
+  identity_initial_commit: "77f06874de97d06ded41b2bd647e02e16973fb9c"
+  identity_node0_hostname: amd140.utah.cloudlab.us
+  identity_node1_hostname: amd136.utah.cloudlab.us
+  identity_node0_clean: true
+  identity_node1_clean: true
+  identity_tag_kind: tag
+  identity_tag_object: "2fb914080bc63d357e38b8f4e21a6d5add34dc8e"
+  identity_tag_target: "0a88f03a21802be0eadc3065b93cb97876a6bd2f"
+  identity_node0_profile_sha256: "50a9f9fe2f2c80f37e8e374b359471bc9afb9c5c8958c905ffec313fa980b09b"
+  identity_node1_profile_sha256: "fc6d03bbda541e921d444252ff74aaf944662f63d6ecff536531f26acd11e89e"
+  prior_evidence_sha256s_sha256: "456820bdf445c24c5502e6794249d972b57f7e6f319415f5f97e88158a9edd5f"
+  prior_evidence_verified_entries: 2755
+  identity_evidence_root: "physical-results/wp4-a-gates-20260719T132156Z/02-identity"
+  lease_checked_at_utc: "2026-07-19T13:40:14Z"
   owner_policy_recorded_at_utc: "2026-07-18T15:17:01Z"
   manifest_required_date: "2026-07-25"
   observed_node0_expiration_utc: "2026-07-18T03:00:00Z"
   observed_node1_expiration_utc: "2026-07-18T03:00:00Z"
   node0_manifest_sha256: "ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8"
   node1_manifest_sha256: "ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8"
+  live_status_slice_urn: "urn:publicid:IDN+emulab.net:micro3319+slice+Racked"
+  live_status_sliver_urns:
+    - "urn:publicid:IDN+utah.cloudlab.us+sliver+2419568"
+    - "urn:publicid:IDN+utah.cloudlab.us+sliver+2419569"
   supplemental_am_v3_geni_expires: "2026-07-24 05:00:00"
   supplemental_am_v3_timezone: America/Denver
   supplemental_am_v3_numeric_offset: "-0600"
   supplemental_am_v3_status_sha256:
     node0: "1743b02feed164f002441a93ce6461991046b3eb7bf0442aab5a89d0622e8a12"
     node1: "1743b02feed164f002441a93ce6461991046b3eb7bf0442aab5a89d0622e8a12"
+  live_getversion_sha256:
+    node0: "132ba180bcbc64a659aca4f9ed6d3b3d15e8e78053731c55f620f54ca679b33c"
+    node1: "132ba180bcbc64a659aca4f9ed6d3b3d15e8e78053731c55f620f54ca679b33c"
+  live_site_rss_sha256:
+    node0: "287601b9d33155778e70c8d62dd9ee32eea334601817854299494cfce53a48f4"
+    node1: "287601b9d33155778e70c8d62dd9ee32eea334601817854299494cfce53a48f4"
   supplemental_portal_displayed_expiration: "Jul 24, 2026 7:00 PM"
   supplemental_portal_timezone: null
   deployed_site_source_commit: "0b1fdb15cd434591f3fab98799d78189698686fc"
   lease_exact_expiration_utc: "2026-07-24T11:00:00Z"
   lease_no_new_block_utc: "2026-07-23T23:00:00Z"
-  lease_remaining_at_decision_seconds: 444707
+  lease_remaining_at_decision_seconds: 422386
+  lease_remaining_to_no_new_block_seconds: 379186
   lease_source_consistency: LIVE_AM_STATUS_MATCHED_BOTH_NODES_MANIFEST_STALE
   lease_manifest_subcheck: BLOCKED_STALE_OR_NON_PROPAGATED_VALUE
-  lease_authority_override: LIVE_AM_STATUS_PLUS_DEPLOYED_SITE_TIMEZONE_SOURCE
-  lease_evidence_root: "physical-results/wp0-wp3-20260719T070542Z/wp0.1"
+  lease_authority_override: LIVE_AM_STATUS_PLUS_LIVE_GETVERSION_AND_DEPLOYED_SITE_TIMEZONE_SOURCE
+  lease_evidence_root: "physical-results/wp4-a-gates-20260719T132156Z/03-lease"
   historical_gate_policy_evidence_root: "physical-results/gate-policy-revision-20260718T151701Z"
-  lease_status: PASS_EXACT_UTC_FROZEN_FOR_WP3
-  lease_scope: WP3_HOST_PROFILE_APPLY_RESTORE_ONLY
-  wp3_apply_restore_safety: PASS_SUFFICIENT_TIME
-  s3_checked_at_utc: "2026-07-19T07:29:06Z"
+  lease_status: PASS_EXACT_UTC_FROZEN_FOR_WP4
+  lease_scope: WP4_LEASE_SUBGATE_ONLY_NO_WORKLOAD_AUTHORIZATION
+  wp4_lease_safety: PASS_SUFFICIENT_TIME
+  wp4_workload_authorized_by_lease: false
+  s3_checked_at_utc: "2026-07-19T13:42:15Z"
   s3_region: us-west-2
   rclone_config_path: "~/.config/rescuesched/rclone.conf"
   rclone_config_exists_node0: false
   rclone_config_exists_node1: false
+  rclone_config_mode_node0: null
+  rclone_config_mode_node1: null
+  rclone_config_mode_0600_node0: false
+  rclone_config_mode_0600_node1: false
   s3_remote: null
   s3_bucket: null
   s3_prefix: null
-  s3_gate_status: DEFERRED_UNTIL_PILOT_BLOCKED_MISSING_INPUTS
+  s3_missing_inputs:
+    - node0_repository_external_rclone_config
+    - node1_repository_external_rclone_config
+    - expected_remote_name
+    - private_bucket_name
+    - project_dedicated_prefix
+  s3_gate_status: BLOCKED_MISSING_INPUTS
+  s3_object_operations_run: false
   s3_required_for_wp2: false
   s3_required_for_wp3: false
-  s3_required_before_pilot_or_formal: true
-  s3_evidence_root: "physical-results/wp0-wp3-20260719T070542Z/wp0.2"
+  s3_required_before_wp4_pilot_or_formal: true
+  s3_evidence_root: "physical-results/wp4-a-gates-20260719T132156Z/04-s3"
   wp2_runtime_work_allowed: true
   host_tuning_allowed: false
+  profile_apply_allowed: false
   wp3_profile_regression_completed: true
   rpc_smoke_allowed: false
   pilot_allowed: false
   calibration_allowed: false
+  wp5_allowed: false
   formal_execution_allowed: false
+  wp4_gate_overall_status: BLOCKED_S3_NOT_PASS_AND_NOT_AUTHORIZED
+  wp4_short_cohort_run: false
+  infrastructure_pilot_run: false
+  scheduler_period_test_run: false
+  calibration_run: false
+  wp5_run: false
+  formal_execution_run: false
+  port_9000_used: false
+  ring_4096_used: false
 
 remote_publication_gate:
   checked_at_utc: "2026-07-18T15:03:28Z"
