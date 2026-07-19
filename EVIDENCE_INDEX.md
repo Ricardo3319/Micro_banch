@@ -1,6 +1,6 @@
 # RescueSched Evidence Index
 
-> 索引版本：`evidence-index-v0.3`。最后更新：2026-07-18T16:59:01Z（UTC）。只登记真实存在的证据；`PENDING`/`null` 不代表 PASS。节点本地 `physical-results/` 被 Git 忽略，正式 archive 必须在 WP0 S3 门禁通过后登记 remote object。
+> 索引版本：`evidence-index-v0.4`。最后更新：2026-07-19T08:33:00Z（UTC）。只登记真实存在的证据；`PENDING`/`null` 不代表 PASS。节点本地 `physical-results/` 被 Git 忽略，正式 archive 必须在 WP0 S3 门禁通过后登记 remote object。
 
 ## 1. 字段定义
 
@@ -52,31 +52,47 @@
 | `E-WP2-BUNDLE-SYNC-20260718-01` | `GATE-WP2-SAME-COMMIT-DEPLOYMENT` | N/A | N/A | `physical-results/wp2-node1-sync-20260718T164112Z/STATUS.txt`；`bundle-verify.log`；`node1-fast-forward.log` | N/A | `20260718T164112Z` | N/A | N/A | N/A | `7db91095c4d0f84a5eb568b980748051f994c4cc` | null | null | null | PASS：Git bundle over SCP，node1 fast-forward 到源码提交并 clean；GitHub 未使用、无 force push、冻结 tag 未移动 |
 | `E-WP2-NODE1-EVIDENCE-TRANSFER-20260718-01` | `GATE-WP2-EVIDENCE-PRESERVATION` | N/A | N/A | `physical-results/wp2-node1-evidence-transfer-20260718T164352Z/STATUS.txt`；`copied-evidence-verify.log` | N/A | `20260718T164352Z` | N/A | N/A | N/A | `7db91095c4d0f84a5eb568b980748051f994c4cc` | null | `30eea36dc89fbc78e1d4dfb6305bd16e51d8f27590a9b8108ed94b34ebd4ec2c` | null | PASS：node1 证据 archive SHA 一致，复制后逐文件校验 PASS，node1 原始证据保留 |
 
+| `E-WP0-LEASE-20260719-05` | `GATE-LEASE-EXACT-UTC-WP3` | N/A | N/A | `physical-results/wp0-wp3-20260719T070542Z/wp0.1/GATE_STATUS.env`；`LEASE_DECISION.txt`；`authority-analysis/` | N/A | `20260719T070542Z` | N/A | N/A | N/A | `08b12f60e94ed585e86744997a1077373c70b743` | N/A | null | null | **PASS_EXACT_UTC_FROZEN_FOR_WP3**：两机 manifest 子检查仍为 stale/BLOCKED；两机 live AM status 原始值一致，结合 deployed Utah site `America/Denver`/`-0600` 语义冻结 `T_expire=2026-07-24T11:00:00Z`、`T_no_new_block=2026-07-23T23:00:00Z`；仅授权 WP3 |
+| `E-WP0-S3-20260719-05` | `GATE-REMOTE-RECOVERY` | N/A | N/A | `physical-results/wp0-wp3-20260719T070542Z/wp0.2/GATE_STATUS.env`；`MISSING_INPUTS.txt` | N/A | `20260719T070542Z` | N/A | N/A | N/A | `08b12f60e94ed585e86744997a1077373c70b743` | N/A | null | null | **DEFERRED_UNTIL_PILOT_BLOCKED_MISSING_INPUTS**：两机 repo-external config 不存在，remote/private bucket/project prefix 缺失；未读取 credential，全部对象操作 `NOT_RUN`；不阻塞 WP3，继续阻塞 WP4/pilot/formal |
+| `E-WP3-TOOLING-20260719-01` | `GATE-WP3-RECOVERABLE-TOOLING` | N/A | N/A | `physical-results/wp0-wp3-20260719T070542Z/wp3/tooling-validation-precommit-20260719T075917Z/`；`tooling-sync-20260719T080032Z/`；`tooling-sync-dryrun-order-20260719T080145Z/` | N/A | `20260719T075917Z` | N/A | N/A | N/A | `90c5ff6d774cea0e06563e92681570727b079933` | node0=`50a9f9fe2f2c80f37e8e374b359471bc9afb9c5c8958c905ffec313fa980b09b`; node1=`fc6d03bbda541e921d444252ff74aaf944662f63d6ecff536531f26acd11e89e` | null | null | PASS：capture/validator/dry-run/restore-plan/apply/verify/independent restore 入口已提交；事务顺序修正为 dry-run 早于 final restore plan；bundle over management SCP 同步，GitHub 未使用；Release 26/26，shellcheck `UNAVAILABLE` |
+| `E-WP3-NODE0-20260719-01` | `GATE-WP3-NODE0-PROFILE-RESTORE` | N/A | N/A | `physical-results/wp0-wp3-20260719T070542Z/wp3/node0/attempt-20260719T080242Z/RESULT.env`；`before/`；`apply/`；`restore-1/`；`restore-2/` | N/A | `20260719T080242Z` | N/A | N/A | N/A | `90c5ff6d774cea0e06563e92681570727b079933` | `50a9f9fe2f2c80f37e8e374b359471bc9afb9c5c8958c905ffec313fa980b09b` | null | null | **PASS_APPLY_EFFECTIVE_RESTORE_REGRESSION**：topology PASS；effective 89/89；management SSH PASS；restore PASS；repeat restore `PASS_ALREADY_RESTORED` mutation 0；before/restored、idempotency、control diff 均 0 bytes；workload/port 9000/ring 4096 未使用 |
+| `E-WP3-NODE1-20260719-01` | `GATE-WP3-NODE1-PROFILE-RESTORE` | N/A | N/A | `physical-results/wp0-wp3-20260719T070542Z/wp3/node1/attempt-20260719T080344Z/RESULT.env`；`before/`；`apply/`；`restore-1/`；`restore-2/` | N/A | `20260719T080344Z` | N/A | N/A | N/A | `90c5ff6d774cea0e06563e92681570727b079933` | `fc6d03bbda541e921d444252ff74aaf944662f63d6ecff536531f26acd11e89e` | null | null | **PASS_APPLY_EFFECTIVE_RESTORE_REGRESSION**：topology PASS，cpufreq policy absent 如实记录；effective 89/89；management SSH PASS；restore PASS；repeat restore `PASS_ALREADY_RESTORED` mutation 0；三类 restored diff 均 0 bytes；workload/port 9000/ring 4096 未使用 |
+| `E-WP3-FINAL-VALIDATION-20260719-01` | `GATE-WP3-TRACKED-FILES-AND-RELEASE` | N/A | N/A | `physical-results/wp0-wp3-20260719T070542Z/final-validation-20260719T082516Z/STATUS.env`；`node0/release/`；`node1/release/`；`failed-attempt-*` | N/A | `20260719T082516Z` | N/A | N/A | N/A | `90c5ff6d774cea0e06563e92681570727b079933` | node0=`50a9f9fe2f2c80f37e8e374b359471bc9afb9c5c8958c905ffec313fa980b09b`; node1=`fc6d03bbda541e921d444252ff74aaf944662f63d6ecff536531f26acd11e89e` | null | null | PASS：git diff check、bash syntax、Python compile、YAML parse/frozen-field assertions、tracked credential scan；两机 Release 26/26；shellcheck `UNAVAILABLE`。外层 wrapper exit discrepancy 与一次 wrong-cwd SHA readback 均作为失败调用保留，正确 cwd 复核和 node1 证据复制 SHA PASS |
+| `E-WP3-POSTDOCS-VALIDATION-20260719-01` | `GATE-WP3-FINAL-TRACKED-DOCS` | N/A | N/A | `physical-results/wp0-wp3-20260719T070542Z/final-validation-precommit-20260719T083324Z/STATUS.env`；`physical-results/wp0-wp3-20260719T070542Z/final-validation-postdocs-20260719T083051Z/FAILURE_CLASSIFICATION.txt` | N/A | `20260719T083147Z` | N/A | N/A | N/A | `SELF` | node0=`50a9f9fe2f2c80f37e8e374b359471bc9afb9c5c8958c905ffec313fa980b09b`; node1=`fc6d03bbda541e921d444252ff74aaf944662f63d6ecff536531f26acd11e89e` | null | null | **PASS_WITH_PRESERVED_FAILED_VALIDATOR_INVOCATION**：最终文档后 `git diff --check`、YAML exact lease/WP3/WP4-stop assertions、tracked credential-value scan PASS；首次只读 validator 使用错误顶层 key 而失败，未修改 tracked 文件，失败目录保留并在新目录校正复核 |
+| `E-WP3-FINAL-IDENTITY-20260719-01` | `GATE-WP3-FINAL-SAME-COMMIT-CLEAN-TAG` | N/A | N/A | `physical-results/wp0-wp3-20260719T070542Z/final-identity/STATUS.env`；`node0/git_identity.raw`；`node1/git_identity.raw` | N/A | `20260719-final` | N/A | N/A | N/A | `SELF` | node0=`50a9f9fe2f2c80f37e8e374b359471bc9afb9c5c8958c905ffec313fa980b09b`; node1=`fc6d03bbda541e921d444252ff74aaf944662f63d6ecff536531f26acd11e89e` | null | null | PASS：最终两机 branch/commit 相同且 clean；annotated tag object/target 未变化；GitHub push 未执行；WP4/RPC/pilot/calibration/formal/9000 均未执行 |
+
 ## 3. 租期 manifest 完整性
 
-历史 2026-07-17 复核：
-
-```text
-node0 ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8
-node1 ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8
-```
-
-最新 2026-07-18T14:44:32Z 实时复核：
+历史 2026-07-17、2026-07-18 的失败/BLOCKED 记录继续保留，不被新判定覆盖。它们的两机 manifest SHA 与 2026-07-19 实时复核相同：
 
 ```text
 node0 expiration=2026-07-18T03:00:00Z sha256=ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8
 node1 expiration=2026-07-18T03:00:00Z sha256=ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8
+manifest_subcheck=BLOCKED_STALE_OR_NON_PROPAGATED_VALUE
 ```
 
-完整原始 XML、补充状态源、Portal 截图与逐文件 SHA 清单：
+2026-07-19 本轮没有使用旧缓存推断租期。两机分别实时执行的 `geni-get -n status` 均给出两个 sliver 的原始 `geni_expires=2026-07-24 05:00:00`，状态输出 SHA256 均为：
 
 ```text
-physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.1/
+1743b02feed164f002441a93ce6461991046b3eb7bf0442aab5a89d0622e8a12
 ```
 
-补充诊断：两机 AM API v3 `status` 均列出两个 ready/provisioned sliver，`geni_expires=2026-07-24 05:00:00`；用户 Portal 截图显示 `Jul 24, 2026 7:00 PM`，但截图不含时区。manifest、AM status 与 Portal 展示互不一致，详见 `physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.1/LEASE_SOURCE_DISCREPANCY.txt`。
+实时 Utah CloudLab 官方站点响应给出 `-0600`；保存的 exact deployed source `0b1fdb15cd434591f3fab98799d78189698686fc` 与站点配置证明原始字段使用 `America/Denver` 站点时间。因此本轮冻结：
 
-2026-07-18T15:17:01Z，项目负责人正式确认采用实时 Portal 页面加负责人确认作为 **WP2-only** 的替代租期依据，证据见 `physical-results/gate-policy-revision-20260718T151701Z/`（`SHA256SUMS` SHA256 `29e6f6fece0463c10bd97153cacb1f529c9d95f9e82e0d676684375e5cd8d918`）。因此有效状态为 `PASS_OWNER_ATTESTED_PORTAL_FOR_WP2`；这不改变 manifest 子检查的 BLOCKED 事实，也没有把 2026-07-25 或精确 UTC 登记为已由 manifest 证明。
+```text
+raw=2026-07-24 05:00:00 America/Denver (MDT, -0600)
+T_expire=2026-07-24T11:00:00Z
+T_no_new_block=2026-07-23T23:00:00Z
+status=PASS_EXACT_UTC_FROZEN_FOR_WP3
+```
+
+完整原始 XML、开始/结束 UTC、hostname、exit code、补充 status、部署源码、时区解释、逐文件 SHA 和所有失败 attempts：
+
+```text
+physical-results/wp0-wp3-20260719T070542Z/wp0.1/
+```
+
+该 PASS 只解除 WP3 host profile apply/restore。旧 Portal 截图不含时区，仍作为历史补充事实保留；它没有被改写成精确 UTC authority。
 
 ## 4. 正式证据模板（WP2 代码级证据不属于 formal 记录）
 
@@ -100,4 +116,4 @@ s3_object_key:
 validation_status:
 ```
 
-当前没有 formal block、formal trace、formal config SHA、host-profile SHA、archive SHA 或 S3 object，因此不得在索引中填入推测值。S3 的 `DEFERRED_UNTIL_PILOT` 不是数据面 PASS。
+当前没有 formal block、formal trace、formal config SHA、formal archive SHA 或 S3 object。WP3 的两机 host-profile SHA 已真实冻结并用于 apply/restore regression，但尚不是 WP4/formal config SHA。S3 的 `DEFERRED_UNTIL_PILOT_BLOCKED_MISSING_INPUTS` 不是数据面 PASS。

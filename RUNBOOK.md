@@ -1,43 +1,63 @@
-# RescueSched WP0/WP1/WP2 操作手册
+# RescueSched WP0/WP1/WP2/WP3 操作手册
 
-> 本文覆盖租期/S3 门禁、integration baseline、2026-07-18T15:17:01Z 的 WP2 前置门禁调整，以及源码提交 `7db91095c4d0f84a5eb568b980748051f994c4cc` 的 WP2 本机代码级验证入口。WP2 已在两台节点分别通过代码级 gate，但 host tuning、两机 RPC smoke、pilot、calibration、formal 入口全部保持停止。所有时间使用 UTC；所有 secret 必须位于仓库外。
+> 本文覆盖租期/S3 门禁、integration baseline、WP2 代码级验证，以及 WP3 可恢复 host profile 的 capture/validate/dry-run/apply/verify/restore 入口。2026-07-19 已冻结 `T_expire=2026-07-24T11:00:00Z` 并在两机完成 WP3 apply/restore 回归；主机最终均恢复到 before 状态。WP4、双机 RPC、pilot、calibration、formal、正式端口 `9000` 和 ring `4096` 条件继续停止。所有时间使用 UTC；所有 secret 必须位于仓库外。
 
 ## 0. 主机约定与 fail-closed 规则
 
 | 名称 | 角色 | control path | experiment path | repo |
 | --- | --- | --- | --- | --- |
 | node0 | server | 本机 / `amd140.utah.cloudlab.us` | `10.10.1.1` | `/users/Mingyang/Micro_banch` |
-| node1 | coordinator/client | SSH alias `node1` / `amd136.utah.cloudlab.us` | `10.10.1.2` | `/users/Mingyang/Micro_banch` |
+| node1 | coordinator/client | management SSH alias（本轮为 `node1-control`）/ `amd136.utah.cloudlab.us` | `10.10.1.2` | `/users/Mingyang/Micro_banch` |
 
-全局成功条件：命令 exit code 0、要求的 status/限定范围 owner waiver 明确、identity 一致且输出被保留。恢复入口：任何一步失败即停止后续 gate，保存 stdout/stderr 和目录；不删除失败证据，不执行主机调优。`DEFERRED`/`WAIVED` 不得写成数据面或远端发布 PASS。
+全局成功条件：命令 exit code 0、要求的 gate status 明确、两机 identity 一致且输出被保留。恢复入口：任何一步失败即停止后续 gate，保存 stdout/stderr 和唯一 attempt 目录；不删除旧失败证据，不使用 `reset --hard` 掩盖未知修改。`DEFERRED`/`WAIVED` 不得写成数据面或远端发布 PASS。WP3 只允许修改 experiment NIC `enp65s0f0np0`；control NIC `eno33np0` 只能做只读连通性核验。
 
-## 1. WP0.1：采集 uncached lease manifest
+## 1. WP0.1：实时租期采集与精确 UTC freeze
 
-**Host：node0。Input：** node1 SSH 可用。**标准成功条件：** 两份原始 XML、采集时间和 SHA256 存在，且 expiration 明确显示 2026-07-25，才能判 `PASS_MANIFEST`。**恢复入口：** 若不满足，保存差异并停止受影响阶段；禁止覆盖旧目录。当前负责人调整只允许以 Portal+负责人确认形成 `PASS_OWNER_ATTESTED_PORTAL_FOR_WP2`，不得冒充 `PASS_MANIFEST`。
+**Host：node0 和 node1，分别实时执行。Input：** management SSH 可用。**成功条件：** 每机完整原始 manifest、开始/结束 UTC、hostname、exit code、manifest SHA256 和 expiration 均落盘；若 manifest 与 live status 冲突，必须保留冲突，并以明确时区语义的权威 live source 冻结唯一 UTC。**停止条件：** 两机 sliver 不一致、来源时区仍不明确、节点不可达或剩余窗口不足时，WP3 保持 `BLOCKED_FOR_WP3`，不得执行 host tuning。
 
 ```bash
 cd /users/Mingyang/Micro_banch
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 OUT="physical-results/wp0-lease-$STAMP"
 mkdir -p "$OUT/node0" "$OUT/node1"
-date -u +%Y-%m-%dT%H:%M:%SZ > "$OUT/collected_at_utc.txt"
+
+# 每台机器都要把开始/结束 UTC、stdout、stderr 和 exit code 分开保存；
+# 不得复用旧 manifest。以下为节点本地采集核心命令。
+date -u +%Y-%m-%dT%H:%M:%SZ > "$OUT/node0/manifest.started_at_utc.txt"
+set +e
+geni-get -n manifest > "$OUT/node0/manifest.xml" 2> "$OUT/node0/manifest.stderr.txt"
+rc=$?
+set -e
+printf '%s\n' "$rc" > "$OUT/node0/manifest.exit_code.txt"
+date -u +%Y-%m-%dT%H:%M:%SZ > "$OUT/node0/manifest.completed_at_utc.txt"
 hostname -f > "$OUT/node0/hostname.txt"
-geni-get -n manifest > "$OUT/node0/manifest.xml"
-ssh -o BatchMode=yes node1 'hostname -f' > "$OUT/node1/hostname.txt"
-ssh -o BatchMode=yes node1 'geni-get -n manifest' > "$OUT/node1/manifest.xml"
-sha256sum "$OUT/node0/manifest.xml" "$OUT/node1/manifest.xml" \
-  > "$OUT/MANIFEST_SHA256SUMS"
-grep -oE 'expires="[^"]+"' "$OUT"/node*/manifest.xml
-# 仅在 manifest 与 Portal 认知冲突时补采诊断；这些输出不自动替代 manifest 门禁。
-geni-get -n status > "$OUT/node0/status.raw"
-geni-get -n portalmanifest > "$OUT/node0/portalmanifest.xml"
-ssh -o BatchMode=yes node1 'geni-get -n status' > "$OUT/node1/status.raw"
-ssh -o BatchMode=yes node1 'geni-get -n portalmanifest' > "$OUT/node1/portalmanifest.xml"
+sha256sum "$OUT/node0/manifest.xml" > "$OUT/node0/manifest.sha256"
+
+# 补充来源同样必须实时采集并保存原始输出；其时区语义必须另有权威依据。
+geni-get -n status > "$OUT/node0/status.raw" 2> "$OUT/node0/status.stderr.txt"
+sha256sum "$OUT/node0/status.raw" > "$OUT/node0/status.sha256"
 ```
 
-最新 manifest 证据 `physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.1/` 显示：2026-07-18T14:44:32Z 两机实时执行 `geni-get -n manifest` 后仍均为 `2026-07-18T03:00:00Z`。安装的客户端源码表明 `-n` 不读取本地缓存（该版本客户端本身不缓存）；补采 AM v3 `status` 为 `2026-07-24 05:00:00`，Portal 截图为 `Jul 24, 2026 7:00 PM` 且不含时区。
+node1 使用管理面 SSH 在远端执行相同采集；不要把 SSH 私钥或配置内容写入证据。若使用临时 SSH config，日志只记录别名、hostname、exit code 和 route，不记录 `IdentityFile`。
 
-项目负责人于 2026-07-18T15:17:01Z 正式确认采用调整，证据位于 `physical-results/gate-policy-revision-20260718T151701Z/`：对 WP2 runtime 工作，以实时 Portal 实验页加负责人确认判为 `PASS_OWNER_ATTESTED_PORTAL_FOR_WP2`；manifest 子检查继续登记为 `BLOCKED_STALE_OR_NON_PROPAGATED_VALUE`，精确 expiration UTC 继续为 `UNRESOLVED`。因此当前可进入 WP2 代码工作，但不得进入 host tuning、两机 RPC smoke、pilot、calibration 或 formal。历史证据目录继续保留，不覆盖、不删除。
+2026-07-19 的实际结果位于：
+
+```text
+physical-results/wp0-wp3-20260719T070542Z/wp0.1/
+```
+
+两机实时 manifest 仍为 `2026-07-18T03:00:00Z`，SHA256 均为 `ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8`，因此 manifest 子检查保留为 `BLOCKED_STALE_OR_NON_PROPAGATED_VALUE`。两机实时 `geni-get -n status` 原始 `geni_expires` 均为 `2026-07-24 05:00:00`，status SHA256 均为 `1743b02feed164f002441a93ce6461991046b3eb7bf0442aab5a89d0622e8a12`。实时 Utah CloudLab 官方站点给出 `-0600`，保存的 exact deployed source `0b1fdb15cd434591f3fab98799d78189698686fc` 与站点配置证明该字段使用 `America/Denver` 本地时间，因此冻结：
+
+```text
+raw live status = 2026-07-24 05:00:00 America/Denver (MDT, -0600)
+T_expire = 2026-07-24T11:00:00Z
+T_no_new_block = 2026-07-23T23:00:00Z
+decision_at_utc = 2026-07-19T07:28:13Z
+remaining_at_decision = 5d 03h 31m 47s
+status = PASS_EXACT_UTC_FROZEN_FOR_WP3
+```
+
+旧 Portal `Jul 24, 2026 7:00 PM` 截图没有时区，只保留为历史补充事实，不作为精确 UTC authority。该 PASS 只授权 WP3 apply/restore；不授权 WP4、pilot 或 formal。
 
 ## 2. WP0.2：S3 最小权限闭环
 
@@ -86,9 +106,9 @@ printf 'status=PASS\nobject=%s\nlocal_sha256=%s\nremote_sha256=%s\ndownloaded_sh
 rm -f "$TEST_FILE" "$DOWNLOADED"
 ```
 
-当前 2026-07-18T14:54:03Z preflight 证据位于 `physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.2/`：两机首选/默认 rclone 配置、remote 和 private bucket/project prefix 均缺失，故所有数据面步骤为 `NOT_RUN`。负责人调整后状态为 `DEFERRED_UNTIL_PILOT`：它不再阻塞 WP2，但进入 pilot/formal 前仍必须按本节完成全部闭环。
+2026-07-19 的实时非敏感检查位于 `physical-results/wp0-wp3-20260719T070542Z/wp0.2/`：两机 `~/.config/rescuesched/rclone.conf` 均不存在，expected remote、private bucket 和 project-dedicated prefix 均缺失。状态为 `DEFERRED_UNTIL_PILOT_BLOCKED_MISSING_INPUTS`；upload、remote stream SHA、download、download SHA、delete 和 absence confirmation 全部 `NOT_RUN`。它不阻塞 WP3，但继续硬阻塞 WP4/pilot/formal。
 
-`S3_GATE_STATUS.txt` 只能包含无 secret 的 remote/object 标识和 hashes。当前没有配置输入，本节尚未执行，不能写成 PASS。
+S3 gate 日志只能包含无 secret 的非敏感标识和 hashes；不得运行 `rclone config show`，不得把 credential 放入参数、Git、证据或聊天。缺少输入时只能列缺失项，不能写成 PASS。
 
 ## 3. 安装 WP1 依赖
 
@@ -324,17 +344,90 @@ physical-results/wp2-final-node1-20260718T164147Z/
 
 这两个目录记录源码提交 `7db91095c4d0f84a5eb568b980748051f994c4cc` 上两机分别完成 Release 26/26、ASan/UBSan 26/26、TSan 2/2、loopback gate 和 synthetic 12/12。
 
-## 10. WP2 完成后的硬停止线
+## 10. WP3 可恢复 host profile 操作入口
 
-WP2 的 `PASS_CODE_LEVEL_ON_BOTH_NODES` 只证明同一源码在两台节点分别完成代码级测试，不证明双机网络实验、性能或论文主张，也不自动授权 WP3。
+本节只执行 host profile discovery/apply/restore，不启动任何 workload。两机 profile：
+
+```text
+config/host-profiles/infocom2027-node0.env
+config/host-profiles/infocom2027-node1.env
+```
+
+node0 profile SHA256：`50a9f9fe2f2c80f37e8e374b359471bc9afb9c5c8958c905ffec313fa980b09b`；node1 profile SHA256：`fc6d03bbda541e921d444252ff74aaf944662f63d6ecff536531f26acd11e89e`。执行前必须再次只读核对 lease gate、clean/same branch+commit 和冻结 tag object/target。
+
+每台机器必须严格按以下事务顺序使用新的唯一 attempt 目录；**dry-run 必须早于 final restore plan**：
+
+```bash
+cd /users/Mingyang/Micro_banch
+PROFILE=config/host-profiles/infocom2027-node0.env   # node1 改为 node1 profile
+ATTEMPT="physical-results/wp3-$(hostname -s)-$(date -u +%Y%m%dT%H%M%SZ)"
+mkdir -p "$ATTEMPT"
+
+scripts/capture_physical_host_state.sh \
+  --out-dir "$ATTEMPT/before" --label before --profile "$PROFILE"
+
+python3 scripts/validate_host_profile.py \
+  --profile "$PROFILE" --repo-root "$PWD" --out-dir "$ATTEMPT/validator"
+
+scripts/apply_host_profile.sh \
+  --profile "$PROFILE" --log-dir "$ATTEMPT/dry-run" --dry-run
+
+scripts/prepare_host_restore_plan.sh \
+  --profile "$PROFILE" --out-dir "$ATTEMPT/restore-plan"
+
+bash -n scripts/restore_host_state.sh
+scripts/restore_host_state.sh --plan "$ATTEMPT/restore-plan" --check-plan
+
+# Atomic apply validates the prepared independent plan. If apply fails after mutation,
+# the apply entry invokes the independent restore path and the attempt must stop.
+scripts/apply_host_profile.sh \
+  --profile "$PROFILE" --log-dir "$ATTEMPT/apply" \
+  --plan "$ATTEMPT/restore-plan"
+
+scripts/verify_host_profile.sh \
+  --profile "$PROFILE" --plan "$ATTEMPT/restore-plan" \
+  --mode effective --out-dir "$ATTEMPT/effective-verify"
+
+# 另开 management SSH/control-plane 检查：hostname、route、branch、HEAD、clean、tag。
+# route 必须继续使用 eno33np0；不得修改或关闭 control NIC。
+
+scripts/restore_host_state.sh \
+  --plan "$ATTEMPT/restore-plan" --log-dir "$ATTEMPT/restore-1"
+
+scripts/verify_host_profile.sh \
+  --profile "$PROFILE" --plan "$ATTEMPT/restore-plan" \
+  --mode restored --out-dir "$ATTEMPT/restored-verify-1"
+
+# 第二次独立 restore 是幂等性门禁。
+scripts/restore_host_state.sh \
+  --plan "$ATTEMPT/restore-plan" --log-dir "$ATTEMPT/restore-2"
+scripts/verify_host_profile.sh \
+  --profile "$PROFILE" --plan "$ATTEMPT/restore-plan" \
+  --mode restored --out-dir "$ATTEMPT/restored-verify-2"
+```
+
+成功条件：topology validator PASS、dry-run PASS、apply/effective verification PASS、management SSH PASS、第一次 restore PASS、第二次 restore 为 `PASS_ALREADY_RESTORED` 且 `mutation_count=0`、before/restored semantic diff 和 control diff 均为空。restore 不能只依赖 shell trap；禁止 reboot/reset 掩盖失败。
+
+2026-07-19 已完成的 attempts：
+
+```text
+physical-results/wp0-wp3-20260719T070542Z/wp3/node0/attempt-20260719T080242Z/
+physical-results/wp0-wp3-20260719T070542Z/wp3/node1/attempt-20260719T080344Z/
+```
+
+两机 effective verification 均为 89/89，第一次 restore PASS，第二次 restore 均为 `PASS_ALREADY_RESTORED`、mutation 0；before/restored、idempotency 和 control diff 均为 0 bytes。management SSH 在 effective/restored 后保持可用并经 `eno33np0`。本次没有运行 workload。
+
+## 11. WP3 完成后的硬停止线
+
+WP3 的 `PASS_APPLY_EFFECTIVE_RESTORE_REGRESSION_ON_BOTH_NODES` 只证明主机 profile 能安全 apply、核验并恢复，不证明双机网络实验、性能或论文主张。主机已恢复到 before 状态。
 
 仍然禁止：
 
-1. WP3、CPU/IRQ/NIC tuning、sysctl/governor 变更或 host profile apply；
-2. 两机 RPC smoke、pilot、calibration 和 formal experiment；
-3. 使用正式实验端口 `9000` 或正式结果目录；
+1. WP4、双机 RPC smoke、pilot、scheduler period calibration、arrival calibration 和 formal experiment；
+2. 使用正式实验端口 `9000`、正式结果目录或 NIC ring `4096` pilot 条件；
+3. 在 S3 gate 未完成前进入 WP4/pilot/formal；
 4. 把 S3 `DEFERRED` 写成 PASS，或把 GitHub `WAIVED` 写成已 push；
-5. 把旧 manifest 值改写成已证明 2026-07-25；
-6. 把本机 loopback 写成双机 RPC，或把 synthetic smoke 写成正式物理结果。
+5. 把旧 manifest 子检查改写成 PASS，或忽略其 stale/non-propagated 事实；
+6. 把 WP2 loopback/synthetic 或 WP3 host transaction 写成双机或正式性能证据。
 
-进入 WP3/pilot/formal 前必须先冻结可审计的精确 lease expiration UTC；进入 pilot/formal 前还必须完成 S3 upload/remote-stream-SHA/download/local-SHA/delete 闭环，并获得相应阶段的明确授权。
+进入 WP4/pilot/formal 前必须完成 S3 upload/remote-stream-SHA/download/local-SHA/delete/absence-confirmation 闭环，并获得明确的新授权；当前任务到 WP3 恢复与证据封存为止。

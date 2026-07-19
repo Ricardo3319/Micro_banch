@@ -1,21 +1,22 @@
 # RescueSched 项目状态
 
 > 单一状态入口。实验合同见 `EXPERIMENT_CONTRACT.md`，操作入口见 `RUNBOOK.md`，证据映射见 `EVIDENCE_INDEX.md`。
-> 最后更新：2026-07-18T16:59:01Z（UTC）
+> 最后更新：2026-07-19T08:27:23Z（UTC）
 
 ## 1. 当前结论
 
 | 项目 | 状态 | 结论 |
 | --- | --- | --- |
-| WP0.1 租期证据 | **PASS_OWNER_ATTESTED_PORTAL_FOR_WP2** | 项目负责人于 2026-07-18T15:17:01Z 确认采用实时 Portal 实验页作为 WP2 前置租期依据。页面显示实验 `ready`、`Jul 24, 2026 7:00 PM`；两机 manifest 子检查仍显示旧值 `2026-07-18T03:00:00Z`，保持 `BLOCKED_STALE_OR_NON_PROPAGATED_VALUE`，不得描述为 manifest 已证明 2026-07-25。Portal 未显示时区，精确 expiration UTC 仍未冻结。 |
-| WP0.2 S3 闭环 | **DEFERRED_UNTIL_PILOT** | 负责人明确同意 WP2 前暂不执行 S3 闭环。rclone 配置、remote、private bucket/project prefix 仍缺失，upload、remote SHA、download、local SHA 和 delete 全部 `NOT_RUN`；进入 pilot 或 formal 前仍必须完成，不得写成 PASS。 |
-| WP1 集成基线 | **PASS_LOCAL / REMOTE_PUBLICATION_WAIVED_BY_OWNER** | 冻结基线 `0a88f03a21802be0eadc3065b93cb97876a6bd2f` 的两机 Release 24/24 CTest 历史证据保持有效；WP2 源码提交 `7db91095c4d0f84a5eb568b980748051f994c4cc` 已在两机 clean/same commit 上验证。annotated tag 未移动。GitHub 远端 branch/tag 实际仍为 `ABSENT`，没有 push；负责人同意该发布不阻塞 WP2。 |
-| WP2 runtime | **PASS_CODE_LEVEL_ON_BOTH_NODES** | WP2.1–WP2.9 的代码路径已在源码提交 `7db91095c4d0f84a5eb568b980748051f994c4cc` 完成；node0/node1 各自 Release 26/26、ASan/UBSan 26/26、TSan 核心 2/2、本机四策略 UDP mapping/fail-closed gate 和 3×4 synthetic smoke 均 PASS。该状态只证明两机分别完成代码级验证，不是双机 RPC、pilot 或正式物理结果，也不自动授权 WP3。 |
-| WP3 及以后 | **BLOCKED** | 不允许 CPU/IRQ/NIC tuning、host profile apply、两机 RPC smoke、pilot、calibration 或 formal experiment；不得使用正式端口或正式结果目录。 |
+| WP0.1 租期证据 | **PASS_EXACT_UTC_FROZEN_FOR_WP3** | 2026-07-19 在 node0/node1 重新实时执行 `geni-get -n manifest` 与 `geni-get -n status`。manifest 仍为旧值 `2026-07-18T03:00:00Z`，子检查保持 `BLOCKED_STALE_OR_NON_PROPAGATED_VALUE`；两机 live AM status 均为 `2026-07-24 05:00:00`。依据实时 Utah CloudLab 官方站点 `-0600` 时区、精确部署源码和 `America/Denver` 站点配置，冻结 `T_expire=2026-07-24T11:00:00Z`、`T_no_new_block=2026-07-23T23:00:00Z`。该 PASS 的授权范围仅为 WP3 host profile apply/restore。 |
+| WP0.2 S3 闭环 | **DEFERRED_UNTIL_PILOT_BLOCKED_MISSING_INPUTS** | 两机首选仓库外配置 `~/.config/rescuesched/rclone.conf` 均不存在；expected remote、private bucket、project-dedicated prefix 未提供。未读取或记录 credential，upload、remote SHA、download、download SHA、delete、absence confirmation 全部 `NOT_RUN`。该项不阻塞已授权的 WP3，但继续硬阻塞 WP4/pilot/formal。 |
+| WP1 集成基线 | **PASS_LOCAL / REMOTE_PUBLICATION_WAIVED_BY_OWNER** | 冻结 annotated tag `physical-integration-v1` 的 object/target 保持 `2fb914080bc63d357e38b8f4e21a6d5add34dc8e` → `0a88f03a21802be0eadc3065b93cb97876a6bd2f`。GitHub publication 仍为 owner waiver；本次没有 push、force push 或 remote URL 修改。 |
+| WP2 runtime | **PASS_CODE_LEVEL_ON_BOTH_NODES** | WP2 源码提交 `7db91095c4d0f84a5eb568b980748051f994c4cc` 的两机代码级验证保持有效：Release 26/26、ASan/UBSan 26/26、TSan 核心 2/2、本机 loopback/mapping/fail-closed gate 和 synthetic 12/12。它仍不是双机 RPC、pilot 或正式物理结果。 |
+| WP3 host profile | **PASS_APPLY_EFFECTIVE_RESTORE_REGRESSION_ON_BOTH_NODES** | node0/node1 topology validator、profile freeze、before capture、dry-run、atomic apply、89 项 effective verification、management SSH、独立 restore、第二次零修改 restore 和 restored semantic diff 均 PASS。两机均已恢复到 before 状态，未保持调优态。 |
+| WP4 及以后 | **BLOCKED_NOT_AUTHORIZED_AND_S3_NOT_PASS** | 不允许双机 RPC、pilot、scheduler period calibration、arrival calibration、formal paired block 或正式性能结论；正式端口 `9000`、ring `4096` 条件和正式结果目录不得使用。 |
 
-**当前允许事项：** 保存 WP2 最终身份/测试证据，以及处理后续阶段所需的精确 lease UTC 与 S3 最小权限门禁；任何 WP3 执行仍需新的明确放行。
+**当前允许事项：** 保存并复核 WP0.1/WP0.2/WP3 证据、同步同一文档提交、只读验证两机 identity/tag，以及补齐进入 WP4 前的非敏感 S3 输入。
 
-**当前禁止事项：** WP3、host tuning、host profile apply、两机 RPC smoke、pilot、calibration 和 formal paired block。进入这些阶段前必须冻结可审计的精确 lease UTC，并按相应门禁完成 S3 最小权限恢复闭环。
+**当前禁止事项：** WP4、双机 RPC、pilot、calibration、formal experiment、正式端口 `9000`、ring `4096` pilot 条件和正式结果目录。WP3 已完成恢复，不得把本次结果描述为性能实验。
 
 ## 2. Git 与集成范围
 
@@ -26,186 +27,267 @@ integration_base: 5379f1af94a042814493a6329386b056738bfeaf
 frozen_integration_commit: 0a88f03a21802be0eadc3065b93cb97876a6bd2f
 current_status_commit: SELF
 wp2_source_commit: 7db91095c4d0f84a5eb568b980748051f994c4cc
+wp3_tooling_commit_1: b8eec4768d9dc556f43af925a9520e05c503b7a5
+wp3_tooling_commit_2: 90c5ff6d774cea0e06563e92681570727b079933
 release_tag: physical-integration-v1
 release_tag_object: 2fb914080bc63d357e38b8f4e21a6d5add34dc8e
 release_tag_target: 0a88f03a21802be0eadc3065b93cb97876a6bd2f
 release_tag_kind: annotated
-remote_branch_actual: ABSENT
-remote_tag_actual: ABSENT
+remote_branch_actual: ABSENT_AT_LAST_REMOTE_CHECK
+remote_tag_actual: ABSENT_AT_LAST_REMOTE_CHECK
 remote_publication: WAIVED_BY_OWNER
+this_run_github_push: NOT_PERFORMED
 ```
 
-选择性集成保留了以下历史研究资产：
-
-- `src/core/simulator.cpp`
-- `paper/main.tex`
-- `artifacts/step-21-corrected-full/manifest.md`
-- `scripts/corrected_eval_analysis.py`
-
-物理裁剪分支中会破坏完整 simulator 的公共 `constants.h` / `types.h` 简化版本未导入。物理 runtime、UDP RPC、trace generator、测试和辅助脚本按 allowlist 集成，公共构建文件手工合并。
-
-## 3. 租期事实、来源差异与负责人调整
-
-| 节点 | hostname | 实时采集 UTC | manifest expiration | manifest SHA256 |
-| --- | --- | --- | --- | --- |
-| node0 | `amd140.utah.cloudlab.us` | `2026-07-18T14:44:32Z` | `2026-07-18T03:00:00Z` | `ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8` |
-| node1 | `amd136.utah.cloudlab.us` | `2026-07-18T14:44:32Z` | `2026-07-18T03:00:00Z` | `ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8` |
-
-实时 manifest、AM API v3 `status` 和 Portal 展示仍不一致：
+WP3 新增的 tracked 工具和冻结 profile：
 
 ```text
-node0/node1 manifest: 2026-07-18T03:00:00Z
-AM API v3 status:    2026-07-24 05:00:00
-Portal experiment:   Jul 24, 2026 7:00 PM (timezone not shown)
+config/host-profiles/infocom2027-node0.env
+config/host-profiles/infocom2027-node1.env
+scripts/lib/host_profile_common.sh
+scripts/capture_physical_host_state.sh
+scripts/validate_host_profile.py
+scripts/prepare_host_restore_plan.sh
+scripts/apply_host_profile.sh
+scripts/verify_host_profile.sh
+scripts/restore_host_state.sh
 ```
 
-manifest 原始 XML、采集时间、SHA 和来源差异诊断位于：
+选择性集成保留了 `src/core/simulator.cpp`、`paper/main.tex`、`artifacts/step-21-corrected-full/manifest.md`、`scripts/corrected_eval_analysis.py` 和所有旧失败/BLOCKED/TSan/coordinator 证据。
+
+## 3. WP0.1：精确租期 UTC freeze
+
+2026-07-19 的两机实时采集结果：
+
+| 节点 | hostname | manifest expiration | manifest SHA256 | live AM status raw expiration | live status SHA256 |
+| --- | --- | --- | --- | --- | --- |
+| node0 | `amd140.utah.cloudlab.us` | `2026-07-18T03:00:00Z` | `ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8` | `2026-07-24 05:00:00` | `1743b02feed164f002441a93ce6461991046b3eb7bf0442aab5a89d0622e8a12` |
+| node1 | `amd136.utah.cloudlab.us` | `2026-07-18T03:00:00Z` | `ca30afc0937b830d2dbaf6594ea7af878ed368e150df54901256b5ece72a27a8` | `2026-07-24 05:00:00` | `1743b02feed164f002441a93ce6461991046b3eb7bf0442aab5a89d0622e8a12` |
+
+解释和冻结依据：
+
+1. manifest 原始 XML、开始/结束 UTC、hostname、exit code、expiration 和 SHA 均重新实时采集，未使用旧缓存；manifest 子检查仍保持旧值事实。
+2. 两机 `geni-get -n status` 返回相同 sliver expiration 原始字段 `2026-07-24 05:00:00`。
+3. 实时 Utah CloudLab 官方 RSS 响应给出数字偏移 `-0600`；实时 `geni-get -n getversion` 对应部署源码提交 `0b1fdb15cd434591f3fab98799d78189698686fc`，保存的 exact source 和站点配置证明该字段按站点 `America/Denver` 本地时间解释。
+4. 2026-07-24 位于 MDT，偏移 `-06:00`，所以 `2026-07-24 05:00:00 America/Denver = 2026-07-24T11:00:00Z`。旧 Portal `Jul 24, 2026 7:00 PM` 截图无时区，只作为保留的历史补充事实，不用于精确 UTC 计算。
+
+冻结结果：
 
 ```text
-physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.1/
+decision_utc=2026-07-19T07:28:13Z
+T_expire=2026-07-24T11:00:00Z
+T_no_new_block=2026-07-23T23:00:00Z
+remaining_at_decision=5d 03h 31m 47s
+wp3_apply_restore_safety=PASS_SUFFICIENT_TIME
+scope=WP3_HOST_PROFILE_APPLY_RESTORE_ONLY
 ```
 
-负责人于 2026-07-18T15:17:01Z 明确确认实验已延期并采用以下政策：
-
-- 对 **WP2 runtime 工作**，以实时 Portal 实验页和负责人确认作为有效租期依据；
-- WP0.1 生效状态为 `PASS_OWNER_ATTESTED_PORTAL_FOR_WP2`；
-- manifest 子检查仍为 `BLOCKED_STALE_OR_NON_PROPAGATED_VALUE`，旧值和旧证据不得删除或改写；
-- 精确 expiration UTC 仍为 `UNRESOLVED`，所以当前不计算或冻结 formal `T_expire`、`T_no_new_block`、`T_restore`；
-- host tuning、RPC smoke、pilot、calibration 和 formal experiment 继续停止。
-
-负责人确认和 Portal 截图证据位于：
+证据根：
 
 ```text
-physical-results/gate-policy-revision-20260718T151701Z/
-SHA256SUMS SHA256: 29e6f6fece0463c10bd97153cacb1f529c9d95f9e82e0d676684375e5cd8d918
+physical-results/wp0-wp3-20260719T070542Z/wp0.1/
 ```
 
-## 4. 主机事实与计划布局
+关键入口为 `GATE_STATUS.env`、`LEASE_DECISION.txt`、`authority-analysis/deployed-source-0b1fdb15/` 和 `authority-analysis/live-site-timezone/`。AM 直连 403、remote wrapper 和 SCP dot-path 等失败 attempts 全部保留。
 
-两机当前均为 Ubuntu 22.04.2、kernel `5.15.0-177-generic`、AMD EPYC 7302P；每机 16 个 physical cores / 32 个 logical CPUs，CPU `16-31` 分别是 CPU `0-15` 的 SMT siblings。实验 NIC 为 Mellanox `mlx5_core`。
+## 4. WP0.2：S3 最小权限闭环
 
-当前只保留计划布局，没有 apply host profile：
+状态：`DEFERRED_UNTIL_PILOT_BLOCKED_MISSING_INPUTS`。
 
-- node0 worker CPUs：`0-15`，每个 physical core 只选一个 worker；
-- node0 control/IRQ logical CPUs：`16-31`，它们是 worker cores 的 SMT siblings；
-- node1 client/coordinator：CPU `0-7`；实验 IRQ：CPU `8-15`；CPU `16-31` 不运行实验线程；
-- 旧文档中的 `0,2,4,...,30` worker 示例无效，因为会重复使用同一 physical core。
+只检查了以下非敏感事实：
 
-正式使用前必须由 topology validator 重新验证，并在 WP3 冻结实际 profile/hash。当前没有执行 topology freeze、sysctl/governor 变更或任何 host tuning。
+- node0/node1 的 `~/.config/rescuesched/rclone.conf` 均不存在；
+- `rclone` binary 可用；
+- expected remote name 缺失；
+- private bucket name 缺失；
+- project-dedicated prefix 缺失。
 
-## 5. S3 状态
+没有读取、打印、复制或提交任何 credential；没有创建测试对象，没有 upload/download/delete。该状态 `blocks_wp3=false`、`blocks_wp4_pilot_formal=true`。
 
-2026-07-18T14:54:03Z 的非敏感 preflight 事实保持不变：
-
-```yaml
-rclone_config_preferred: ~/.config/rescuesched/rclone.conf
-rclone_config_preferred_exists: false
-rclone_config_default: ~/.config/rclone/rclone.conf
-rclone_config_default_exists: false
-discovered_rclone_configs: []
-remote_name: null
-bucket: null
-prefix: null
-test_object: null
-local_source_sha256: null
-remote_stream_sha256: null
-downloaded_local_sha256: null
-delete_confirmation: NOT_RUN
-s3_gate_status: DEFERRED_UNTIL_PILOT
-```
-
-没有读取、打印、复制或提交 access key、secret key、session token；没有创建、下载或删除任何 S3 对象。原始 preflight 证据位于：
+证据根：
 
 ```text
-physical-results/wp0-wp1-unblock-20260718T144404Z/wp0.2/
+physical-results/wp0-wp3-20260719T070542Z/wp0.2/
 ```
 
-本次调整只把 S3 从“WP2 前阻塞”改为“pilot/formal 前必须完成”。实际数据面闭环仍未通过。
+## 5. WP3.0：实际 topology 与 NIC
 
-## 6. WP1 本地基线与远端发布
-
-2026-07-18T15:17:01Z 的负责人政策证据采集时：
+两机一致的硬件事实：
 
 ```text
-node0 HEAD: 50362f346c7fcdbbc064760e5670841eb5ac5db4, clean, branch codex/infocom2027-integration
-node1 HEAD: 50362f346c7fcdbbc064760e5670841eb5ac5db4, clean, branch codex/infocom2027-integration
-node0 tag object: 2fb914080bc63d357e38b8f4e21a6d5add34dc8e -> 0a88f03a21802be0eadc3065b93cb97876a6bd2f
-node1 tag object: 2fb914080bc63d357e38b8f4e21a6d5add34dc8e -> 0a88f03a21802be0eadc3065b93cb97876a6bd2f
+online logical CPUs: 0-31
+physical packages: 1
+physical cores: 16
+threads per core: 2
+SMT sibling pairs: CPU n <-> CPU 16+n, n=0..15
+NUMA nodes: 1
+experiment NIC: enp65s0f0np0 (10.10.1.x)
+control NIC: eno33np0 (128.110.219.x)
+experiment NIC driver: mlx5_core
+experiment NIC firmware: 16.28.4512 (DEL0000000015)
+experiment NIC PCI: 0000:41:00.0
+experiment NIC sysfs NUMA node: -1
 ```
 
-最近一次远端确认时间为 2026-07-18T15:03:28Z：
+validator 在修改前验证 online/duplicate/SMT/role/NIC/queue/ring/governor 合同。experiment NIC 与 management NIC 被明确区分；所有 NIC、IRQ、RPS/XPS、offload、ring、RSS、sysctl 变更只针对 experiment profile，control NIC 未修改。
+
+## 6. WP3.1 node0 profile
+
+冻结 role map：
 
 ```text
-refs/heads/codex/infocom2027-integration: ABSENT
-refs/tags/physical-integration-v1: ABSENT
-push performed: no
-force push: no
-remote URL modified: no
+workers: 0-15
+receivers: 16-17
+response senders: 18-19
+scheduler: 20
+server main: 21
+housekeeping: 22-23
+experiment IRQs: 24-31
+async IRQ affinity: 22-23
+XPS CPUs: 18-21
 ```
 
-远端发布状态现为 `WAIVED_BY_OWNER`，含义是“不要求于 WP2 前完成”，而不是已经 push。若以后发布，仍只能普通非 force push，并验证远端 branch/tag；冻结 tag 不得移动、删除或重建。
-
-## 7. WP2 代码级双机验证
-
-WP2 源码提交：
+worker `0-15` 覆盖 16 个唯一 physical cores。由于机器只有 16 个 physical cores，而合同需要 32 个逻辑角色，profile 显式冻结 `ALLOW_WORKER_AUX_SMT_SIBLINGS=true`：辅助/IRQ logical CPUs 是 worker 的 SMT siblings；辅助角色物理 core 集合与 IRQ 物理 core 集合互不重叠，所有 logical CPU 唯一且各角色不重用同一 logical CPU。该例外由 validator 明确检查，不是绕过 validator。
 
 ```text
-7db91095c4d0f84a5eb568b980748051f994c4cc
+profile_sha256=50a9f9fe2f2c80f37e8e374b359471bc9afb9c5c8958c905ffec313fa980b09b
+governor_effective=performance
+combined_queues=8
+ring_rx_tx=1024/1024
+irqbalance_effective=inactive
+RPS=off
+GRO/GSO/TSO/LRO=off
+RX/TX checksum=on
+rmem_max/wmem_max=16777216
+netdev_max_backlog=250000
+socket_request_probe=8388608
+ulimit_probe=65536
 ```
 
-两台节点是在同一 clean 源码提交上**分别**完成代码级验证；没有运行 node0↔node1 RPC：
+事务结果：dry-run PASS；apply `PASS_APPLIED_AND_EFFECTIVE_VERIFIED`；effective verification 89/89；独立 restore PASS；重复 restore `PASS_ALREADY_RESTORED` 且 mutation count 0；before/restored、idempotency 和 control diff 均 0 bytes。node1 经 management IP 新建 SSH 到 node0，effective/restored 后均通过且 route 为 `eno33np0`。
 
-| 验证项 | node0 | node1 | 范围说明 |
-| --- | --- | --- | --- |
-| Release CTest | PASS 26/26 | PASS 26/26 | 全量当前测试集；冻结 WP1 tag 的历史值仍是 24/24 |
-| ASan/UBSan | PASS 26/26 | PASS 26/26 | Debug sanitizer 全量测试 |
-| TSan 核心 | PASS 2/2 | PASS 2/2 | `physical_runtime_validity`、`wp2_runtime_concurrency` |
-| 本机 UDP gate | PASS | PASS | loopback `127.0.0.1:19184`；正式端口 `9000` 未使用 |
-| 四方法 ingress mapping | PASS | PASS | 各节点内部 L0/L1/M0/M1 projection 完全一致；不要求跨节点 SHA 相同 |
-| response queue failure injection | PASS_EXPECTED_FAIL_CLOSED | PASS_EXPECTED_FAIL_CLOSED | 212 次 enqueue failure 被显式报告，无 silent drop |
-| synthetic stress | PASS 12/12 | PASS 12/12 | 3 repetitions × 4 policies；仅 in-process implementation smoke |
-
-关键证据根：
+证据：
 
 ```text
-physical-results/wp2-runtime-20260718T153855Z/
-physical-results/wp2-final-node0-20260718T163835Z/
-physical-results/wp2-final-node1-20260718T164147Z/
-physical-results/wp2-node1-sync-20260718T164112Z/
-physical-results/wp2-node1-evidence-transfer-20260718T164352Z/
+physical-results/wp0-wp3-20260719T070542Z/wp3/node0/attempt-20260719T080242Z/
 ```
 
-TSan 诊断历史没有删除：GCC 11/glibc 2.35 `pthread_cond_clockwait` 假阳性复现、一次异常生命周期测试挂起、中断快照、20/20 生命周期压力 PASS、sanitizer 重试 PASS 和最终两机 clean-commit PASS 均保留。误将 `--help` 作为 sanitizer build-dir 参数而产生的仓库根 `--help/` 目录也保留，并仅通过本地 `.git/info/exclude` 排除。
+## 7. WP3.2 node1 profile
 
-## 8. 已完成、证据保留与下一步
+冻结 role map：
 
-本次完成：
+```text
+client-0 sender/receiver: 0,1
+client-1 sender/receiver: 2,3
+coordinator: 4
+monitor: 5
+post-run archive: 6-7
+experiment IRQs: 8-15
+unused for experiment: 16-31
+async IRQ affinity: 4-5
+XPS CPUs: 0,2,4
+```
 
-1. 在源码提交 `7db91095c4d0f84a5eb568b980748051f994c4cc` 完成 WP2.1–WP2.9 代码路径和新增单元/并发测试；
-2. node0/node1 均在 clean/same commit 上完成 Release 26/26、ASan/UBSan 26/26、TSan 核心 2/2；
-3. 两机分别完成本机四策略 UDP/mapping gate、response queue fail-closed 注入和 3×4 synthetic stress；
-4. 使用 Git bundle over SCP 将 WP2 源码 fast-forward 同步到 node1，未使用 GitHub、未 force push；
-5. 安全复制 node1 WP2 原始证据到 node0，并验证 archive SHA；node1 原始目录继续保留；
-6. 未改写、移动、删除或重建 `physical-integration-v1`；所有旧 BLOCKED、失败 attempt、TSan 诊断和 coordinator bug 证据继续保留；
-7. 没有执行 WP3、CPU/IRQ/NIC tuning、host profile apply、双机 RPC、pilot、calibration 或 formal experiment，正式端口 `9000` 未使用。
+CPU `0-15` 各自位于唯一 physical core；`16-31` 为其 SMT siblings，本次不运行实验线程。node1 没有 cpufreq policy，profile 和 validator 均登记 `GOVERNOR_MODE=absent`，未伪造 `performance`。
 
-下一步：
+```text
+profile_sha256=fc6d03bbda541e921d444252ff74aaf944662f63d6ecff536531f26acd11e89e
+cpufreq_policy=absent
+combined_queues=8
+ring_rx_tx=1024/1024
+irqbalance_effective=inactive
+RPS=off
+GRO/GSO/TSO/LRO=off
+RX/TX checksum=on
+rmem_max/wmem_max=16777216
+netdev_max_backlog=250000
+socket_request_probe=8388608
+ulimit_probe=65536
+```
 
-1. 精确 lease expiration UTC 仍需以可审计来源冻结；manifest 子检查仍为 `BLOCKED_STALE_OR_NON_PROPAGATED_VALUE`；
-2. 进入 pilot/formal 前必须完成 S3 最小权限 upload/remote-SHA/download/local-SHA/delete 闭环；
-3. WP3 及两机 RPC 需在外部门禁完成后另行明确授权，WP2 的代码级 PASS 不构成自动放行；
-4. GitHub publication 保持 `WAIVED_BY_OWNER`；远端 refs 仍 `ABSENT`，没有 push。
+事务结果：dry-run PASS；apply `PASS_APPLIED_AND_EFFECTIVE_VERIFIED`；effective verification 89/89；独立 restore PASS；重复 restore `PASS_ALREADY_RESTORED` 且 mutation count 0；before/restored、idempotency 和 control diff 均 0 bytes。node0 经 management IP 新建 SSH 到 node1，effective/restored 后均通过且 route 为 `eno33np0`。
 
-## 9. 未冻结合同值
+证据：
 
-以下字段保持 `PENDING`/`null`，不得从 smoke 或仿真结果臆测：
+```text
+physical-results/wp0-wp3-20260719T070542Z/wp3/node1/attempt-20260719T080344Z/
+```
 
-- 精确 lease expiration UTC、`T_expire`、`T_no_new_block`、`T_restore`；
-- scheduler/poll period；
-- handoff estimate；
-- 四个 anchor 的 physical arrival scale；
-- decision logging 的代码默认已固定为 bounded / 100000 / 1000 µs，但包含这些值的 formal config SHA 尚未冻结；
-- formal host-profile SHA；
-- formal config SHA；
-- S3 remote/bucket/prefix/object；
-- 16-worker 与 12-worker fallback 的最终选择。
+## 8. WP3.3 可恢复事务门禁
+
+实际顺序严格为：
+
+```text
+capture before
+→ standalone topology validator
+→ dry-run (zero mutation)
+→ final independent restore plan
+→ restore entry bash -n and plan integrity/host check
+→ atomic apply
+→ effective-state verification
+→ management SSH verification
+→ effective snapshot
+→ independent restore
+→ restored verification and snapshot
+→ repeated restore zero-mutation path
+→ repeated restored verification
+```
+
+两机最终结果：
+
+| Gate | node0 | node1 |
+| --- | --- | --- |
+| topology validator | PASS | PASS |
+| dry-run | PASS | PASS |
+| atomic apply | PASS | PASS |
+| effective verification | PASS 89/89 | PASS 89/89 |
+| management SSH after apply | PASS via `eno33np0` | PASS via `eno33np0` |
+| independent restore | PASS | PASS |
+| restored verification | PASS 9/9 | PASS 9/9 |
+| repeated restore | PASS_ALREADY_RESTORED, mutation 0 | PASS_ALREADY_RESTORED, mutation 0 |
+| before/restored semantic diff | 0 bytes | 0 bytes |
+| repeated-restore diff | 0 bytes | 0 bytes |
+| control diff | 0 bytes | 0 bytes |
+
+WP3 总状态：`PASS_APPLY_EFFECTIVE_RESTORE_REGRESSION_ON_BOTH_NODES`。恢复后 `irqbalance` 再次 active；没有 reboot/reset，没有用 `git reset --hard`，没有关闭 management NIC，没有运行 workload。
+
+## 9. 测试、证据保留与后续门禁
+
+WP3 tracked 工具与最终文档/config 验证：
+
+- `git diff --check`: PASS；
+- WP3 shell `bash -n`: PASS；
+- `python3 -m py_compile scripts/validate_host_profile.py`: PASS；
+- `config/infocom2027-physical.yaml` parse 与冻结字段断言：PASS；
+- tracked-file credential-pattern scan: PASS；
+- node0/node1 最终 Release CTest: 26/26 PASS；
+- `shellcheck`: UNAVAILABLE，exit 127，已记录而非伪造 PASS。
+
+最终验证证据：
+
+```text
+physical-results/wp0-wp3-20260719T070542Z/final-validation-20260719T082516Z/
+```
+
+其中保留了两次不影响测试结论的证据核验调用问题：一次外层 wrapper 报告 exit 1 但捕获的 SSH/远端 CTest 均为 exit 0；一次在错误 cwd 校验 repository-relative `SHA256SUMS` 导致 readback 失败。两者均保留为 `failed-attempt-*`，随后已从 repository root 独立复核并复制 node1 Release 证据，SHA 校验 PASS。
+
+所有旧 BLOCKED、失败 attempt、TSan 诊断、coordinator bug 和意外 invocation 证据继续保留。新的唯一证据根：
+
+```text
+physical-results/wp0-wp3-20260719T070542Z/
+```
+
+继续未执行、未授权：
+
+```text
+WP4=NOT_RUN
+two_node_RPC=NOT_RUN
+pilot=NOT_RUN
+scheduler_period_calibration=NOT_RUN
+formal_experiment=NOT_RUN
+formal_port_9000=NOT_USED
+ring_4096=NOT_USED
+GitHub_push=NOT_PERFORMED
+```
+
+进入 WP4/pilot/formal 前，至少必须完成 WP0.2 S3 最小权限闭环，并获得对应阶段的新授权。scheduler/poll period、handoff estimate、arrival scales、formal config SHA、formal archive/S3 object 和 16/12-worker 最终选择仍保持未冻结。
