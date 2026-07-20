@@ -325,14 +325,58 @@ if(Python3_Interpreter_FOUND)
         FIXTURES_REQUIRED cloudlab_order_csv
     )
 
+    add_test(NAME wp4_blind_infrastructure_validator
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration/test_wp4_infrastructure_validator.py
+                ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    add_test(NAME wp4_nonformal_config_identity
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration/test_wp4_nonformal_config.py
+                ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    set_tests_properties(
+        wp4_blind_infrastructure_validator
+        wp4_nonformal_config_identity
+        PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         add_test(NAME two_node_coordinator_rejects_commit_mismatch
             COMMAND ${Python3_EXECUTABLE}
                     ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration/test_two_node_coordinator_fail_closed.py
                     ${CMAKE_CURRENT_SOURCE_DIR}
         )
-        set_tests_properties(two_node_coordinator_rejects_commit_mismatch PROPERTIES
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        add_test(NAME two_node_coordinator_exact_pid_lifecycle
+            COMMAND ${Python3_EXECUTABLE}
+                    ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration/test_two_node_coordinator_lifecycle.py
+                    ${CMAKE_CURRENT_SOURCE_DIR}
+        )
+        add_test(NAME network_counter_capture_fail_closed
+            COMMAND ${Python3_EXECUTABLE}
+                    ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration/test_network_counter_capture_fail_closed.py
+                    ${CMAKE_CURRENT_SOURCE_DIR}
+        )
+        add_test(NAME background_job_exact_pid_lifecycle
+            COMMAND ${Python3_EXECUTABLE}
+                    ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration/test_background_job_exact_pid.py
+                    ${CMAKE_CURRENT_SOURCE_DIR}
+        )
+        add_test(NAME rpc_affinity_fail_closed
+            COMMAND ${Python3_EXECUTABLE}
+                    ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration/test_rpc_affinity_fail_closed.py
+                    ${CMAKE_CURRENT_SOURCE_DIR}
+                    $<TARGET_FILE:rescuesched_trace_generator>
+                    $<TARGET_FILE:rescuesched_rpc_client>
+                    $<TARGET_FILE:rescuesched_rpc_server>
+        )
+        set_tests_properties(
+            two_node_coordinator_rejects_commit_mismatch
+            two_node_coordinator_exact_pid_lifecycle
+            network_counter_capture_fail_closed
+            background_job_exact_pid_lifecycle
+            rpc_affinity_fail_closed
+            PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
     endif()
 endif()

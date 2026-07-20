@@ -1,4 +1,5 @@
 #include "physical/runtime.h"
+#include "physical/runtime_support.h"
 #include "physical/trace.h"
 #include "sim/workloads/trace.h"
 
@@ -234,6 +235,38 @@ void test_terminal_cancel_callback_fires_once() {
     fs::remove(trace_path);
 }
 
+
+void test_strict_scheduler_affinity_fails_closed() {
+    const fs::path trace_path = temp_path("scheduler-affinity.csv");
+    write_v2_trace(trace_path,
+        "rescuesched-trace-v2," + embedded_hash()
+            + ",1,0,short,1,100,0,0\n");
+    const auto allowed = physical::process_allowed_cpu_ids();
+    require(!allowed.empty(), "no allowed CPU is available for affinity test");
+
+    physical::RuntimeConfig config;
+    config.policy = physical::PolicyKind::M1_RESCUE_SCHED;
+    config.worker_count = 1;
+    config.cpu_ids = {allowed.front()};
+    config.scheduler_cpu_id = 1000000;
+    config.strict_affinity = true;
+    config.time_scale = 1.0;
+    config.host_overhead_us = 0.0;
+    physical::FrozenTrace trace = physical::FrozenTrace::load_csv(
+        trace_path.string(), config.worker_count);
+    physical::PhysicalRuntime runtime(std::move(trace), config);
+
+    bool rejected = false;
+    try {
+        (void)runtime.run();
+    } catch (const std::exception& error) {
+        rejected = std::string(error.what()).find("strict scheduler affinity")
+            != std::string::npos;
+    }
+    require(rejected, "strict invalid scheduler CPU did not fail closed");
+    fs::remove(trace_path);
+}
+
 void test_network_ingress_identity_and_lifecycle() {
     const fs::path trace_path = temp_path("network-ingress.csv");
     write_v3_trace(trace_path,
@@ -289,6 +322,7 @@ int main() {
         test_rescue_migrates_only_queued_and_appends_tail();
         test_running_cancel_is_non_preemptive();
         test_terminal_cancel_callback_fires_once();
+        test_strict_scheduler_affinity_fails_closed();
         test_network_ingress_identity_and_lifecycle();
         std::cout << "physical runtime tests: PASS\n";
         return 0;

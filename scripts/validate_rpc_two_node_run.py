@@ -55,8 +55,19 @@ def main() -> int:
         description="Validate a four-policy, two-partition physical RPC run."
     )
     parser.add_argument("run_dir", type=Path)
+    parser.add_argument(
+        "--policies",
+        default=",".join(POLICIES),
+        help="Comma-separated policy directories to validate",
+    )
     args = parser.parse_args()
     root = args.run_dir.resolve()
+    policies = tuple(item for item in args.policies.split(",") if item)
+    if not policies:
+        parser.error("--policies must not be empty")
+    unknown = sorted(set(policies) - set(POLICIES))
+    if unknown:
+        parser.error(f"unknown policies: {unknown}")
 
     failures: list[str] = []
     shard_maps: dict[str, dict[int, str]] = {}
@@ -65,7 +76,7 @@ def main() -> int:
     source_port_bases: dict[str, set[str]] = {}
     row_counts: dict[str, int] = {}
 
-    for policy in POLICIES:
+    for policy in policies:
         policy_dir = root / policy
         server_status_path = policy_dir / "server" / "RPC_SERVER_STATUS.txt"
         if not server_status_path.exists():
@@ -175,9 +186,9 @@ def main() -> int:
 
     if len(trace_hashes) != 1:
         failures.append(f"trace input SHA set is not singular: {sorted(trace_hashes)}")
-    if len(shard_maps) == len(POLICIES):
-        baseline = shard_maps[POLICIES[0]]
-        for policy in POLICIES[1:]:
+    if len(shard_maps) == len(policies):
+        baseline = shard_maps[policies[0]]
+        for policy in policies[1:]:
             if shard_maps[policy] != baseline:
                 differing = sorted(
                     request_id
@@ -185,7 +196,7 @@ def main() -> int:
                     if baseline.get(request_id) != shard_maps[policy].get(request_id)
                 )
                 failures.append(
-                    f"{policy} ingress mapping differs from L0 at "
+                    f"{policy} ingress mapping differs from {policies[0]} at "
                     f"{len(differing)} requests; first={differing[:5]}"
                 )
 

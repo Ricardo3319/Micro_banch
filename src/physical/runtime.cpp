@@ -224,6 +224,8 @@ struct PhysicalRuntime::Impl {
     std::thread scheduler;
     std::vector<int> worker_cpu_ids;
     std::vector<bool> worker_affinity_ok;
+    bool scheduler_affinity_ok = true;
+    bool scheduler_ready = false;
     std::mutex mutex;
     std::mutex decision_mutex;
     std::mutex ready_mutex;
@@ -662,6 +664,15 @@ struct PhysicalRuntime::Impl {
     }
 
     void scheduler_loop() {
+        const bool affinity_ok = config.scheduler_cpu_id < 0
+            || pin_current_thread_to_cpu(config.scheduler_cpu_id);
+        {
+            std::lock_guard<std::mutex> lock(ready_mutex);
+            scheduler_affinity_ok = affinity_ok;
+            scheduler_ready = true;
+        }
+        ready_cv.notify_all();
+
         const auto period = std::chrono::duration_cast<Clock::duration>(
             std::chrono::duration<double, std::micro>(
                 config.check_period_us * config.time_scale));
@@ -961,8 +972,23 @@ struct PhysicalRuntime::Impl {
             throw std::runtime_error("strict worker affinity setup failed");
         }
         if (config.policy == PolicyKind::M0_ALTO_THRESHOLD
-            || config.policy == PolicyKind::M1_RESCUE_SCHED)
+            || config.policy == PolicyKind::M1_RESCUE_SCHED) {
             scheduler = std::thread([this] { scheduler_loop(); });
+            {
+                std::unique_lock<std::mutex> lock(ready_mutex);
+                ready_cv.wait(lock, [&] { return scheduler_ready; });
+                affinity_failed = affinity_failed || !scheduler_affinity_ok;
+            }
+            if (config.strict_affinity && affinity_failed) {
+                stopping.store(true, std::memory_order_release);
+                for (auto& cv : worker_cvs) cv->notify_all();
+                scheduler_wait_cv.notify_all();
+                if (scheduler.joinable()) scheduler.join();
+                for (auto& worker : workers) worker.join();
+                workers.clear();
+                throw std::runtime_error("strict scheduler affinity setup failed");
+            }
+        }
     }
 
     void stop_threads() {
@@ -981,6 +1007,7 @@ struct PhysicalRuntime::Impl {
         std::lock_guard<std::mutex> lock(mutex);
         result.worker_cpu_ids = worker_cpu_ids;
         result.worker_affinity_ok = worker_affinity_ok;
+        result.scheduler_affinity_ok = scheduler_affinity_ok;
         {
             std::lock_guard<std::mutex> decision_lock(decision_mutex);
             result.decisions = decisions;
@@ -1018,6 +1045,9 @@ struct PhysicalRuntime::Impl {
             ? submit_lag_sum_us / static_cast<double>(submitted_count) : 0.0;
         result.summary.affinity_failure_count = static_cast<uint64_t>(std::count(
             worker_affinity_ok.begin(), worker_affinity_ok.end(), false));
+        result.summary.scheduler_cpu_id = config.scheduler_cpu_id;
+        result.summary.scheduler_affinity_ok = scheduler_affinity_ok;
+        if (!scheduler_affinity_ok) ++result.summary.affinity_failure_count;
 
         for (const Descriptor& descriptor : descriptors) {
             RequestOutcome outcome = outcome_for(descriptor);
@@ -1353,6 +1383,7 @@ void PhysicalRuntime::write_outputs(const RuntimeResult& result) const {
                "P99_server_completion_us,P999_server_completion_us,migrated_requests,"
                "migration_count,duplicate_execution_count,duplicate_completion_count,"
                "lost_descriptor_count,nonzero_reservation_count,affinity_failure_count,"
+               "scheduler_cpu_id,scheduler_affinity_ok,"
                "scheduler_epochs_scheduled,scheduler_epochs_executed,"
                "scheduler_epochs_missed,scheduler_max_epoch_lag_us,"
                "l1_poll_epochs_scheduled,l1_poll_attempts,l1_poll_successes,"
@@ -1382,6 +1413,8 @@ void PhysicalRuntime::write_outputs(const RuntimeResult& result) const {
             << summary.lost_descriptor_count << ','
             << summary.nonzero_reservation_count << ','
             << summary.affinity_failure_count << ','
+            << summary.scheduler_cpu_id << ','
+            << (summary.scheduler_affinity_ok ? 1 : 0) << ','
             << summary.scheduler_epochs_scheduled << ','
             << summary.scheduler_epochs_executed << ','
             << summary.scheduler_epochs_missed << ','

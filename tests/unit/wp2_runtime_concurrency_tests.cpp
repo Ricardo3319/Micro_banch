@@ -4,10 +4,12 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <mutex>
 #include <numeric>
 #include <stdexcept>
 #include <string>
@@ -106,16 +108,47 @@ void test_receiver_lifecycle_race_100_each_policy() {
 
 void test_measured_cpu_service_updates_only_after_completion() {
     const fs::path trace_path = temp_path("cpu-ewma.csv");
-    write_v2(trace_path,
-        "rescuesched-trace-v2," + embedded_hash() + ",1,0,short,24,1000,0,0\n"
-        "rescuesched-trace-v2," + embedded_hash() + ",2,2000,short,5,1000,0,0\n");
+    write_v3(trace_path,
+        "rescuesched-trace-v3," + embedded_hash()
+            + ",flow_affine,1,101,0,short,24,1000,0,0\n"
+        "rescuesched-trace-v3," + embedded_hash()
+            + ",flow_affine,2,202,0,short,5,1000,0,0\n");
     auto config = base_config(physical::PolicyKind::L0_RANDOM_CORE, 1);
+    config.arrival_mode = physical::ArrivalMode::NETWORK_INGRESS;
     config.initial_short_service_us = 10.0;
     config.ewma_alpha = 1.0;
     physical::FrozenTrace trace = physical::FrozenTrace::load_csv(
         trace_path.string(), config.worker_count);
     physical::PhysicalRuntime runtime(std::move(trace), config);
-    const auto result = runtime.run();
+
+    std::mutex completion_mutex;
+    std::condition_variable completion_cv;
+    bool first_completed = false;
+    runtime.set_completion_callback([&](const physical::RequestOutcome& outcome) {
+        if (outcome.id != 1 || outcome.state != physical::DescriptorState::DONE) return;
+        {
+            std::lock_guard<std::mutex> lock(completion_mutex);
+            first_completed = true;
+        }
+        completion_cv.notify_one();
+    });
+
+    runtime.start_network_ingress();
+    require(runtime.submit_network_request(1, 101, 0)
+                == physical::NetworkSubmitStatus::ACCEPTED,
+            "first EWMA request was not accepted");
+    {
+        std::unique_lock<std::mutex> lock(completion_mutex);
+        require(completion_cv.wait_for(lock, std::chrono::seconds(5), [&] {
+                    return first_completed;
+                }),
+                "first EWMA request did not complete before timeout");
+    }
+    require(runtime.submit_network_request(2, 202, 0)
+                == physical::NetworkSubmitStatus::ACCEPTED,
+            "second EWMA request was not accepted");
+    const auto result = runtime.finish_network_ingress(false);
+
     require(result.summary.invariants_pass, "CPU service runtime invariants failed");
     const auto& first = result.requests.at(0);
     const auto& second = result.requests.at(1);

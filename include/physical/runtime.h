@@ -63,6 +63,7 @@ struct RuntimeConfig {
     std::vector<int> cpu_ids;
     std::vector<int> control_cpu_ids;
     std::vector<int> irq_cpu_ids;
+    int scheduler_cpu_id = -1;
     bool allow_control_irq_smt_siblings = false;
     bool strict_affinity = true;
     int warmup_requests = 0;
@@ -162,6 +163,8 @@ struct RuntimeSummary {
     uint64_t lost_descriptor_count = 0;
     uint64_t nonzero_reservation_count = 0;
     uint64_t affinity_failure_count = 0;
+    int scheduler_cpu_id = -1;
+    bool scheduler_affinity_ok = true;
     uint64_t scheduler_epochs_scheduled = 0;
     uint64_t scheduler_epochs_executed = 0;
     uint64_t scheduler_epochs_missed = 0;
@@ -196,6 +199,7 @@ struct RuntimeResult {
     std::vector<MigrationRecord> migrations;
     std::vector<int> worker_cpu_ids;
     std::vector<bool> worker_affinity_ok;
+    bool scheduler_affinity_ok = true;
 };
 
 class MethodEwmaEstimator {

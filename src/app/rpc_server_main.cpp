@@ -42,6 +42,8 @@ struct Options {
     int idle_timeout_seconds = 10;
     std::vector<int> receiver_cpus;
     std::vector<int> response_sender_cpus;
+    int scheduler_cpu = -1;
+    int server_main_cpu = -1;
     std::size_t response_queue_capacity = 65536;
     uint64_t inject_response_queue_failure_after = 0;
     physical::RuntimeConfig runtime;
@@ -114,6 +116,8 @@ void usage(const char* executable) {
         << "  --bind ADDRESS --port N --idle-timeout-seconds N\n"
         << "  --receiver-cpus A,B       Exactly two fixed receiver CPUs\n"
         << "  --response-sender-cpus A,B Exactly two fixed sender CPUs\n"
+        << "  --scheduler-cpu N         Dedicated scheduler CPU for M0/M1\n"
+        << "  --server-main-cpu N       Pin the server main/control thread\n"
         << "  --response-queue-capacity N (default: 65536)\n\n"
         << "Runtime:\n"
         << "  --policy NAME --workers N --cpus A,B,...\n"
@@ -153,6 +157,10 @@ Options parse_options(int argc, char** argv) {
         else if (arg == "--response-sender-cpus"
                  || arg.rfind("--response-sender-cpus=", 0) == 0)
             options.response_sender_cpus = parse_cpu_list(take("--response-sender-cpus"));
+        else if (arg == "--scheduler-cpu" || arg.rfind("--scheduler-cpu=", 0) == 0)
+            options.scheduler_cpu = std::stoi(take("--scheduler-cpu"));
+        else if (arg == "--server-main-cpu" || arg.rfind("--server-main-cpu=", 0) == 0)
+            options.server_main_cpu = std::stoi(take("--server-main-cpu"));
         else if (arg == "--response-queue-capacity"
                  || arg.rfind("--response-queue-capacity=", 0) == 0)
             options.response_queue_capacity = std::stoull(take("--response-queue-capacity"));
@@ -224,6 +232,8 @@ Options parse_options(int argc, char** argv) {
     if (!options.response_sender_cpus.empty()
         && options.response_sender_cpus.size() != 2)
         throw std::runtime_error("--response-sender-cpus must contain exactly two CPUs");
+    if (options.scheduler_cpu < -1 || options.server_main_cpu < -1)
+        throw std::runtime_error("scheduler and server-main CPU IDs must be non-negative");
 
     auto allowed = physical::process_allowed_cpu_ids();
     if (options.runtime.cpu_ids.empty()) {
@@ -256,6 +266,11 @@ Options parse_options(int argc, char** argv) {
     options.runtime.control_cpu_ids = options.receiver_cpus;
     options.runtime.control_cpu_ids.insert(options.runtime.control_cpu_ids.end(),
         options.response_sender_cpus.begin(), options.response_sender_cpus.end());
+    if (options.scheduler_cpu >= 0)
+        options.runtime.control_cpu_ids.push_back(options.scheduler_cpu);
+    if (options.server_main_cpu >= 0)
+        options.runtime.control_cpu_ids.push_back(options.server_main_cpu);
+    options.runtime.scheduler_cpu_id = options.scheduler_cpu;
     options.runtime.output_dir = options.output_dir;
     return options;
 }
@@ -295,8 +310,11 @@ std::string ipv4_peer(const sockaddr_storage& address, uint16_t* source_port) {
 } // namespace
 
 int main(int argc, char** argv) {
+    std::string output_dir_hint;
+    bool output_directory_initialized = false;
     try {
         const Options options = parse_options(argc, argv);
+        output_dir_hint = options.output_dir;
         if (options.help) {
             usage(argv[0]);
             return 0;
@@ -305,6 +323,18 @@ int main(int argc, char** argv) {
         if (fs::exists(options.output_dir) && !fs::is_empty(options.output_dir))
             throw std::runtime_error("output directory must be new or empty");
         fs::create_directories(options.output_dir);
+        output_directory_initialized = true;
+
+        const bool server_main_affinity_ok = options.server_main_cpu < 0
+            || physical::pin_current_thread_to_cpu(options.server_main_cpu);
+        if (options.runtime.strict_affinity && !server_main_affinity_ok) {
+            std::ofstream status(fs::path(options.output_dir) / "RPC_SERVER_STATUS.txt");
+            status << "status=FAIL\n"
+                   << "classification=INFRASTRUCTURE_FAILURE\n"
+                   << "server_main_cpu=" << options.server_main_cpu << '\n'
+                   << "server_main_affinity_pass=0\n";
+            return 1;
+        }
 
         auto trace = physical::FrozenTrace::load_csv(
             options.trace_path, options.runtime.worker_count);
@@ -327,6 +357,8 @@ int main(int argc, char** argv) {
         std::atomic<uint64_t> accepted{0};
         std::atomic<uint64_t> invalid_packets{0};
         std::atomic<uint64_t> duplicate_packets{0};
+        std::atomic<uint64_t> unknown_requests{0};
+        std::atomic<uint64_t> flow_mismatch_requests{0};
         std::atomic<uint64_t> responses_enqueued{0};
         std::atomic<uint64_t> response_enqueue_failures{0};
         std::atomic<uint64_t> responses_sent{0};
@@ -485,6 +517,10 @@ int main(int argc, char** argv) {
                                 peers.erase(request_id);
                                 if (submit == physical::NetworkSubmitStatus::DUPLICATE_OR_TERMINAL)
                                     duplicate_packets.fetch_add(1, std::memory_order_relaxed);
+                                else if (submit == physical::NetworkSubmitStatus::UNKNOWN_REQUEST)
+                                    unknown_requests.fetch_add(1, std::memory_order_relaxed);
+                                else if (submit == physical::NetworkSubmitStatus::FLOW_MISMATCH)
+                                    flow_mismatch_requests.fetch_add(1, std::memory_order_relaxed);
                                 else
                                     invalid_packets.fetch_add(1, std::memory_order_relaxed);
                                 continue;
@@ -519,6 +555,44 @@ int main(int argc, char** argv) {
             sender_affinity_ok.begin(), sender_affinity_ok.end(), [](bool value) {
                 return value;
             });
+        const bool startup_infrastructure_pass = receiver_affinity_pass
+            && sender_affinity_pass
+            && receiver_internal_failures.load(std::memory_order_acquire) == 0;
+        if (!startup_infrastructure_pass) {
+            stop_receivers.store(true, std::memory_order_release);
+            receive_cv.notify_all();
+            for (auto& thread : receivers) thread.join();
+            const auto failed_result = runtime.finish_network_ingress(true);
+            response_queue.close();
+            for (auto& thread : senders) thread.join();
+            runtime.write_outputs(failed_result);
+            for (int fd : sockets) ::close(fd);
+
+            std::ofstream status(fs::path(options.output_dir) / "RPC_SERVER_STATUS.txt");
+            status << "status=FAIL\n"
+                   << "classification=INFRASTRUCTURE_FAILURE\n"
+                   << "expected_requests=" << expected_requests << '\n'
+                   << "accepted_requests=" << accepted.load() << '\n'
+                   << "responses_enqueued=" << responses_enqueued.load() << '\n'
+                   << "responses_sent=" << responses_sent.load() << '\n'
+                   << "invalid_packets=" << invalid_packets.load() << '\n'
+                   << "duplicate_packets=" << duplicate_packets.load() << '\n'
+                   << "unknown_requests=" << unknown_requests.load() << '\n'
+                   << "flow_mismatch_requests=" << flow_mismatch_requests.load() << '\n'
+                   << "response_enqueue_failures=" << response_enqueue_failures.load() << '\n'
+                   << "response_send_failures=" << response_send_failures.load() << '\n'
+                   << "receiver_affinity_pass=" << (receiver_affinity_pass ? 1 : 0) << '\n'
+                   << "response_sender_affinity_pass=" << (sender_affinity_pass ? 1 : 0) << '\n'
+                   << "scheduler_affinity_pass="
+                   << (failed_result.summary.scheduler_affinity_ok ? 1 : 0) << '\n'
+                   << "server_main_affinity_pass=" << (server_main_affinity_ok ? 1 : 0) << '\n'
+                   << "receiver_internal_failures=" << receiver_internal_failures.load() << '\n'
+                   << "idle_termination=0\n"
+                   << "runtime_invariants_pass="
+                   << (failed_result.summary.invariants_pass ? 1 : 0) << '\n';
+            std::cerr << "RPC server startup infrastructure gate failed before readiness\n";
+            return 1;
+        }
 
         std::cout << "RPC_SERVER_READY port=" << options.port
                   << " workers=" << options.runtime.worker_count
@@ -588,12 +662,17 @@ int main(int argc, char** argv) {
             && responses_sent.load() == expected_requests
             && invalid_packets.load() == 0
             && duplicate_packets.load() == 0
+            && unknown_requests.load() == 0
+            && flow_mismatch_requests.load() == 0
             && response_enqueue_failures.load() == 0
             && response_send_failures.load() == 0
             && receiver_internal_failures.load() == 0
-            && receiver_affinity_pass && sender_affinity_pass;
+            && receiver_affinity_pass && sender_affinity_pass
+            && server_main_affinity_ok && result.summary.scheduler_affinity_ok;
         const bool infrastructure_failure = !receiver_affinity_pass
-            || !sender_affinity_pass || receiver_internal_failures.load() != 0
+            || !sender_affinity_pass || !server_main_affinity_ok
+            || !result.summary.scheduler_affinity_ok
+            || receiver_internal_failures.load() != 0
             || result.summary.infrastructure_failure;
         std::ofstream status(fs::path(options.output_dir) / "RPC_SERVER_STATUS.txt");
         status << "status=" << (pass ? "PASS" : "FAIL") << '\n'
@@ -606,6 +685,8 @@ int main(int argc, char** argv) {
                << "responses_sent=" << responses_sent.load() << '\n'
                << "invalid_packets=" << invalid_packets.load() << '\n'
                << "duplicate_packets=" << duplicate_packets.load() << '\n'
+               << "unknown_requests=" << unknown_requests.load() << '\n'
+               << "flow_mismatch_requests=" << flow_mismatch_requests.load() << '\n'
                << "response_enqueue_failures=" << response_enqueue_failures.load() << '\n'
                << "response_send_failures=" << response_send_failures.load() << '\n'
                << "response_queue_capacity=" << response_queue.capacity() << '\n'
@@ -613,8 +694,13 @@ int main(int argc, char** argv) {
                << "epoll_receiver_count=2\nresponse_sender_count=2\n"
                << "receiver_cpus=" << join_ints(options.receiver_cpus) << '\n'
                << "response_sender_cpus=" << join_ints(options.response_sender_cpus) << '\n'
+               << "scheduler_cpu=" << options.scheduler_cpu << '\n'
+               << "server_main_cpu=" << options.server_main_cpu << '\n'
                << "receiver_affinity_pass=" << (receiver_affinity_pass ? 1 : 0) << '\n'
                << "response_sender_affinity_pass=" << (sender_affinity_pass ? 1 : 0) << '\n'
+               << "scheduler_affinity_pass="
+               << (result.summary.scheduler_affinity_ok ? 1 : 0) << '\n'
+               << "server_main_affinity_pass=" << (server_main_affinity_ok ? 1 : 0) << '\n'
                << "receiver_internal_failures=" << receiver_internal_failures.load() << '\n'
                << "idle_wait_calls=" << idle_wait_calls << '\n'
                << "idle_predicate_wakeups=" << idle_predicate_wakeups << '\n'
@@ -630,6 +716,17 @@ int main(int argc, char** argv) {
                   << " output=" << options.output_dir << '\n';
         return pass ? 0 : 1;
     } catch (const std::exception& error) {
+        if (output_directory_initialized && !output_dir_hint.empty()) {
+            const std::filesystem::path status_path =
+                std::filesystem::path(output_dir_hint) / "RPC_SERVER_STATUS.txt";
+            if (!std::filesystem::exists(status_path)) {
+                std::ofstream status(status_path);
+                status << "status=FAIL\n"
+                       << "classification=INFRASTRUCTURE_FAILURE\n"
+                       << "failure_stage=EXCEPTION_BEFORE_COMPLETION\n"
+                       << "error=" << error.what() << '\n';
+            }
+        }
         std::cerr << "RPC server error: " << error.what() << '\n';
         return 2;
     }

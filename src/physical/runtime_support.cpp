@@ -72,14 +72,21 @@ CpuWorkMeasurement execute_thread_cpu_work(double target_cpu_us) {
     result.target_cpu_us = target_cpu_us;
     if (target_cpu_us == 0.0) return result;
 #if defined(__linux__)
+    timespec cpu_warmup{};
     timespec cpu_start{};
     timespec cpu_now{};
+    const uint64_t target_ns = static_cast<uint64_t>(std::ceil(target_cpu_us * 1000.0));
+    uint64_t state = 0x9e3779b97f4a7c15ULL;
+
+    // Resolve and warm the per-thread CPU clock before the measured interval.
+    // Cold first-use overhead is significant relative to a 5 us service target
+    // and otherwise becomes indistinguishable from the synthetic CPU service.
+    if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &cpu_warmup) != 0)
+        throw std::runtime_error("CLOCK_THREAD_CPUTIME_ID warmup failed");
     const auto wall_start = std::chrono::steady_clock::now();
     if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &cpu_start) != 0)
         throw std::runtime_error("CLOCK_THREAD_CPUTIME_ID start failed");
     const uint64_t start_ns = timespec_ns(cpu_start);
-    const uint64_t target_ns = static_cast<uint64_t>(std::ceil(target_cpu_us * 1000.0));
-    uint64_t state = 0x9e3779b97f4a7c15ULL;
     do {
         state ^= state << 7U;
         state ^= state >> 9U;

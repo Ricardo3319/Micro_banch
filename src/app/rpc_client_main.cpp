@@ -1,4 +1,5 @@
 #include "physical/rpc_protocol.h"
+#include "physical/runtime_support.h"
 #include "physical/trace.h"
 #include "sim/workloads/trace.h"
 
@@ -13,6 +14,7 @@
 #include <cerrno>
 #include <chrono>
 #include <cmath>
+#include <condition_variable>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -48,6 +50,8 @@ struct Options {
     std::string seed_label = "UNSPECIFIED";
     int repetition = 0;
     uint64_t start_at_unix_ns = 0;
+    int sender_cpu = -1;
+    int receiver_cpu = -1;
     bool help = false;
 };
 
@@ -102,6 +106,8 @@ void usage(const char* executable) {
         << "  --client-count N          Number of disjoint clients (default: 1)\n"
         << "  --source-port-base N      Deterministic flow port base (default: 20000)\n"
         << "  --bind ADDRESS            Client experiment IPv4 address\n"
+        << "  --sender-cpu N            Pin the open-loop sender/main thread\n"
+        << "  --receiver-cpu N          Pin the response receiver thread\n"
         << "  --start-at-unix-ns N      Shared absolute start time; 0 uses local delay\n"
         << "  --response-timeout-seconds N (default: 15)\n"
         << "  --warmup-requests N       Prefix excluded from metrics\n"
@@ -140,6 +146,10 @@ Options parse_options(int argc, char** argv) {
                 std::stoul(take("--source-port-base")));
         else if (arg == "--bind" || arg.rfind("--bind=", 0) == 0)
             options.bind_address = take("--bind");
+        else if (arg == "--sender-cpu" || arg.rfind("--sender-cpu=", 0) == 0)
+            options.sender_cpu = std::stoi(take("--sender-cpu"));
+        else if (arg == "--receiver-cpu" || arg.rfind("--receiver-cpu=", 0) == 0)
+            options.receiver_cpu = std::stoi(take("--receiver-cpu"));
         else if (arg == "--start-at-unix-ns" || arg.rfind("--start-at-unix-ns=", 0) == 0)
             options.start_at_unix_ns = std::stoull(take("--start-at-unix-ns"));
         else if (arg == "--response-timeout-seconds"
@@ -165,6 +175,7 @@ Options parse_options(int argc, char** argv) {
         || !std::isfinite(options.arrival_scale) || options.warmup_requests < 0
         || options.repetition < 0 || options.client_count <= 0
         || options.client_index < 0 || options.client_index >= options.client_count
+        || options.sender_cpu < -1 || options.receiver_cpu < -1
         || options.source_port_base == 0
         || static_cast<uint64_t>(options.source_port_base)
                + static_cast<uint64_t>(options.client_count * options.flow_sockets) > 65535ULL)
@@ -287,11 +298,27 @@ int main(int argc, char** argv) {
         std::atomic<uint64_t> invalid_responses{0};
         std::atomic<uint64_t> duplicate_responses{0};
         std::atomic<bool> sender_done{false};
+        std::atomic<bool> abort_receiver{false};
+        const bool sender_affinity_ok = options.sender_cpu < 0
+            || physical::pin_current_thread_to_cpu(options.sender_cpu);
+        bool receiver_affinity_ok = false;
+        bool receiver_ready = false;
+        std::mutex receiver_ready_mutex;
+        std::condition_variable receiver_ready_cv;
         std::thread receiver([&] {
+            const bool affinity_ok = options.receiver_cpu < 0
+                || physical::pin_current_thread_to_cpu(options.receiver_cpu);
+            {
+                std::lock_guard<std::mutex> lock(receiver_ready_mutex);
+                receiver_affinity_ok = affinity_ok;
+                receiver_ready = true;
+            }
+            receiver_ready_cv.notify_all();
             std::vector<epoll_event> events(64);
             Clock::time_point sender_done_seen{};
-            while (!sender_done.load(std::memory_order_acquire)
-                   || responses.load(std::memory_order_acquire) < records.size()) {
+            while (!abort_receiver.load(std::memory_order_acquire)
+                   && (!sender_done.load(std::memory_order_acquire)
+                   || responses.load(std::memory_order_acquire) < records.size())) {
                 const int count = epoll_wait(epoll_fd, events.data(),
                                              static_cast<int>(events.size()), 100);
                 if (count < 0) {
@@ -356,9 +383,50 @@ int main(int argc, char** argv) {
             }
         });
 
+        {
+            std::unique_lock<std::mutex> lock(receiver_ready_mutex);
+            receiver_ready_cv.wait(lock, [&] { return receiver_ready; });
+        }
+        if (!sender_affinity_ok || !receiver_affinity_ok) {
+            abort_receiver.store(true, std::memory_order_release);
+            sender_done.store(true, std::memory_order_release);
+            receiver.join();
+            std::ofstream summary(fs::path(options.output_dir) / "client_summary.csv");
+            summary << "evidence_scope,trace_embedded_sha256,trace_input_file_sha256,"
+                       "workload,rho,seed,repetition,total_requests,measurement_requests,"
+                       "responses,measurement_responses,timeouts,send_failures,"
+                       "invalid_responses,duplicate_responses,P50_client_rtt_us,"
+                       "P99_client_rtt_us,P999_client_rtt_us,server_deadline_violations,"
+                       "migrated_requests,max_send_lag_us,send_lag_p99_us,mean_send_lag_us,"
+                       "client_index,client_count,source_port_base,bind_address,"
+                       "start_at_unix_ns,sender_cpu,receiver_cpu,sender_affinity_pass,"
+                       "receiver_affinity_pass,status\n";
+            summary << "physical_network_rpc_client," << trace.embedded_sha256() << ','
+                    << trace.input_file_sha256() << ',' << options.workload_label << ','
+                    << options.rho_label << ',' << options.seed_label << ','
+                    << options.repetition << ',' << records.size() << ",0,0,0,"
+                    << records.size() << ",0,0,0,0,0,0,0,0,0,0,"
+                    << options.client_index << ',' << options.client_count << ','
+                    << options.source_port_base << ',' << options.bind_address << ','
+                    << options.start_at_unix_ns << ',' << options.sender_cpu << ','
+                    << options.receiver_cpu << ',' << (sender_affinity_ok ? 1 : 0) << ','
+                    << (receiver_affinity_ok ? 1 : 0) << ",FAIL\n";
+            std::ofstream status(fs::path(options.output_dir) / "RPC_CLIENT_STATUS.txt");
+            status << "status=FAIL\nclassification=INFRASTRUCTURE_FAILURE\n"
+                   << "sender_cpu=" << options.sender_cpu << '\n'
+                   << "receiver_cpu=" << options.receiver_cpu << '\n'
+                   << "sender_affinity_pass=" << (sender_affinity_ok ? 1 : 0) << '\n'
+                   << "receiver_affinity_pass=" << (receiver_affinity_ok ? 1 : 0) << '\n';
+            for (int fd : sockets) close(fd);
+            close(epoll_fd);
+            return 1;
+        }
+
         uint64_t send_failures = 0;
         double max_send_lag_us = 0.0;
         double sum_send_lag_us = 0.0;
+        std::vector<double> send_lags_us;
+        send_lags_us.reserve(records.size());
         for (size_t index = 0; index < records.size(); ++index) {
             auto& record = records[index];
             const auto target = origin + std::chrono::duration_cast<Clock::duration>(
@@ -386,6 +454,7 @@ int main(int argc, char** argv) {
                 static_cast<double>(send_ns) / 1000.0 - records[index].planned_send_us);
             max_send_lag_us = std::max(max_send_lag_us, lag_us);
             sum_send_lag_us += lag_us;
+            send_lags_us.push_back(lag_us);
         }
         sender_done.store(true, std::memory_order_release);
         receiver.join();
@@ -430,16 +499,18 @@ int main(int argc, char** argv) {
                 return record.measurement_eligible;
             }));
         const bool pass = send_failures == 0 && responses.load() == records.size()
-            && invalid_responses.load() == 0 && duplicate_responses.load() == 0;
+            && invalid_responses.load() == 0 && duplicate_responses.load() == 0
+            && sender_affinity_ok && receiver_affinity_ok;
         std::ofstream summary(fs::path(options.output_dir) / "client_summary.csv");
         summary << "evidence_scope,trace_embedded_sha256,trace_input_file_sha256,"
                    "workload,rho,seed,repetition,total_requests,measurement_requests,"
                    "responses,measurement_responses,timeouts,send_failures,"
                    "invalid_responses,duplicate_responses,P50_client_rtt_us,"
                    "P99_client_rtt_us,P999_client_rtt_us,server_deadline_violations,"
-                   "migrated_requests,max_send_lag_us,mean_send_lag_us,"
+                   "migrated_requests,max_send_lag_us,send_lag_p99_us,mean_send_lag_us,"
                    "client_index,client_count,source_port_base,bind_address,"
-                   "start_at_unix_ns,status\n";
+                   "start_at_unix_ns,sender_cpu,receiver_cpu,sender_affinity_pass,"
+                   "receiver_affinity_pass,status\n";
         summary << std::setprecision(17)
                 << "physical_network_rpc_client," << trace.embedded_sha256() << ','
                 << trace.input_file_sha256() << ',' << options.workload_label << ','
@@ -452,10 +523,13 @@ int main(int argc, char** argv) {
                 << percentile(rtts, 0.99) << ',' << percentile(rtts, 0.999) << ','
                 << server_deadline_violations << ',' << migrated_requests << ','
                 << max_send_lag_us << ','
+                << percentile(send_lags_us, 0.99) << ','
                 << sum_send_lag_us / static_cast<double>(records.size()) << ','
                 << options.client_index << ',' << options.client_count << ','
                 << options.source_port_base << ',' << options.bind_address << ','
-                << options.start_at_unix_ns << ','
+                << options.start_at_unix_ns << ',' << options.sender_cpu << ','
+                << options.receiver_cpu << ',' << (sender_affinity_ok ? 1 : 0) << ','
+                << (receiver_affinity_ok ? 1 : 0) << ','
                 << (pass ? "PASS" : "FAIL") << '\n';
         std::ofstream status(fs::path(options.output_dir) / "RPC_CLIENT_STATUS.txt");
         status << "status=" << (pass ? "PASS" : "FAIL") << '\n'
@@ -464,7 +538,12 @@ int main(int argc, char** argv) {
                << "timeouts=" << (records.size() - responses.load()) << '\n'
                << "send_failures=" << send_failures << '\n'
                << "invalid_responses=" << invalid_responses.load() << '\n'
-               << "duplicate_responses=" << duplicate_responses.load() << '\n';
+               << "duplicate_responses=" << duplicate_responses.load() << '\n'
+               << "sender_cpu=" << options.sender_cpu << '\n'
+               << "receiver_cpu=" << options.receiver_cpu << '\n'
+               << "sender_affinity_pass=" << (sender_affinity_ok ? 1 : 0) << '\n'
+               << "receiver_affinity_pass=" << (receiver_affinity_ok ? 1 : 0) << '\n'
+               << "send_lag_p99_us=" << percentile(send_lags_us, 0.99) << '\n';
 
         for (int fd : sockets) close(fd);
         close(epoll_fd);
