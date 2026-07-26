@@ -1,0 +1,738 @@
+diff --git a/include/physical/runtime.h b/include/physical/runtime.h
+index 625e0dc..24c6d47 100644
+--- a/include/physical/runtime.h
++++ b/include/physical/runtime.h
+@@ -72,8 +72,15 @@ struct RuntimeConfig {
+     int scan_depth = 64;
+     int max_candidates = 16;
+     int target_count = 4;
+-    int moves_per_check = 1;
+-    double epsilon_us = 2.0;
++    int moves_per_check = 4;
++    double epsilon_us = 6.0;
++    double rescue_lookahead_us = 20.0;
++    double rescue_completion_gain_weight = 0.05;
++    double rescue_target_backlog_penalty = 1.0;
++    bool rescue_distributed_l1_enabled = true;
++    int rescue_idle_pulls_per_check = 0;
++    int rescue_idle_pull_min_source_queue_depth = 1;
++    double rescue_idle_pull_min_source_work_us = 0.0;
+     double handoff_estimate_us = 0.5;
+     double host_overhead_us = 2.1;
+     double alto_queue_threshold_us = 40.0;
+@@ -147,6 +154,7 @@ struct MigrationRecord {
+     double start_us = 0.0;
+     double end_us = 0.0;
+     uint64_t handoff_duration_ns = 0;
++    std::string reason;
+     std::string outcome;
+ };
+ 
+diff --git a/src/app/physical_runtime_main.cpp b/src/app/physical_runtime_main.cpp
+index bb8aaa6..1aeed38 100644
+--- a/src/app/physical_runtime_main.cpp
++++ b/src/app/physical_runtime_main.cpp
+@@ -67,8 +67,20 @@ void print_usage(const char* executable) {
+         << "  --scan-depth N            Bounded queue prefix (default: 64)\n"
+         << "  --k-candidates N          Candidate bound (default: 16)\n"
+         << "  --h-targets N             Target bound (default: 4)\n"
+-        << "  --moves-per-check N       Commit bound (default: 1)\n"
+-        << "  --epsilon-us X            Rescue feasibility margin (default: 2)\n"
++        << "  --moves-per-check N       Commit bound (default: 4)\n"
++        << "  --epsilon-us X            Rescue feasibility margin (default: 6)\n"
++        << "  --rescue-lookahead-us X   Pre-deadline rescue horizon (default: 20)\n"
++        << "  --rescue-gain-weight X    Completion-gain score weight (default: 0.05)\n"
++        << "  --rescue-target-backlog-penalty X\n"
++        << "                            Target-work score penalty (default: 1)\n"
++        << "  --disable-rescue-distributed-l1\n"
++        << "                            Ablation: keep central rescue but disable distributed L1 polling\n"
++        << "  --rescue-idle-pulls-per-check N\n"
++        << "                            Central fallback budget (default: 0; distributed idle polling remains active)\n"
++        << "  --rescue-idle-pull-min-source-queue-depth N\n"
++        << "                            Fallback source queue gate (default: 1)\n"
++        << "  --rescue-idle-pull-min-source-work-us X\n"
++        << "                            Fallback pressure gate (default: 0)\n"
+         << "  --handoff-estimate-us X   Policy estimate only (default: 0.5)\n"
+         << "  --host-overhead-us X      Synthetic execution overhead (default: 2.1)\n"
+         << "  --ewma-alpha X            Completion-updated EWMA alpha (default: 0.05)\n"
+@@ -147,6 +159,38 @@ Options parse_options(int argc, char** argv) {
+                    || argument.rfind("--epsilon-us=", 0) == 0) {
+             options.runtime.epsilon_us = std::stod(option_value(
+                 index, argc, argv, argument, "--epsilon-us"));
++        } else if (argument == "--rescue-lookahead-us"
++                   || argument.rfind("--rescue-lookahead-us=", 0) == 0) {
++            options.runtime.rescue_lookahead_us = std::stod(option_value(
++                index, argc, argv, argument, "--rescue-lookahead-us"));
++        } else if (argument == "--rescue-gain-weight"
++                   || argument.rfind("--rescue-gain-weight=", 0) == 0) {
++            options.runtime.rescue_completion_gain_weight = std::stod(option_value(
++                index, argc, argv, argument, "--rescue-gain-weight"));
++        } else if (argument == "--rescue-target-backlog-penalty"
++                   || argument.rfind("--rescue-target-backlog-penalty=", 0) == 0) {
++            options.runtime.rescue_target_backlog_penalty = std::stod(option_value(
++                index, argc, argv, argument,
++                "--rescue-target-backlog-penalty"));
++        } else if (argument == "--disable-rescue-distributed-l1") {
++            options.runtime.rescue_distributed_l1_enabled = false;
++        } else if (argument == "--rescue-idle-pulls-per-check"
++                   || argument.rfind("--rescue-idle-pulls-per-check=", 0) == 0) {
++            options.runtime.rescue_idle_pulls_per_check = std::stoi(option_value(
++                index, argc, argv, argument,
++                "--rescue-idle-pulls-per-check"));
++        } else if (argument == "--rescue-idle-pull-min-source-queue-depth"
++                   || argument.rfind(
++                       "--rescue-idle-pull-min-source-queue-depth=", 0) == 0) {
++            options.runtime.rescue_idle_pull_min_source_queue_depth = std::stoi(
++                option_value(index, argc, argv, argument,
++                    "--rescue-idle-pull-min-source-queue-depth"));
++        } else if (argument == "--rescue-idle-pull-min-source-work-us"
++                   || argument.rfind(
++                       "--rescue-idle-pull-min-source-work-us=", 0) == 0) {
++            options.runtime.rescue_idle_pull_min_source_work_us = std::stod(
++                option_value(index, argc, argv, argument,
++                    "--rescue-idle-pull-min-source-work-us"));
+         } else if (argument == "--handoff-estimate-us"
+                    || argument.rfind("--handoff-estimate-us=", 0) == 0) {
+             options.runtime.handoff_estimate_us = std::stod(option_value(
+diff --git a/src/app/rpc_server_main.cpp b/src/app/rpc_server_main.cpp
+index 49fa5db..fe467eb 100644
+--- a/src/app/rpc_server_main.cpp
++++ b/src/app/rpc_server_main.cpp
+@@ -124,8 +124,14 @@ void usage(const char* executable) {
+         << "  --irq-cpus A,B,... --allow-control-irq-smt-siblings\n"
+         << "  --allow-affinity-failure --warmup-requests N\n"
+         << "  --check-period-us X --scan-depth N --k-candidates N --h-targets N\n"
+-        << "  --moves-per-check N --epsilon-us X --handoff-estimate-us X\n"
+-        << "  --host-overhead-us X --ewma-alpha X --alto-threshold-us X\n"
++        << "  --moves-per-check N --epsilon-us X --rescue-lookahead-us X\n"
++        << "  --rescue-gain-weight X --rescue-target-backlog-penalty X\n"
++        << "  --disable-rescue-distributed-l1 (central-rescue-only ablation)\n"
++        << "  --rescue-idle-pulls-per-check N\n"
++        << "  --rescue-idle-pull-min-source-queue-depth N\n"
++        << "  --rescue-idle-pull-min-source-work-us X\n"
++        << "  --handoff-estimate-us X --host-overhead-us X --ewma-alpha X\n"
++        << "  --alto-threshold-us X\n"
+         << "  --alto-min-gain-us X --decision-sample-cap N --decision-bucket-us X\n"
+         << "  --workload-label TEXT --rho-label TEXT --seed-label TEXT --repetition N\n";
+ }
+@@ -193,6 +199,33 @@ Options parse_options(int argc, char** argv) {
+             options.runtime.moves_per_check = std::stoi(take("--moves-per-check"));
+         else if (arg == "--epsilon-us" || arg.rfind("--epsilon-us=", 0) == 0)
+             options.runtime.epsilon_us = std::stod(take("--epsilon-us"));
++        else if (arg == "--rescue-lookahead-us"
++                 || arg.rfind("--rescue-lookahead-us=", 0) == 0)
++            options.runtime.rescue_lookahead_us = std::stod(
++                take("--rescue-lookahead-us"));
++        else if (arg == "--rescue-gain-weight"
++                 || arg.rfind("--rescue-gain-weight=", 0) == 0)
++            options.runtime.rescue_completion_gain_weight = std::stod(
++                take("--rescue-gain-weight"));
++        else if (arg == "--rescue-target-backlog-penalty"
++                 || arg.rfind("--rescue-target-backlog-penalty=", 0) == 0)
++            options.runtime.rescue_target_backlog_penalty = std::stod(
++                take("--rescue-target-backlog-penalty"));
++        else if (arg == "--disable-rescue-distributed-l1")
++            options.runtime.rescue_distributed_l1_enabled = false;
++        else if (arg == "--rescue-idle-pulls-per-check"
++                 || arg.rfind("--rescue-idle-pulls-per-check=", 0) == 0)
++            options.runtime.rescue_idle_pulls_per_check = std::stoi(
++                take("--rescue-idle-pulls-per-check"));
++        else if (arg == "--rescue-idle-pull-min-source-queue-depth"
++                 || arg.rfind(
++                     "--rescue-idle-pull-min-source-queue-depth=", 0) == 0)
++            options.runtime.rescue_idle_pull_min_source_queue_depth = std::stoi(
++                take("--rescue-idle-pull-min-source-queue-depth"));
++        else if (arg == "--rescue-idle-pull-min-source-work-us"
++                 || arg.rfind("--rescue-idle-pull-min-source-work-us=", 0) == 0)
++            options.runtime.rescue_idle_pull_min_source_work_us = std::stod(
++                take("--rescue-idle-pull-min-source-work-us"));
+         else if (arg == "--handoff-estimate-us"
+                  || arg.rfind("--handoff-estimate-us=", 0) == 0)
+             options.runtime.handoff_estimate_us = std::stod(take("--handoff-estimate-us"));
+diff --git a/src/physical/runtime.cpp b/src/physical/runtime.cpp
+index e3cc4d8..5bdeb64 100644
+--- a/src/physical/runtime.cpp
++++ b/src/physical/runtime.cpp
+@@ -194,6 +194,8 @@ struct PhysicalRuntime::Impl {
+         uint32_t execution_count = 0;
+         uint32_t completion_count = 0;
+         bool measurement_eligible = false;
++        bool centrally_rescued = false;
++        double central_rescue_protect_until_us = 0.0;
+         bool cancel_pending = false;
+         bool cancel_requested_after_start = false;
+     };
+@@ -206,6 +208,7 @@ struct PhysicalRuntime::Impl {
+         int evaluated_targets = 0;
+         double local_completion_us = 0.0;
+         double remote_completion_us = 0.0;
++        bool deadline_rescue = false;
+         std::string reason;
+     };
+ 
+@@ -329,6 +332,10 @@ struct PhysicalRuntime::Impl {
+         };
+         const double finite_values[] = {
+             config.time_scale, config.check_period_us, config.epsilon_us,
++            config.rescue_lookahead_us,
++            config.rescue_completion_gain_weight,
++            config.rescue_target_backlog_penalty,
++            config.rescue_idle_pull_min_source_work_us,
+             config.handoff_estimate_us, config.host_overhead_us,
+             config.alto_queue_threshold_us, config.alto_min_gain_us,
+             config.ewma_alpha, config.initial_short_service_us,
+@@ -348,9 +355,15 @@ struct PhysicalRuntime::Impl {
+         if (!(config.time_scale > 0.0) || !(config.check_period_us > 0.0)
+             || config.scan_depth <= 0 || config.max_candidates <= 0
+             || config.target_count <= 0 || config.moves_per_check <= 0
++            || config.rescue_idle_pulls_per_check < 0
++            || config.rescue_idle_pull_min_source_queue_depth <= 0
+             || !(config.decision_bucket_us > 0.0))
+             throw std::invalid_argument("runtime periods and bounds must be positive");
+-        if (config.epsilon_us < 0.0 || config.handoff_estimate_us < 0.0
++        if (config.epsilon_us < 0.0 || config.rescue_lookahead_us < 0.0
++            || config.rescue_completion_gain_weight < 0.0
++            || config.rescue_target_backlog_penalty < 0.0
++            || config.rescue_idle_pull_min_source_work_us < 0.0
++            || config.handoff_estimate_us < 0.0
+             || config.host_overhead_us < 0.0
+             || config.alto_queue_threshold_us < 0.0
+             || config.alto_min_gain_us < 0.0)
+@@ -409,24 +422,6 @@ struct PhysicalRuntime::Impl {
+         return std::numeric_limits<double>::infinity();
+     }
+ 
+-    int target_risk_before(int core, double now, int* scanned) const {
+-        int risk = 0;
+-        int depth = 0;
+-        double completion = now;
+-        if (running[static_cast<size_t>(core)]) {
+-            completion += std::max(0.0,
+-                running_estimated_finish_us[static_cast<size_t>(core)] - now);
+-        }
+-        for (size_t index : queues[static_cast<size_t>(core)]) {
+-            if (depth++ >= config.scan_depth) break;
+-            ++(*scanned);
+-            const Descriptor& descriptor = descriptors[index];
+-            completion += estimated_work(descriptor);
+-            if (completion > descriptor.view.deadline_abs_us) ++risk;
+-        }
+-        return risk;
+-    }
+-
+     Choice choose_work_stealing_for_target(int target, double now) const {
+         Choice choice;
+         choice.target_core = target;
+@@ -442,6 +437,14 @@ struct PhysicalRuntime::Impl {
+         double largest_work = -1.0;
+         for (int core = 0; core < config.worker_count; ++core) {
+             if (core == target || queues[static_cast<size_t>(core)].empty()) continue;
++            const size_t front = queues[static_cast<size_t>(core)].front();
++            const Descriptor& front_descriptor = descriptors[front];
++            if (config.policy == PolicyKind::M1_RESCUE_SCHED
++                && (front_descriptor.central_rescue_protect_until_us
++                        > now + 1e-9
++                    || (front_descriptor.centrally_rescued
++                        && front_descriptor.view.migration_count >= 2)))
++                continue;
+             const double work = core_work_us(core, now);
+             if (work > largest_work) {
+                 largest_work = work;
+@@ -511,12 +514,26 @@ struct PhysicalRuntime::Impl {
+         std::vector<Target> targets;
+         int total_scanned = 0;
+         for (int core = 0; core < config.worker_count; ++core) {
+-            int risk_scanned = 0;
+-            targets.push_back(Target{
+-                core, target_risk_before(core, now, &risk_scanned),
+-                core_work_us(core, now)
+-            });
+-            total_scanned += risk_scanned;
++            double work = reservations_us[static_cast<size_t>(core)];
++            double completion = now;
++            if (running[static_cast<size_t>(core)]) {
++                const double remaining = std::max(0.0,
++                    running_estimated_finish_us[static_cast<size_t>(core)] - now);
++                work += remaining;
++                completion += remaining;
++            }
++            int risk = 0;
++            int depth = 0;
++            for (size_t index : queues[static_cast<size_t>(core)]) {
++                const Descriptor& descriptor = descriptors[index];
++                const double descriptor_work = estimated_work(descriptor);
++                work += descriptor_work;
++                if (depth++ >= config.scan_depth) continue;
++                ++total_scanned;
++                completion += descriptor_work;
++                if (completion > descriptor.view.deadline_abs_us) ++risk;
++            }
++            targets.push_back(Target{core, risk, work});
+         }
+         std::sort(targets.begin(), targets.end(), [](const Target& lhs, const Target& rhs) {
+             if (lhs.risk != rhs.risk) return lhs.risk < rhs.risk;
+@@ -529,15 +546,27 @@ struct PhysicalRuntime::Impl {
+         double best_score = -std::numeric_limits<double>::infinity();
+         int total_targets = 0;
+         for (int source = 0; source < config.worker_count; ++source) {
++            double local = now;
++            if (running[static_cast<size_t>(source)]) {
++                local += std::max(0.0,
++                    running_estimated_finish_us[static_cast<size_t>(source)] - now);
++            }
+             int depth = 0;
+             int candidates = 0;
+             for (size_t index : queues[static_cast<size_t>(source)]) {
+                 if (depth++ >= config.scan_depth || candidates >= config.max_candidates) break;
+                 ++total_scanned;
+                 const Descriptor& descriptor = descriptors[index];
++                local += estimated_work(descriptor);
+                 if (descriptor.view.migration_count > 0) continue;
+-                const double local = local_completion_us(source, index, now);
+-                if (local <= descriptor.view.deadline_abs_us) continue;
++                // Act before predicted doom. Waiting until the request is
++                // already late loses feasible rescue windows on a periodic
++                // scheduler. Keep the horizon independent of the check period
++                // so a coarse scheduler period cannot silently create an
++                // excessively aggressive lookahead.
++                if (local + config.rescue_lookahead_us
++                        <= descriptor.view.deadline_abs_us)
++                    continue;
+                 ++candidates;
+ 
+                 int tried = 0;
+@@ -550,11 +579,21 @@ struct PhysicalRuntime::Impl {
+                     if (remote + config.epsilon_us > descriptor.view.deadline_abs_us)
+                         continue;
+                     if (target.risk != 0) continue;
+-                    const double local_lateness = std::max(
+-                        0.0, local - descriptor.view.deadline_abs_us);
+-                    const double score = descriptor.view.deadline_abs_us - remote
+-                                       + 0.10 * local_lateness
+-                                       - config.handoff_estimate_us;
++                    const double urgency =
++                        local - descriptor.view.deadline_abs_us;
++                    const double completion_gain = local - remote;
++                    // A deadline-feasible target is not sufficient: moving to
++                    // a slower completion only adds a handoff and can inflate
++                    // tails without rescuing the request. Distributed L1 idle
++                    // polling remains free to rebalance independently.
++                    if (completion_gain <= 1e-9) continue;
++                    // Remote slack is not comparable across RPC classes with
++                    // different deadlines (for example 40 us vs 200 us). Rank
++                    // primarily by impending local deadline, then by the amount
++                    // of completion time the move is predicted to recover.
++                    const double score = urgency
++                        + config.rescue_completion_gain_weight * completion_gain
++                        - config.rescue_target_backlog_penalty * target.work_us;
+                     if (score <= best_score) continue;
+                     best_score = score;
+                     best.descriptor = index;
+@@ -562,10 +601,30 @@ struct PhysicalRuntime::Impl {
+                     best.target_core = target.core;
+                     best.local_completion_us = local;
+                     best.remote_completion_us = remote;
++                    best.deadline_rescue = true;
+                     best.reason = "commit_local_doom_remote_feasible";
+                 }
+             }
+         }
++        if (!best.descriptor && config.rescue_idle_pulls_per_check > 0) {
++            for (const Target& target : targets) {
++                if (target.work_us > 1e-9) break;
++                Choice fallback = choose_work_stealing_for_target(target.core, now);
++                total_scanned += fallback.scanned_entries;
++                if (!fallback.descriptor) continue;
++                if (queues[static_cast<size_t>(fallback.source_core)].size()
++                        < static_cast<size_t>(
++                            config.rescue_idle_pull_min_source_queue_depth))
++                    break;
++                if (core_work_us(fallback.source_core, now)
++                        < config.rescue_idle_pull_min_source_work_us)
++                    break;
++                fallback.scanned_entries = total_scanned;
++                fallback.evaluated_targets = total_targets;
++                fallback.reason = "commit_idle_pull_fallback";
++                return fallback;
++            }
++        }
+         best.scanned_entries = total_scanned;
+         best.evaluated_targets = total_targets;
+         return best;
+@@ -630,15 +689,29 @@ struct PhysicalRuntime::Impl {
+                 descriptor.view.state = DescriptorState::QUEUED;
+                 worker_cvs[static_cast<size_t>(choice.target_core)]->notify_one();
+             }
++            // Use one logical handoff-end timestamp for both the migration
++            // record and the post-rescue guard. Otherwise the guard can begin
++            // slightly before the recorded handoff end, making a valid repull
++            // appear to violate the configured protection window.
++            const double logical_end = now_us();
++            if (!descriptor.cancel_pending && choice.deadline_rescue) {
++                descriptor.centrally_rescued = true;
++                // Cover the immediate post-handoff repull window, then allow
++                // one distributed L1 rebalance. A third migration is treated
++                // as ping-pong and suppressed by source selection.
++                descriptor.central_rescue_protect_until_us =
++                    logical_end + config.handoff_estimate_us;
++            }
+             const auto wall_end = Clock::now();
+             migrations.push_back(MigrationRecord{
+                 descriptor.view.id,
+                 choice.source_core,
+                 choice.target_core,
+                 logical_start,
+-                now_us(),
++                logical_end,
+                 static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                     wall_end - wall_start).count()),
++                choice.reason,
+                 outcome
+             });
+         }
+@@ -702,6 +775,7 @@ struct PhysicalRuntime::Impl {
+             }
+             next_epoch += period * static_cast<Clock::duration::rep>(scheduled);
+ 
++            int idle_pull_commits = 0;
+             for (int move = 0; move < config.moves_per_check; ++move) {
+                 const auto decision_start = Clock::now();
+                 const uint64_t cycles_start = read_cycles();
+@@ -739,12 +813,19 @@ struct PhysicalRuntime::Impl {
+                 record.decision_duration_ns = static_cast<uint64_t>(
+                     std::chrono::duration_cast<std::chrono::nanoseconds>(
+                         decision_end - decision_start).count());
++                const bool used_idle_fallback =
++                    choice.reason == "commit_idle_pull_fallback";
+                 bool committed = false;
+                 if (choice.descriptor) committed = handoff(choice);
+                 if (choice.descriptor && !committed)
+                     record.reason = "source_revalidation_reject";
+                 record_decision(std::move(record));
+-                if (!choice.descriptor || !committed) break;
++                if (used_idle_fallback && committed) ++idle_pull_commits;
++                if (!choice.descriptor || !committed
++                    || (used_idle_fallback
++                        && idle_pull_commits
++                            >= config.rescue_idle_pulls_per_check))
++                    break;
+             }
+         }
+     }
+@@ -808,7 +889,9 @@ struct PhysicalRuntime::Impl {
+             uint64_t poll_cycles_start = 0;
+             {
+                 std::unique_lock<std::mutex> lock(mutex);
+-                if (config.policy == PolicyKind::L1_WORK_STEALING_POLLING) {
++                if (config.policy == PolicyKind::L1_WORK_STEALING_POLLING
++                    || (config.policy == PolicyKind::M1_RESCUE_SCHED
++                        && config.rescue_distributed_l1_enabled)) {
+                     while (!stopping.load(std::memory_order_acquire)
+                            && queues[static_cast<size_t>(worker_id)].empty()) {
+                         wait_until_steady(
+@@ -934,7 +1017,12 @@ struct PhysicalRuntime::Impl {
+                 }
+                 descriptor.actual_thread_cpu_service_us = actual_cpu_us;
+                 descriptor.service_wall_us = service_wall_us;
+-                estimator.observe(descriptor.view.method, actual_cpu_us);
++                // estimated_service_us is payload-only; host overhead is added by
++                // estimated_work(). Remove it from the measured total before the
++                // completion-updated EWMA to avoid charging it twice.
++                const double measured_payload_us = std::max(
++                    0.001, actual_cpu_us - config.host_overhead_us);
++                estimator.observe(descriptor.view.method, measured_payload_us);
+                 descriptor.finish_us = now_us();
+                 ++descriptor.completion_count;
+                 if (descriptor.completion_count > 1) ++duplicate_completion_count;
+@@ -1363,13 +1451,14 @@ void PhysicalRuntime::write_outputs(const RuntimeResult& result) const {
+     {
+         std::ofstream csv(root / "migrations.csv");
+         csv << "request_id,source_core,target_core,handoff_start_us,handoff_end_us,"
+-               "handoff_duration_ns,target_insert_policy,outcome\n";
++               "handoff_duration_ns,target_insert_policy,migration_reason,outcome\n";
+         csv << std::setprecision(17);
+         for (const auto& migration : result.migrations) {
+             csv << migration.request_id << ',' << migration.source_core << ','
+                 << migration.target_core << ',' << migration.start_us << ','
+                 << migration.end_us << ',' << migration.handoff_duration_ns
+-                << ",append_tail," << migration.outcome << '\n';
++                << ",append_tail," << migration.reason << ','
++                << migration.outcome << '\n';
+         }
+     }
+ 
+@@ -1458,11 +1547,25 @@ void PhysicalRuntime::write_outputs(const RuntimeResult& result) const {
+                  << "target_count=" << impl_->config.target_count << '\n'
+                  << "moves_per_check=" << impl_->config.moves_per_check << '\n'
+                  << "epsilon_us=" << impl_->config.epsilon_us << '\n'
++                 << "rescue_lookahead_us="
++                 << impl_->config.rescue_lookahead_us << '\n'
++                 << "rescue_completion_gain_weight="
++                 << impl_->config.rescue_completion_gain_weight << '\n'
++                 << "rescue_target_backlog_penalty="
++                 << impl_->config.rescue_target_backlog_penalty << '\n'
++                 << "rescue_distributed_l1_enabled="
++                 << (impl_->config.rescue_distributed_l1_enabled ? 1 : 0) << '\n'
++                 << "rescue_idle_pulls_per_check="
++                 << impl_->config.rescue_idle_pulls_per_check << '\n'
++                 << "rescue_idle_pull_min_source_queue_depth="
++                 << impl_->config.rescue_idle_pull_min_source_queue_depth << '\n'
++                 << "rescue_idle_pull_min_source_work_us="
++                 << impl_->config.rescue_idle_pull_min_source_work_us << '\n'
+                  << "handoff_estimate_us=" << impl_->config.handoff_estimate_us << '\n'
+                  << "host_overhead_us=" << impl_->config.host_overhead_us << '\n'
+                  << "ewma_alpha=" << impl_->config.ewma_alpha << '\n'
+                  << "synthetic_service_clock=CLOCK_THREAD_CPUTIME_ID\n"
+-                 << "ewma_observation=completed_measured_thread_cpu_service\n"
++                 << "ewma_observation=completed_measured_payload_cpu_service\n"
+                  << "decision_logging=bounded\n"
+                  << "decision_sample_cap=" << impl_->config.decision_sample_cap << '\n'
+                  << "decision_bucket_us=" << impl_->config.decision_bucket_us << '\n'
+diff --git a/tests/unit/physical_runtime_tests.cpp b/tests/unit/physical_runtime_tests.cpp
+index 3e1f90d..29548c6 100644
+--- a/tests/unit/physical_runtime_tests.cpp
++++ b/tests/unit/physical_runtime_tests.cpp
+@@ -3,6 +3,7 @@
+ #include "physical/trace.h"
+ #include "sim/workloads/trace.h"
+ 
++#include <algorithm>
+ #include <atomic>
+ #include <chrono>
+ #include <filesystem>
+@@ -11,6 +12,8 @@
+ #include <stdexcept>
+ #include <string>
+ #include <thread>
++#include <unordered_map>
++#include <unordered_set>
+ 
+ namespace {
+ 
+@@ -71,6 +74,22 @@ void test_strict_trace_loader() {
+     fs::remove(duplicate);
+ }
+ 
++void test_hybrid_validated_defaults() {
++    const physical::RuntimeConfig config;
++    require(config.policy == physical::PolicyKind::M1_RESCUE_SCHED,
++            "default runtime policy is not RescueSched");
++    require(config.moves_per_check == 4,
++            "validated RescueSched move budget is not the default");
++    require(config.epsilon_us == 6.0,
++            "validated RescueSched epsilon is not the default");
++    require(config.rescue_lookahead_us == 20.0,
++            "validated RescueSched lookahead is not the default");
++    require(config.rescue_distributed_l1_enabled,
++            "distributed L1 must remain enabled in the full-hybrid default");
++    require(config.rescue_idle_pulls_per_check == 0,
++            "central idle-pull fallback must remain disabled by default");
++}
++
+ void test_method_ewma_has_no_current_request_input() {
+     physical::MethodEwmaEstimator estimator(0.5, 10.0, 42.0);
+     auto initial = estimator.snapshot(sim::RpcMethod::SHORT_RPC);
+@@ -163,6 +182,82 @@ void test_rescue_migrates_only_queued_and_appends_tail() {
+     fs::remove(trace_path);
+ }
+ 
++void test_hybrid_deadline_rescue_has_bounded_repulls() {
++    const fs::path trace_path = temp_path("hybrid-rescue-stability.csv");
++    std::string rows;
++    for (int id = 1; id <= 40; ++id) {
++        const int service_us = id == 1 ? 400 : 40;
++        const int deadline_us = id == 1 ? 1000 : 120 + id * 5;
++        rows += "rescuesched-trace-v2," + embedded_hash() + ","
++            + std::to_string(id) + ",0,long,"
++            + std::to_string(service_us) + ","
++            + std::to_string(deadline_us) + ",0,0\n";
++    }
++    write_v2_trace(trace_path, rows);
++
++    physical::RuntimeConfig config;
++    config.policy = physical::PolicyKind::M1_RESCUE_SCHED;
++    config.worker_count = 16;
++    config.strict_affinity = false;
++    config.time_scale = 100.0;
++    config.check_period_us = 5.0;
++    config.handoff_estimate_us = 0.5;
++    config.host_overhead_us = 0.0;
++    config.decision_sample_cap = 100000;
++    physical::FrozenTrace trace = physical::FrozenTrace::load_csv(
++        trace_path.string(), config.worker_count);
++    physical::PhysicalRuntime runtime(std::move(trace), config);
++    const physical::RuntimeResult result = runtime.run();
++
++    require(result.summary.invariants_pass,
++            "hybrid rescue stability trace violated runtime invariants");
++    require(result.summary.scheduler_epochs_executed > 0,
++            "hybrid trace did not exercise central deadline rescue checks");
++    require(result.summary.l1_poll_attempts > 0
++            && result.summary.l1_poll_successes > 0,
++            "hybrid trace did not exercise distributed idle polling");
++
++    std::unordered_set<uint64_t> centrally_rescued;
++    for (const auto& decision : result.decisions) {
++        if (decision.reason != "commit_local_doom_remote_feasible") continue;
++        require(decision.predicted_remote_completion_us
++                    + config.epsilon_us
++                    <= decision.deadline_abs_us + 1e-9,
++                "central rescue committed a deadline-infeasible migration");
++        require(decision.predicted_remote_completion_us + 1e-9
++                    < decision.predicted_local_completion_us,
++                "central rescue committed a non-improving migration");
++        centrally_rescued.insert(decision.request_id);
++    }
++    require(!centrally_rescued.empty(),
++            "hybrid trace did not commit a central deadline rescue");
++
++    std::unordered_map<uint64_t, uint32_t> central_migration_records;
++    std::unordered_map<uint64_t, uint32_t> total_migration_records;
++    std::unordered_map<uint64_t, double> central_handoff_end_us;
++    for (const auto& migration : result.migrations) {
++        if (migration.outcome != "committed_append_tail") continue;
++        ++total_migration_records[migration.request_id];
++        if (migration.reason == "commit_local_doom_remote_feasible") {
++            ++central_migration_records[migration.request_id];
++            central_handoff_end_us[migration.request_id] = migration.end_us;
++            continue;
++        }
++        const auto found = central_handoff_end_us.find(migration.request_id);
++        if (found == central_handoff_end_us.end()) continue;
++        require(migration.start_us + 1e-9
++                    >= found->second + config.handoff_estimate_us,
++                "centrally rescued request was immediately re-pulled");
++    }
++    for (uint64_t request_id : centrally_rescued) {
++        require(central_migration_records[request_id] == 1,
++                "central rescue did not have exactly one committed handoff");
++        require(total_migration_records[request_id] <= 2,
++                "centrally rescued request exceeded the repull bound");
++    }
++    fs::remove(trace_path);
++}
++
+ void test_running_cancel_is_non_preemptive() {
+     const fs::path trace_path = temp_path("running-cancel.csv");
+     write_v2_trace(trace_path,
+@@ -317,9 +412,11 @@ void test_network_ingress_identity_and_lifecycle() {
+ int main() {
+     try {
+         test_strict_trace_loader();
++        test_hybrid_validated_defaults();
+         test_method_ewma_has_no_current_request_input();
+         test_all_policies_share_runtime_and_drain();
+         test_rescue_migrates_only_queued_and_appends_tail();
++        test_hybrid_deadline_rescue_has_bounded_repulls();
+         test_running_cancel_is_non_preemptive();
+         test_terminal_cancel_callback_fires_once();
+         test_strict_scheduler_affinity_fails_closed();
+diff --git a/tests/unit/wp2_runtime_concurrency_tests.cpp b/tests/unit/wp2_runtime_concurrency_tests.cpp
+index 39d269b..1d30ccb 100644
+--- a/tests/unit/wp2_runtime_concurrency_tests.cpp
++++ b/tests/unit/wp2_runtime_concurrency_tests.cpp
+@@ -117,6 +117,7 @@ void test_measured_cpu_service_updates_only_after_completion() {
+     config.arrival_mode = physical::ArrivalMode::NETWORK_INGRESS;
+     config.initial_short_service_us = 10.0;
+     config.ewma_alpha = 1.0;
++    config.host_overhead_us = 8.0;
+     physical::FrozenTrace trace = physical::FrozenTrace::load_csv(
+         trace_path.string(), config.worker_count);
+     physical::PhysicalRuntime runtime(std::move(trace), config);
+@@ -155,14 +156,16 @@ void test_measured_cpu_service_updates_only_after_completion() {
+     require(first.estimated_service_us == 10.0
+             && first.estimator_prior_samples == 0,
+             "scheduler observed hidden current-request service");
+-    require(std::abs(first.actual_thread_cpu_service_us - 24.0) <= 2.0,
++    require(std::abs(first.actual_thread_cpu_service_us - 32.0) <= 2.0,
+             "runtime CPU service measurement exceeded threshold");
+     require(first.service_wall_us + 0.05 >= first.actual_thread_cpu_service_us,
+             "runtime wall service was smaller than CPU service");
++    const double first_measured_payload_us = std::max(
++        0.001, first.actual_thread_cpu_service_us - config.host_overhead_us);
+     require(second.estimator_prior_samples == 1
+             && std::abs(second.estimated_service_us
+-                        - first.actual_thread_cpu_service_us) < 0.001,
+-            "EWMA did not consume the completed measured CPU service");
++                        - first_measured_payload_us) < 0.001,
++            "EWMA did not remove host overhead from measured CPU service");
+     fs::remove(trace_path);
+ }
+ 
+@@ -209,6 +212,67 @@ void test_distributed_l1_polling_and_bounded_logging() {
+     fs::remove(trace_path);
+ }
+ 
++void test_hybrid_keeps_distributed_idle_polling_without_deadline_rescue() {
++    const fs::path trace_path = temp_path("hybrid-idle-poll.csv");
++    std::string rows;
++    for (int id = 1; id <= 16; ++id) {
++        rows += "rescuesched-trace-v2," + embedded_hash() + ","
++            + std::to_string(id) + ",0,short,100,10000,0,0\n";
++    }
++    write_v2(trace_path, rows);
++    auto config = base_config(physical::PolicyKind::M1_RESCUE_SCHED);
++    config.check_period_us = 5.0;
++    config.decision_sample_cap = 10000;
++    physical::FrozenTrace trace = physical::FrozenTrace::load_csv(
++        trace_path.string(), config.worker_count);
++    physical::PhysicalRuntime runtime(std::move(trace), config);
++    const auto result = runtime.run();
++
++    require(result.summary.invariants_pass, "hybrid idle-poll invariants failed");
++    require(result.summary.scheduler_epochs_executed > 0,
++            "hybrid policy did not run the central scheduler");
++    require(result.summary.l1_poll_attempts > 0
++            && result.summary.l1_poll_successes > 0,
++            "hybrid policy disabled distributed idle polling");
++    require(result.summary.migration_count == result.summary.l1_poll_successes,
++            "hybrid no-rescue trace used a non-L1 migration path");
++    require(std::none_of(result.decisions.begin(), result.decisions.end(),
++                [](const physical::DecisionRecord& decision) {
++                    return decision.reason == "commit_local_doom_remote_feasible";
++                }),
++            "long-deadline hybrid trace unexpectedly used central rescue");
++    fs::remove(trace_path);
++}
++
++void test_central_rescue_only_disables_distributed_idle_polling() {
++    const fs::path trace_path = temp_path("central-only-no-idle-poll.csv");
++    std::string rows;
++    for (int id = 1; id <= 16; ++id) {
++        rows += "rescuesched-trace-v2," + embedded_hash() + ","
++            + std::to_string(id) + ",0,short,100,10000,0,0\n";
++    }
++    write_v2(trace_path, rows);
++    auto config = base_config(physical::PolicyKind::M1_RESCUE_SCHED);
++    config.check_period_us = 5.0;
++    config.rescue_distributed_l1_enabled = false;
++    config.decision_sample_cap = 10000;
++    physical::FrozenTrace trace = physical::FrozenTrace::load_csv(
++        trace_path.string(), config.worker_count);
++    physical::PhysicalRuntime runtime(std::move(trace), config);
++    const auto result = runtime.run();
++
++    require(result.summary.invariants_pass,
++            "central-only idle-poll invariants failed");
++    require(result.summary.scheduler_epochs_executed > 0,
++            "central-only policy did not run the central scheduler");
++    require(result.summary.l1_poll_attempts == 0
++            && result.summary.l1_poll_successes == 0,
++            "central-only ablation still executed distributed L1 polling");
++    require(result.summary.migration_count == 0,
++            "long-deadline central-only trace unexpectedly migrated requests");
++    fs::remove(trace_path);
++}
++
+ void test_scheduler_epoch_accounting_and_ingress_progress() {
+     const fs::path trace_path = temp_path("stress.csv");
+     std::string rows;
+@@ -264,6 +328,8 @@ int main() {
+         test_receiver_lifecycle_race_100_each_policy();
+         test_measured_cpu_service_updates_only_after_completion();
+         test_distributed_l1_polling_and_bounded_logging();
++        test_hybrid_keeps_distributed_idle_polling_without_deadline_rescue();
++        test_central_rescue_only_disables_distributed_idle_polling();
+         test_scheduler_epoch_accounting_and_ingress_progress();
+         std::cout << "WP2 runtime concurrency tests: PASS\n";
+         return 0;

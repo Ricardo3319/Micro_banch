@@ -1,0 +1,11 @@
+runs=160
+unique_runs=160
+parameter_tuples=[('4', '6', '20', '0')]
+distributed_l1_flags={'CentralOnly': ['0'], 'FIFO': ['1'], 'FullHybrid': ['1'], 'L1Only': ['1'], 'M0': ['1']}
+total_decision_records_dropped=0
+max_scheduler_missed_fraction=0.015811801
+max_scheduler_missed_run=/users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/synthetic/W3-rho070-w16/seed-83/FullHybrid
+max_scheduler_lag_us=114.474800000
+max_scheduler_lag_run=/users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/synthetic/W2-rho070-w16/seed-83/FullHybrid
+errors=0
+status=PASS

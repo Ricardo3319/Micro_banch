@@ -1,0 +1,46 @@
+{
+  "benchmark_execution": false,
+  "bootstrap_draws": 10000,
+  "bootstrap_seed": 2026072603,
+  "generated_files": [
+    "bootstrap_95ci.csv",
+    "setup_variant_summary.csv",
+    "key_results.csv",
+    "outcome_regressions.csv",
+    "generalization_directional_summary.csv",
+    "holdout_trace_audit.csv",
+    "mechanism_metrics.csv",
+    "mechanism_summary.csv",
+    "mechanism_cost_aggregate.csv",
+    "rpc_path_breakdown.csv",
+    "rpc_path_breakdown_by_class.csv",
+    "rpc_variant_summary.csv",
+    "tail_group_summary.csv",
+    "tail_policy_comparisons.csv",
+    "tail_regressions.csv",
+    "within_variant_tail_contrasts.csv",
+    "worker_load_summary.csv",
+    "correctness_invariant_detail.csv"
+  ],
+  "holdout_seeds": [
+    71,
+    83,
+    97,
+    109,
+    127
+  ],
+  "input_aggregate_rows": 285,
+  "input_paired_rows": 195,
+  "input_run_count": 185,
+  "input_tail_rows": 1859,
+  "notes": [
+    "positive paired outcome delta means candidate better unless a row explicitly says otherwise",
+    "tail migration/rescue groups are policy-selected subpopulations and are descriptive, not causal",
+    "RPC non_runtime_residual is per-request client RTT minus server completion and is not a direct mutex-wait measurement",
+    "heterogeneous setups are directionally summarized but not pooled into a universal effect"
+  ],
+  "parameter_selection_or_scan": false,
+  "scheduler_cpu_directly_measured": false,
+  "script": "/users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/build_audit_outputs.py",
+  "small_group_threshold": 100
+}

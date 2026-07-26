@@ -1,0 +1,89 @@
+start_utc=2026-07-26T10:20:44Z
+commit=9fdaf5679dfecfd98b573f4ab9b14085258b7bf3
+dirty=1
+[  6%] Built target rescuesched_handoff_microbench
+[ 17%] Built target sim_core
+[ 24%] Built target rescuesched_trace_generator
+[ 37%] Built target physical_runtime_core
+[ 44%] Built target simulator
+[ 51%] Built target simulator_validity_tests
+[ 58%] Built target rescuesched_physical_runtime
+[ 65%] Built target physical_runtime_tests
+[ 72%] Built target wp2_runtime_support_tests
+[ 79%] Built target wp2_runtime_concurrency_tests
+[ 86%] Built target rescuesched_rpc_server
+[ 93%] Built target rescuesched_rpc_client
+[100%] Built target rpc_protocol_tests
+build_returncode=0
+Internal ctest changing into directory: /users/Mingyang/Micro_banch/build-wp2-release
+Test project /users/Mingyang/Micro_banch/build-wp2-release
+      Start  1: rescue_cli_help
+ 1/32 Test  #1: rescue_cli_help ................................   Passed    0.00 sec
+      Start  2: rescue_smoke_deterministic
+ 2/32 Test  #2: rescue_smoke_deterministic .....................   Passed    0.00 sec
+      Start  3: simulator_validity
+ 3/32 Test  #3: simulator_validity .............................   Passed    0.71 sec
+      Start  4: trace_generator_cli_help
+ 4/32 Test  #4: trace_generator_cli_help .......................   Passed    0.00 sec
+      Start  5: trace_generate_a
+ 5/32 Test  #5: trace_generate_a ...............................   Passed    0.00 sec
+      Start  6: trace_generate_b
+ 6/32 Test  #6: trace_generate_b ...............................   Passed    0.00 sec
+      Start  7: trace_reproducible
+ 7/32 Test  #7: trace_reproducible .............................   Passed    0.01 sec
+      Start  8: physical_runtime_validity
+ 8/32 Test  #8: physical_runtime_validity ......................   Passed    0.23 sec
+      Start  9: wp2_runtime_support
+ 9/32 Test  #9: wp2_runtime_support ............................   Passed    0.02 sec
+      Start 10: wp2_runtime_concurrency
+10/32 Test #10: wp2_runtime_concurrency ........................   Passed    0.62 sec
+      Start 11: physical_runtime_cli_help
+11/32 Test #11: physical_runtime_cli_help ......................   Passed    0.00 sec
+      Start 12: handoff_microbench_cli_help
+12/32 Test #12: handoff_microbench_cli_help ....................   Passed    0.00 sec
+      Start 13: rpc_server_cli_help
+13/32 Test #13: rpc_server_cli_help ............................   Passed    0.00 sec
+      Start 14: rpc_client_cli_help
+14/32 Test #14: rpc_client_cli_help ............................   Passed    0.00 sec
+      Start 15: rpc_protocol_validity
+15/32 Test #15: rpc_protocol_validity ..........................   Passed    0.00 sec
+      Start 16: rescue_v2_generate_a
+16/32 Test #16: rescue_v2_generate_a ...........................   Passed    0.00 sec
+      Start 17: rescue_v2_generate_b
+17/32 Test #17: rescue_v2_generate_b ...........................   Passed    0.00 sec
+      Start 18: rescue_csv_schema
+18/32 Test #18: rescue_csv_schema ..............................   Passed    0.03 sec
+      Start 19: cloudlab_order_generate_a
+19/32 Test #19: cloudlab_order_generate_a ......................   Passed    0.04 sec
+      Start 20: cloudlab_order_generate_b
+20/32 Test #20: cloudlab_order_generate_b ......................   Passed    0.04 sec
+      Start 21: cloudlab_order_reproducible
+21/32 Test #21: cloudlab_order_reproducible ....................   Passed    0.01 sec
+      Start 22: cloudlab_order_verify
+22/32 Test #22: cloudlab_order_verify ..........................   Passed    0.04 sec
+      Start 23: wp4_blind_infrastructure_validator
+23/32 Test #23: wp4_blind_infrastructure_validator .............   Passed    0.71 sec
+      Start 24: wp4_nonformal_config_identity
+24/32 Test #24: wp4_nonformal_config_identity ..................   Passed    0.66 sec
+      Start 25: two_node_coordinator_rejects_commit_mismatch
+25/32 Test #25: two_node_coordinator_rejects_commit_mismatch ...   Passed    0.08 sec
+      Start 26: two_node_coordinator_exact_pid_lifecycle
+26/32 Test #26: two_node_coordinator_exact_pid_lifecycle .......   Passed    0.45 sec
+      Start 27: network_counter_capture_fail_closed
+27/32 Test #27: network_counter_capture_fail_closed ............   Passed    0.31 sec
+      Start 28: background_job_exact_pid_lifecycle
+28/32 Test #28: background_job_exact_pid_lifecycle .............   Passed    0.18 sec
+      Start 29: rpc_affinity_fail_closed
+29/32 Test #29: rpc_affinity_fail_closed .......................   Passed    0.47 sec
+      Start 30: rescue_v2_reproducible
+30/32 Test #30: rescue_v2_reproducible .........................   Passed    0.01 sec
+      Start 31: rescue_rejects_zero_check_period
+31/32 Test #31: rescue_rejects_zero_check_period ...............   Passed    0.00 sec
+      Start 32: rescue_rejects_nan_migration_cost
+32/32 Test #32: rescue_rejects_nan_migration_cost ..............   Passed    0.00 sec
+
+100% tests passed, 0 tests failed out of 32
+
+Total Test time (real) =   4.70 sec
+ctest_returncode=0
+end_utc=2026-07-26T10:20:49Z

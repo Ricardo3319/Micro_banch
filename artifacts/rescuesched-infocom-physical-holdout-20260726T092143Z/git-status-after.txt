@@ -1,0 +1,40 @@
+snapshot_utc=2026-07-26T10:32:15Z
+repository=/users/Mingyang/Micro_banch
+branch=codex/infocom2027-integration
+commit=9fdaf5679dfecfd98b573f4ab9b14085258b7bf3
+dirty=1
+staged_changes=0
+
+## codex/infocom2027-integration
+ M include/physical/runtime.h
+ M src/app/physical_runtime_main.cpp
+ M src/app/rpc_server_main.cpp
+ M src/physical/runtime.cpp
+ M tests/unit/physical_runtime_tests.cpp
+ M tests/unit/wp2_runtime_concurrency_tests.cpp
+?? artifacts/comprehensive-test-20260721T094700Z/
+?? artifacts/quick-run-20260721T065733Z/
+?? artifacts/rescuesched-budget-crossload-scan-20260721T120618Z/
+?? artifacts/rescuesched-fallback-first-pilot-20260721T120512Z/
+?? artifacts/rescuesched-fix-20260721T114246Z/
+?? artifacts/rescuesched-hybrid-bounded-repull-full-20260725T130513Z/
+?? artifacts/rescuesched-hybrid-bounded-repull-screen-20260725T130433Z/
+?? artifacts/rescuesched-hybrid-bounded-repull-timestamp-full-20260725T131254Z/
+?? artifacts/rescuesched-hybrid-cooldown-screen-20260725T124512Z/
+?? artifacts/rescuesched-hybrid-full-20260721T121158Z/
+?? artifacts/rescuesched-hybrid-gain-gate-screen-20260725T124118Z/
+?? artifacts/rescuesched-hybrid-improving-only-screen-20260725T125532Z/
+?? artifacts/rescuesched-hybrid-improving-rescue-full-20260725T125052Z/
+?? artifacts/rescuesched-hybrid-improving-rescue-screen-20260725T124955Z/
+?? artifacts/rescuesched-hybrid-pilot-20260721T121107Z/
+?? artifacts/rescuesched-hybrid-rescued-gate-screen-20260725T124316Z/
+?? artifacts/rescuesched-hybrid-screen-20260725T123923Z/
+?? artifacts/rescuesched-hybrid-short-protect-full-20260725T125305Z/
+?? artifacts/rescuesched-hybrid-short-protect-screen-20260725T124757Z/
+?? artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/
+?? artifacts/rescuesched-lookahead-crossload-scan-20260721T120729Z/
+?? artifacts/rescuesched-lowload-grid-20260721T120841Z/
+?? artifacts/rescuesched-opt-20260721T112338Z/
+?? artifacts/rescuesched-queue-gate-scan-20260721T120042Z/
+?? artifacts/rescuesched-single-migration-pilot-20260721T120319Z/
+?? artifacts/rescuesched-threshold-scan-20260721T115816Z/

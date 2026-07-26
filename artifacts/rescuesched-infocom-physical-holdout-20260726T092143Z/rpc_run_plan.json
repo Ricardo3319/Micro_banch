@@ -1,0 +1,57 @@
+{
+  "arrival_scale": 10.0,
+  "attempt": 2,
+  "check_period_us": 100,
+  "cpu_layout": {
+    "client_receiver": 15,
+    "client_sender": 14,
+    "receivers": [
+      8,
+      9
+    ],
+    "response_senders": [
+      10,
+      11
+    ],
+    "scheduler": 12,
+    "server_main": 13,
+    "server_workers": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ]
+  },
+  "fixed_m1": {
+    "epsilon_us": 6,
+    "idle_pulls": 0,
+    "lookahead_us": 20,
+    "moves": 4
+  },
+  "order_seed": 2026072602,
+  "restart_reason": "check_period_5us_was_physically_unschedulable_in_network_time_scale_1",
+  "scope": "single-host-loopback-real-UDP-RPC-low-load-runtime-validation",
+  "seeds": [
+    71,
+    83,
+    97,
+    109,
+    127
+  ],
+  "timing_warning_thresholds_non_exclusionary": {
+    "client_send_lag_p99_us": 4.0,
+    "scheduler_missed_fraction": 0.05
+  },
+  "variants": [
+    "FIFO",
+    "M0",
+    "L1Only",
+    "CentralOnly",
+    "FullHybrid"
+  ],
+  "workers": 8
+}

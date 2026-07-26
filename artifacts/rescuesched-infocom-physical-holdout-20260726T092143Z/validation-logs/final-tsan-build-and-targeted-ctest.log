@@ -1,0 +1,29 @@
+start_utc=2026-07-26T10:20:44Z
+commit=9fdaf5679dfecfd98b573f4ab9b14085258b7bf3
+dirty=1
+[ 10%] Built target sim_core
+[ 17%] Built target rescuesched_handoff_microbench
+[ 24%] Built target rescuesched_trace_generator
+[ 37%] Built target physical_runtime_core
+[ 44%] Built target simulator_validity_tests
+[ 51%] Built target simulator
+[ 58%] Built target rescuesched_physical_runtime
+[ 65%] Built target physical_runtime_tests
+[ 72%] Built target wp2_runtime_support_tests
+[ 79%] Built target wp2_runtime_concurrency_tests
+[ 86%] Built target rescuesched_rpc_server
+[ 93%] Built target rescuesched_rpc_client
+[100%] Built target rpc_protocol_tests
+build_returncode=0
+Internal ctest changing into directory: /users/Mingyang/Micro_banch/build-wp2-tsan
+Test project /users/Mingyang/Micro_banch/build-wp2-tsan
+    Start  8: physical_runtime_validity
+1/2 Test  #8: physical_runtime_validity ........   Passed    0.32 sec
+    Start 10: wp2_runtime_concurrency
+2/2 Test #10: wp2_runtime_concurrency ..........   Passed    2.10 sec
+
+100% tests passed, 0 tests failed out of 2
+
+Total Test time (real) =   2.42 sec
+ctest_returncode=0
+end_utc=2026-07-26T10:20:47Z

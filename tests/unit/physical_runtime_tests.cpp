@@ -3,6 +3,7 @@
 #include "physical/trace.h"
 #include "sim/workloads/trace.h"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <filesystem>
@@ -11,6 +12,8 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace {
 
@@ -69,6 +72,22 @@ void test_strict_trace_loader() {
 
     fs::remove(valid);
     fs::remove(duplicate);
+}
+
+void test_hybrid_validated_defaults() {
+    const physical::RuntimeConfig config;
+    require(config.policy == physical::PolicyKind::M1_RESCUE_SCHED,
+            "default runtime policy is not RescueSched");
+    require(config.moves_per_check == 4,
+            "validated RescueSched move budget is not the default");
+    require(config.epsilon_us == 6.0,
+            "validated RescueSched epsilon is not the default");
+    require(config.rescue_lookahead_us == 20.0,
+            "validated RescueSched lookahead is not the default");
+    require(config.rescue_distributed_l1_enabled,
+            "distributed L1 must remain enabled in the full-hybrid default");
+    require(config.rescue_idle_pulls_per_check == 0,
+            "central idle-pull fallback must remain disabled by default");
 }
 
 void test_method_ewma_has_no_current_request_input() {
@@ -160,6 +179,82 @@ void test_rescue_migrates_only_queued_and_appends_tail() {
     }
     require(migrated_candidate,
             "deterministic queued doomed request was not migrated");
+    fs::remove(trace_path);
+}
+
+void test_hybrid_deadline_rescue_has_bounded_repulls() {
+    const fs::path trace_path = temp_path("hybrid-rescue-stability.csv");
+    std::string rows;
+    for (int id = 1; id <= 40; ++id) {
+        const int service_us = id == 1 ? 400 : 40;
+        const int deadline_us = id == 1 ? 1000 : 120 + id * 5;
+        rows += "rescuesched-trace-v2," + embedded_hash() + ","
+            + std::to_string(id) + ",0,long,"
+            + std::to_string(service_us) + ","
+            + std::to_string(deadline_us) + ",0,0\n";
+    }
+    write_v2_trace(trace_path, rows);
+
+    physical::RuntimeConfig config;
+    config.policy = physical::PolicyKind::M1_RESCUE_SCHED;
+    config.worker_count = 16;
+    config.strict_affinity = false;
+    config.time_scale = 100.0;
+    config.check_period_us = 5.0;
+    config.handoff_estimate_us = 0.5;
+    config.host_overhead_us = 0.0;
+    config.decision_sample_cap = 100000;
+    physical::FrozenTrace trace = physical::FrozenTrace::load_csv(
+        trace_path.string(), config.worker_count);
+    physical::PhysicalRuntime runtime(std::move(trace), config);
+    const physical::RuntimeResult result = runtime.run();
+
+    require(result.summary.invariants_pass,
+            "hybrid rescue stability trace violated runtime invariants");
+    require(result.summary.scheduler_epochs_executed > 0,
+            "hybrid trace did not exercise central deadline rescue checks");
+    require(result.summary.l1_poll_attempts > 0
+            && result.summary.l1_poll_successes > 0,
+            "hybrid trace did not exercise distributed idle polling");
+
+    std::unordered_set<uint64_t> centrally_rescued;
+    for (const auto& decision : result.decisions) {
+        if (decision.reason != "commit_local_doom_remote_feasible") continue;
+        require(decision.predicted_remote_completion_us
+                    + config.epsilon_us
+                    <= decision.deadline_abs_us + 1e-9,
+                "central rescue committed a deadline-infeasible migration");
+        require(decision.predicted_remote_completion_us + 1e-9
+                    < decision.predicted_local_completion_us,
+                "central rescue committed a non-improving migration");
+        centrally_rescued.insert(decision.request_id);
+    }
+    require(!centrally_rescued.empty(),
+            "hybrid trace did not commit a central deadline rescue");
+
+    std::unordered_map<uint64_t, uint32_t> central_migration_records;
+    std::unordered_map<uint64_t, uint32_t> total_migration_records;
+    std::unordered_map<uint64_t, double> central_handoff_end_us;
+    for (const auto& migration : result.migrations) {
+        if (migration.outcome != "committed_append_tail") continue;
+        ++total_migration_records[migration.request_id];
+        if (migration.reason == "commit_local_doom_remote_feasible") {
+            ++central_migration_records[migration.request_id];
+            central_handoff_end_us[migration.request_id] = migration.end_us;
+            continue;
+        }
+        const auto found = central_handoff_end_us.find(migration.request_id);
+        if (found == central_handoff_end_us.end()) continue;
+        require(migration.start_us + 1e-9
+                    >= found->second + config.handoff_estimate_us,
+                "centrally rescued request was immediately re-pulled");
+    }
+    for (uint64_t request_id : centrally_rescued) {
+        require(central_migration_records[request_id] == 1,
+                "central rescue did not have exactly one committed handoff");
+        require(total_migration_records[request_id] <= 2,
+                "centrally rescued request exceeded the repull bound");
+    }
     fs::remove(trace_path);
 }
 
@@ -317,9 +412,11 @@ void test_network_ingress_identity_and_lifecycle() {
 int main() {
     try {
         test_strict_trace_loader();
+        test_hybrid_validated_defaults();
         test_method_ewma_has_no_current_request_input();
         test_all_policies_share_runtime_and_drain();
         test_rescue_migrates_only_queued_and_appends_tail();
+        test_hybrid_deadline_rescue_has_bounded_repulls();
         test_running_cancel_is_non_preemptive();
         test_terminal_cancel_callback_fires_once();
         test_strict_scheduler_affinity_fails_closed();

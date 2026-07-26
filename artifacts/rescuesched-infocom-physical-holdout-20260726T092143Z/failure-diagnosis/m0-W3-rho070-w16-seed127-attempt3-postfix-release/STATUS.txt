@@ -1,0 +1,5 @@
+status=PASS
+iterations=100
+timeout_s=5
+failures=0
+metrics_use=DIAGNOSTIC_ONLY_EXCLUDED

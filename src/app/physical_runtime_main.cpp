@@ -67,8 +67,20 @@ void print_usage(const char* executable) {
         << "  --scan-depth N            Bounded queue prefix (default: 64)\n"
         << "  --k-candidates N          Candidate bound (default: 16)\n"
         << "  --h-targets N             Target bound (default: 4)\n"
-        << "  --moves-per-check N       Commit bound (default: 1)\n"
-        << "  --epsilon-us X            Rescue feasibility margin (default: 2)\n"
+        << "  --moves-per-check N       Commit bound (default: 4)\n"
+        << "  --epsilon-us X            Rescue feasibility margin (default: 6)\n"
+        << "  --rescue-lookahead-us X   Pre-deadline rescue horizon (default: 20)\n"
+        << "  --rescue-gain-weight X    Completion-gain score weight (default: 0.05)\n"
+        << "  --rescue-target-backlog-penalty X\n"
+        << "                            Target-work score penalty (default: 1)\n"
+        << "  --disable-rescue-distributed-l1\n"
+        << "                            Ablation: keep central rescue but disable distributed L1 polling\n"
+        << "  --rescue-idle-pulls-per-check N\n"
+        << "                            Central fallback budget (default: 0; distributed idle polling remains active)\n"
+        << "  --rescue-idle-pull-min-source-queue-depth N\n"
+        << "                            Fallback source queue gate (default: 1)\n"
+        << "  --rescue-idle-pull-min-source-work-us X\n"
+        << "                            Fallback pressure gate (default: 0)\n"
         << "  --handoff-estimate-us X   Policy estimate only (default: 0.5)\n"
         << "  --host-overhead-us X      Synthetic execution overhead (default: 2.1)\n"
         << "  --ewma-alpha X            Completion-updated EWMA alpha (default: 0.05)\n"
@@ -147,6 +159,38 @@ Options parse_options(int argc, char** argv) {
                    || argument.rfind("--epsilon-us=", 0) == 0) {
             options.runtime.epsilon_us = std::stod(option_value(
                 index, argc, argv, argument, "--epsilon-us"));
+        } else if (argument == "--rescue-lookahead-us"
+                   || argument.rfind("--rescue-lookahead-us=", 0) == 0) {
+            options.runtime.rescue_lookahead_us = std::stod(option_value(
+                index, argc, argv, argument, "--rescue-lookahead-us"));
+        } else if (argument == "--rescue-gain-weight"
+                   || argument.rfind("--rescue-gain-weight=", 0) == 0) {
+            options.runtime.rescue_completion_gain_weight = std::stod(option_value(
+                index, argc, argv, argument, "--rescue-gain-weight"));
+        } else if (argument == "--rescue-target-backlog-penalty"
+                   || argument.rfind("--rescue-target-backlog-penalty=", 0) == 0) {
+            options.runtime.rescue_target_backlog_penalty = std::stod(option_value(
+                index, argc, argv, argument,
+                "--rescue-target-backlog-penalty"));
+        } else if (argument == "--disable-rescue-distributed-l1") {
+            options.runtime.rescue_distributed_l1_enabled = false;
+        } else if (argument == "--rescue-idle-pulls-per-check"
+                   || argument.rfind("--rescue-idle-pulls-per-check=", 0) == 0) {
+            options.runtime.rescue_idle_pulls_per_check = std::stoi(option_value(
+                index, argc, argv, argument,
+                "--rescue-idle-pulls-per-check"));
+        } else if (argument == "--rescue-idle-pull-min-source-queue-depth"
+                   || argument.rfind(
+                       "--rescue-idle-pull-min-source-queue-depth=", 0) == 0) {
+            options.runtime.rescue_idle_pull_min_source_queue_depth = std::stoi(
+                option_value(index, argc, argv, argument,
+                    "--rescue-idle-pull-min-source-queue-depth"));
+        } else if (argument == "--rescue-idle-pull-min-source-work-us"
+                   || argument.rfind(
+                       "--rescue-idle-pull-min-source-work-us=", 0) == 0) {
+            options.runtime.rescue_idle_pull_min_source_work_us = std::stod(
+                option_value(index, argc, argv, argument,
+                    "--rescue-idle-pull-min-source-work-us"));
         } else if (argument == "--handoff-estimate-us"
                    || argument.rfind("--handoff-estimate-us=", 0) == 0) {
             options.runtime.handoff_estimate_us = std::stod(option_value(

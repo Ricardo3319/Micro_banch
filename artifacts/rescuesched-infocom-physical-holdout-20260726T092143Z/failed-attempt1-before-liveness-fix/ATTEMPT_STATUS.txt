@@ -1,0 +1,9 @@
+status=FAILED
+completed_valid_runs=24
+failed_run_number=25
+failed_setup=W3-rho070-w16
+failed_seed=127
+failed_variant=M0
+failure=runtime_liveness_hang_over_10_minutes
+resolution=preserved_full_attempt_and_diagnosis; fixed terminal scheduler handshake; restart all 160 runs from a clean paired matrix
+metrics_use=EXCLUDED

@@ -1,0 +1,4 @@
+status=PASS
+runs=25
+arrival_scale=10.0
+scope=single_host_loopback_real_udp_rpc_low_load_runtime_validation

@@ -124,8 +124,14 @@ void usage(const char* executable) {
         << "  --irq-cpus A,B,... --allow-control-irq-smt-siblings\n"
         << "  --allow-affinity-failure --warmup-requests N\n"
         << "  --check-period-us X --scan-depth N --k-candidates N --h-targets N\n"
-        << "  --moves-per-check N --epsilon-us X --handoff-estimate-us X\n"
-        << "  --host-overhead-us X --ewma-alpha X --alto-threshold-us X\n"
+        << "  --moves-per-check N --epsilon-us X --rescue-lookahead-us X\n"
+        << "  --rescue-gain-weight X --rescue-target-backlog-penalty X\n"
+        << "  --disable-rescue-distributed-l1 (central-rescue-only ablation)\n"
+        << "  --rescue-idle-pulls-per-check N\n"
+        << "  --rescue-idle-pull-min-source-queue-depth N\n"
+        << "  --rescue-idle-pull-min-source-work-us X\n"
+        << "  --handoff-estimate-us X --host-overhead-us X --ewma-alpha X\n"
+        << "  --alto-threshold-us X\n"
         << "  --alto-min-gain-us X --decision-sample-cap N --decision-bucket-us X\n"
         << "  --workload-label TEXT --rho-label TEXT --seed-label TEXT --repetition N\n";
 }
@@ -193,6 +199,33 @@ Options parse_options(int argc, char** argv) {
             options.runtime.moves_per_check = std::stoi(take("--moves-per-check"));
         else if (arg == "--epsilon-us" || arg.rfind("--epsilon-us=", 0) == 0)
             options.runtime.epsilon_us = std::stod(take("--epsilon-us"));
+        else if (arg == "--rescue-lookahead-us"
+                 || arg.rfind("--rescue-lookahead-us=", 0) == 0)
+            options.runtime.rescue_lookahead_us = std::stod(
+                take("--rescue-lookahead-us"));
+        else if (arg == "--rescue-gain-weight"
+                 || arg.rfind("--rescue-gain-weight=", 0) == 0)
+            options.runtime.rescue_completion_gain_weight = std::stod(
+                take("--rescue-gain-weight"));
+        else if (arg == "--rescue-target-backlog-penalty"
+                 || arg.rfind("--rescue-target-backlog-penalty=", 0) == 0)
+            options.runtime.rescue_target_backlog_penalty = std::stod(
+                take("--rescue-target-backlog-penalty"));
+        else if (arg == "--disable-rescue-distributed-l1")
+            options.runtime.rescue_distributed_l1_enabled = false;
+        else if (arg == "--rescue-idle-pulls-per-check"
+                 || arg.rfind("--rescue-idle-pulls-per-check=", 0) == 0)
+            options.runtime.rescue_idle_pulls_per_check = std::stoi(
+                take("--rescue-idle-pulls-per-check"));
+        else if (arg == "--rescue-idle-pull-min-source-queue-depth"
+                 || arg.rfind(
+                     "--rescue-idle-pull-min-source-queue-depth=", 0) == 0)
+            options.runtime.rescue_idle_pull_min_source_queue_depth = std::stoi(
+                take("--rescue-idle-pull-min-source-queue-depth"));
+        else if (arg == "--rescue-idle-pull-min-source-work-us"
+                 || arg.rfind("--rescue-idle-pull-min-source-work-us=", 0) == 0)
+            options.runtime.rescue_idle_pull_min_source_work_us = std::stod(
+                take("--rescue-idle-pull-min-source-work-us"));
         else if (arg == "--handoff-estimate-us"
                  || arg.rfind("--handoff-estimate-us=", 0) == 0)
             options.runtime.handoff_estimate_us = std::stod(take("--handoff-estimate-us"));

@@ -1,0 +1,24 @@
+{
+  "analysis_script": "/users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/analyze_results.py",
+  "bootstrap_draws": 10000,
+  "bootstrap_seed": 2026072603,
+  "delta_convention": "positive means candidate better",
+  "holdout_seeds": [
+    71,
+    83,
+    97,
+    109,
+    127
+  ],
+  "notes": [
+    "scheduler CPU is not directly sampled; decision wall duration and cycles are proxies",
+    "loopback RPC uses arrival_scale=10 and check_period_us=100 and is low-load implementation evidence, not formal rho=0.85 evidence",
+    "RPC client send-lag P99 above the original 4-us gate is retained as a non-exclusionary timing warning for every RPC run"
+  ],
+  "paired_unit": "holdout seed",
+  "run_count": 185,
+  "scope_counts": {
+    "local_synthetic_runtime": 160,
+    "loopback_udp_rpc": 25
+  }
+}

@@ -72,8 +72,15 @@ struct RuntimeConfig {
     int scan_depth = 64;
     int max_candidates = 16;
     int target_count = 4;
-    int moves_per_check = 1;
-    double epsilon_us = 2.0;
+    int moves_per_check = 4;
+    double epsilon_us = 6.0;
+    double rescue_lookahead_us = 20.0;
+    double rescue_completion_gain_weight = 0.05;
+    double rescue_target_backlog_penalty = 1.0;
+    bool rescue_distributed_l1_enabled = true;
+    int rescue_idle_pulls_per_check = 0;
+    int rescue_idle_pull_min_source_queue_depth = 1;
+    double rescue_idle_pull_min_source_work_us = 0.0;
     double handoff_estimate_us = 0.5;
     double host_overhead_us = 2.1;
     double alto_queue_threshold_us = 40.0;
@@ -147,6 +154,7 @@ struct MigrationRecord {
     double start_us = 0.0;
     double end_us = 0.0;
     uint64_t handoff_duration_ns = 0;
+    std::string reason;
     std::string outcome;
 };
 

@@ -1,0 +1,315 @@
+validation_utc=2026-07-26T10:31:17Z
+branch=codex/infocom2027-integration
+commit=9fdaf5679dfecfd98b573f4ab9b14085258b7bf3
+dirty=1
+command=python3 validate_final_artifact.py
+artifact=/users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z
+repo=/users/Mingyang/Micro_banch
+checks_passed=304
+errors=0
+PASS HEAD matches recorded experiment commit
+PASS current branch matches experiment branch
+PASS repository remains dirty
+PASS no staged changes
+PASS all six expected tracked runtime/test changes remain in the dirty diff
+PASS holdout and development seed sets are disjoint
+PASS run metadata commit matches
+PASS run metadata records dirty=1
+PASS run metadata records exact holdout seeds
+PASS run metadata records no parameter scan
+PASS run metadata excludes remote/tuning work
+PASS run metadata records fixed M1 tuple 4/6/20/0
+PASS required CSV exists: raw_metrics.csv
+PASS raw_metrics.csv has exactly 185 data rows
+PASS raw scope counts are 160 synthetic and 25 RPC
+PASS raw metrics use only the five holdout seeds
+PASS every final run records the same dirty commit
+PASS all 185 final runs are VALID_COMPLETE
+PASS no final run has a validity error
+PASS the only recorded parameter tuple is 4/6/20/0
+PASS all decision records are captured with zero drops
+PASS all recorded run paths exist
+PASS there are exactly 40 paired setup/seed cells
+PASS synthetic paired variants complete: W2-rho070-w16 seed 97
+PASS synthetic paired variants complete: W2-rho070-w16 seed 83
+PASS synthetic paired variants complete: W2-rho070-w16 seed 71
+PASS synthetic paired variants complete: W2-rho070-w16 seed 109
+PASS synthetic paired variants complete: W2-rho070-w16 seed 127
+PASS synthetic paired variants complete: W2-rho085-w16 seed 97
+PASS synthetic paired variants complete: W2-rho085-w16 seed 83
+PASS synthetic paired variants complete: W2-rho085-w16 seed 71
+PASS synthetic paired variants complete: W2-rho085-w16 seed 109
+PASS synthetic paired variants complete: W2-rho085-w16 seed 127
+PASS synthetic paired variants complete: W3-rho070-w16 seed 97
+PASS synthetic paired variants complete: W3-rho070-w16 seed 83
+PASS synthetic paired variants complete: W3-rho070-w16 seed 71
+PASS synthetic paired variants complete: W3-rho070-w16 seed 109
+PASS synthetic paired variants complete: W3-rho070-w16 seed 127
+PASS synthetic paired variants complete: W3-rho085-w8 seed 97
+PASS synthetic paired variants complete: W3-rho085-w8 seed 83
+PASS synthetic paired variants complete: W3-rho085-w8 seed 71
+PASS synthetic paired variants complete: W3-rho085-w8 seed 109
+PASS synthetic paired variants complete: W3-rho085-w8 seed 127
+PASS synthetic paired variants complete: W3-rho085-w12 seed 97
+PASS synthetic paired variants complete: W3-rho085-w12 seed 83
+PASS synthetic paired variants complete: W3-rho085-w12 seed 71
+PASS synthetic paired variants complete: W3-rho085-w12 seed 109
+PASS synthetic paired variants complete: W3-rho085-w12 seed 127
+PASS synthetic paired variants complete: W3-rho085-w16 seed 97
+PASS synthetic paired variants complete: W3-rho085-w16 seed 83
+PASS synthetic paired variants complete: W3-rho085-w16 seed 71
+PASS synthetic paired variants complete: W3-rho085-w16 seed 109
+PASS synthetic paired variants complete: W3-rho085-w16 seed 127
+PASS synthetic paired variants complete: W3-rho090-w16 seed 97
+PASS synthetic paired variants complete: W3-rho090-w16 seed 83
+PASS synthetic paired variants complete: W3-rho090-w16 seed 71
+PASS synthetic paired variants complete: W3-rho090-w16 seed 109
+PASS synthetic paired variants complete: W3-rho090-w16 seed 127
+PASS RPC paired variants complete: seed 97
+PASS RPC paired variants complete: seed 83
+PASS RPC paired variants complete: seed 71
+PASS RPC paired variants complete: seed 109
+PASS RPC paired variants complete: seed 127
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W2-rho070-w16', 71)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W2-rho070-w16', 71)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W2-rho070-w16', 83)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W2-rho070-w16', 83)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W2-rho070-w16', 97)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W2-rho070-w16', 97)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W2-rho070-w16', 109)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W2-rho070-w16', 109)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W2-rho070-w16', 127)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W2-rho070-w16', 127)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W2-rho085-w16', 71)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W2-rho085-w16', 71)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W2-rho085-w16', 83)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W2-rho085-w16', 83)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W2-rho085-w16', 97)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W2-rho085-w16', 97)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W2-rho085-w16', 109)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W2-rho085-w16', 109)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W2-rho085-w16', 127)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W2-rho085-w16', 127)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho070-w16', 71)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho070-w16', 71)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho070-w16', 83)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho070-w16', 83)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho070-w16', 97)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho070-w16', 97)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho070-w16', 109)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho070-w16', 109)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho070-w16', 127)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho070-w16', 127)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w12', 71)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w12', 71)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w12', 83)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w12', 83)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w12', 97)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w12', 97)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w12', 109)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w12', 109)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w12', 127)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w12', 127)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w16', 71)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w16', 71)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w16', 83)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w16', 83)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w16', 97)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w16', 97)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w16', 109)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w16', 109)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w16', 127)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w16', 127)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w8', 71)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w8', 71)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w8', 83)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w8', 83)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w8', 97)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w8', 97)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w8', 109)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w8', 109)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w8', 127)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho085-w8', 127)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho090-w16', 71)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho090-w16', 71)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho090-w16', 83)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho090-w16', 83)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho090-w16', 97)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho090-w16', 97)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho090-w16', 109)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho090-w16', 109)
+PASS embedded trace hash paired for ('local_synthetic_runtime', 'W3-rho090-w16', 127)
+PASS input trace hash paired for ('local_synthetic_runtime', 'W3-rho090-w16', 127)
+PASS embedded trace hash paired for ('loopback_udp_rpc', 'RPC-W3-rho085-w8-scale10', 71)
+PASS input trace hash paired for ('loopback_udp_rpc', 'RPC-W3-rho085-w8-scale10', 71)
+PASS embedded trace hash paired for ('loopback_udp_rpc', 'RPC-W3-rho085-w8-scale10', 83)
+PASS input trace hash paired for ('loopback_udp_rpc', 'RPC-W3-rho085-w8-scale10', 83)
+PASS embedded trace hash paired for ('loopback_udp_rpc', 'RPC-W3-rho085-w8-scale10', 97)
+PASS input trace hash paired for ('loopback_udp_rpc', 'RPC-W3-rho085-w8-scale10', 97)
+PASS embedded trace hash paired for ('loopback_udp_rpc', 'RPC-W3-rho085-w8-scale10', 109)
+PASS input trace hash paired for ('loopback_udp_rpc', 'RPC-W3-rho085-w8-scale10', 109)
+PASS embedded trace hash paired for ('loopback_udp_rpc', 'RPC-W3-rho085-w8-scale10', 127)
+PASS input trace hash paired for ('loopback_udp_rpc', 'RPC-W3-rho085-w8-scale10', 127)
+PASS required CSV exists: holdout_trace_audit.csv
+PASS holdout trace audit has 40 setup/seed rows
+PASS holdout trace audit passes pairing, validity, and fixed-tuple checks
+PASS required CSV exists: correctness_invariant_detail.csv
+PASS correctness detail has exactly 185 rows
+PASS all 185 correctness audits pass
+PASS all runtime cancellation/duplicate/loss/reservation/affinity/drop counters are zero
+PASS all runtimes complete all 5500 requests
+PASS all runs contain 5000 measured requests
+PASS exactly 25 RPC rows are present
+PASS all and only final RPC rows retain the send-lag warning
+PASS all 25 RPC send-lag P99 values exceed the retained 4-us warning threshold
+PASS no final RPC run violates the 5% scheduler-miss validity gate
+PASS every RPC run accepts, enqueues, sends, and receives all 5500 requests
+PASS all RPC packet/queue/send/client failure counters are zero
+PASS all RPC client/server/scheduler affinity checks pass
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/CentralOnly
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/CentralOnly
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/CentralOnly
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/CentralOnly
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/CentralOnly
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/FIFO
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/FIFO
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/FIFO
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/FIFO
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/FIFO
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/FullHybrid
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/FullHybrid
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/FullHybrid
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/FullHybrid
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/FullHybrid
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/L1Only
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/L1Only
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/L1Only
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/L1Only
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/L1Only
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/M0
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/M0
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/M0
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/M0
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-71/M0
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/CentralOnly
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/CentralOnly
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/CentralOnly
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/CentralOnly
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/CentralOnly
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/FIFO
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/FIFO
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/FIFO
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/FIFO
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/FIFO
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/FullHybrid
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/FullHybrid
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/FullHybrid
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/FullHybrid
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/FullHybrid
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/L1Only
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/L1Only
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/L1Only
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/L1Only
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/L1Only
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/M0
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/M0
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/M0
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/M0
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-83/M0
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/CentralOnly
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/CentralOnly
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/CentralOnly
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/CentralOnly
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/CentralOnly
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/FIFO
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/FIFO
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/FIFO
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/FIFO
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/FIFO
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/FullHybrid
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/FullHybrid
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/FullHybrid
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/FullHybrid
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/FullHybrid
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/L1Only
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/L1Only
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/L1Only
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/L1Only
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/L1Only
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/M0
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/M0
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/M0
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/M0
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-97/M0
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/CentralOnly
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/CentralOnly
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/CentralOnly
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/CentralOnly
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/CentralOnly
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/FIFO
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/FIFO
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/FIFO
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/FIFO
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/FIFO
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/FullHybrid
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/FullHybrid
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/FullHybrid
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/FullHybrid
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/FullHybrid
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/L1Only
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/L1Only
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/L1Only
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/L1Only
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/L1Only
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/M0
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/M0
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/M0
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/M0
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-109/M0
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/CentralOnly
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/CentralOnly
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/CentralOnly
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/CentralOnly
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/CentralOnly
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/FIFO
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/FIFO
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/FIFO
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/FIFO
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/FIFO
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/FullHybrid
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/FullHybrid
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/FullHybrid
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/FullHybrid
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/FullHybrid
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/L1Only
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/L1Only
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/L1Only
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/L1Only
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/L1Only
+PASS single client summary row: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/M0
+PASS client RPC counters/affinity pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/M0
+PASS server RPC counters/affinity/invariants pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/M0
+PASS RPC manifest environment and fixed tuple pass: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/M0
+PASS RPC validity classification retained: /users/Mingyang/Micro_banch/artifacts/rescuesched-infocom-physical-holdout-20260726T092143Z/rpc/RPC-W3-rho085-w8-scale10/seed-127/M0
+PASS CentralOnly uniquely disables distributed L1
+PASS CentralOnly has zero distributed-L1 poll attempts/successes
+PASS L1Only has zero central commits
+PASS FullHybrid exercises central rescue in every final run
+PASS required CSV exists: paired_metrics.csv
+PASS required CSV exists: aggregate.csv
+PASS required CSV exists: bootstrap_95ci.csv
+PASS paired_metrics.csv has 195 paired rows
+PASS aggregate.csv has 285 aggregate rows
+PASS bootstrap_95ci.csv has 285 aggregate rows
+PASS every aggregate uses n=5, 10,000 bootstrap draws, and the fixed bootstrap seed
+PASS bootstrap audit records the exact-test n=5 limitation
+PASS derived analysis declares no benchmark execution or parameter selection
+PASS derived analysis explicitly records scheduler CPU as not directly measured
+PASS RPC seed 97 FullHybrid high-tail/high-lag observation is retained
+PASS RPC seed 71 M0 scheduler-lag outlier is retained
+PASS all failed attempts and M0 post-fix regression are preserved
+PASS all final documentation files exist
+PASS final Release build and 32-test CTest pass on dirty tree
+PASS final targeted TSan build and 2-test CTest pass on dirty tree
+status=PASS
+validator_return_code=0

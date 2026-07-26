@@ -1,0 +1,106 @@
+{
+  "attempt": 2,
+  "order_seed": 20260726,
+  "restart_reason": "post-liveness-fix full clean paired restart",
+  "seeds": [
+    71,
+    83,
+    97,
+    109,
+    127
+  ],
+  "setups": {
+    "W2-rho070-w16": {
+      "rho": "0.70",
+      "role": "supplemental_cross_load",
+      "variants": [
+        "FIFO",
+        "M0",
+        "L1Only",
+        "FullHybrid"
+      ],
+      "workers": 16,
+      "workload": "W2"
+    },
+    "W2-rho085-w16": {
+      "existing": "W2-rho085",
+      "rho": "0.85",
+      "role": "primary_holdout_and_ablation",
+      "variants": [
+        "FIFO",
+        "M0",
+        "L1Only",
+        "FullHybrid",
+        "CentralOnly"
+      ],
+      "workers": 16,
+      "workload": "W2"
+    },
+    "W3-rho070-w16": {
+      "existing": "W3-rho070",
+      "rho": "0.70",
+      "role": "primary_holdout_and_ablation",
+      "variants": [
+        "FIFO",
+        "M0",
+        "L1Only",
+        "FullHybrid",
+        "CentralOnly"
+      ],
+      "workers": 16,
+      "workload": "W3"
+    },
+    "W3-rho085-w12": {
+      "rho": "0.85",
+      "role": "supplemental_worker_count",
+      "variants": [
+        "FIFO",
+        "M0",
+        "L1Only",
+        "FullHybrid"
+      ],
+      "workers": 12,
+      "workload": "W3"
+    },
+    "W3-rho085-w16": {
+      "existing": "W3-rho085",
+      "rho": "0.85",
+      "role": "primary_holdout_and_ablation",
+      "variants": [
+        "FIFO",
+        "M0",
+        "L1Only",
+        "FullHybrid",
+        "CentralOnly"
+      ],
+      "workers": 16,
+      "workload": "W3"
+    },
+    "W3-rho085-w8": {
+      "rho": "0.85",
+      "role": "supplemental_worker_count",
+      "variants": [
+        "FIFO",
+        "M0",
+        "L1Only",
+        "FullHybrid"
+      ],
+      "workers": 8,
+      "workload": "W3"
+    },
+    "W3-rho090-w16": {
+      "existing": "W3-rho090",
+      "rho": "0.90",
+      "role": "primary_holdout_and_ablation",
+      "variants": [
+        "FIFO",
+        "M0",
+        "L1Only",
+        "FullHybrid",
+        "CentralOnly"
+      ],
+      "workers": 16,
+      "workload": "W3"
+    }
+  }
+}

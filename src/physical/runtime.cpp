@@ -194,6 +194,8 @@ struct PhysicalRuntime::Impl {
         uint32_t execution_count = 0;
         uint32_t completion_count = 0;
         bool measurement_eligible = false;
+        bool centrally_rescued = false;
+        double central_rescue_protect_until_us = 0.0;
         bool cancel_pending = false;
         bool cancel_requested_after_start = false;
     };
@@ -206,6 +208,7 @@ struct PhysicalRuntime::Impl {
         int evaluated_targets = 0;
         double local_completion_us = 0.0;
         double remote_completion_us = 0.0;
+        bool deadline_rescue = false;
         std::string reason;
     };
 
@@ -236,6 +239,7 @@ struct PhysicalRuntime::Impl {
     CompletionCallback completion_callback;
     Clock::time_point start_time;
     std::atomic<bool> stopping{false};
+    std::atomic<bool> terminal_run_complete{false};
     bool started = false;
     bool submission_done = false;
     size_t ready_workers = 0;
@@ -329,6 +333,10 @@ struct PhysicalRuntime::Impl {
         };
         const double finite_values[] = {
             config.time_scale, config.check_period_us, config.epsilon_us,
+            config.rescue_lookahead_us,
+            config.rescue_completion_gain_weight,
+            config.rescue_target_backlog_penalty,
+            config.rescue_idle_pull_min_source_work_us,
             config.handoff_estimate_us, config.host_overhead_us,
             config.alto_queue_threshold_us, config.alto_min_gain_us,
             config.ewma_alpha, config.initial_short_service_us,
@@ -348,9 +356,15 @@ struct PhysicalRuntime::Impl {
         if (!(config.time_scale > 0.0) || !(config.check_period_us > 0.0)
             || config.scan_depth <= 0 || config.max_candidates <= 0
             || config.target_count <= 0 || config.moves_per_check <= 0
+            || config.rescue_idle_pulls_per_check < 0
+            || config.rescue_idle_pull_min_source_queue_depth <= 0
             || !(config.decision_bucket_us > 0.0))
             throw std::invalid_argument("runtime periods and bounds must be positive");
-        if (config.epsilon_us < 0.0 || config.handoff_estimate_us < 0.0
+        if (config.epsilon_us < 0.0 || config.rescue_lookahead_us < 0.0
+            || config.rescue_completion_gain_weight < 0.0
+            || config.rescue_target_backlog_penalty < 0.0
+            || config.rescue_idle_pull_min_source_work_us < 0.0
+            || config.handoff_estimate_us < 0.0
             || config.host_overhead_us < 0.0
             || config.alto_queue_threshold_us < 0.0
             || config.alto_min_gain_us < 0.0)
@@ -370,6 +384,23 @@ struct PhysicalRuntime::Impl {
 
     double estimated_work(const Descriptor& descriptor) const {
         return descriptor.view.estimated_service_us + config.host_overhead_us;
+    }
+
+    void update_terminal_run_complete_locked() {
+        if (!submission_done || terminal_count != descriptors.size()) return;
+        terminal_run_complete.store(true, std::memory_order_release);
+        scheduler_wait_cv.notify_all();
+    }
+
+    void record_terminal_locked() {
+        ++terminal_count;
+        update_terminal_run_complete_locked();
+        terminal_cv.notify_all();
+    }
+
+    void mark_submission_done_locked() {
+        submission_done = true;
+        update_terminal_run_complete_locked();
     }
 
     double core_work_us(int core, double now) const {
@@ -409,24 +440,6 @@ struct PhysicalRuntime::Impl {
         return std::numeric_limits<double>::infinity();
     }
 
-    int target_risk_before(int core, double now, int* scanned) const {
-        int risk = 0;
-        int depth = 0;
-        double completion = now;
-        if (running[static_cast<size_t>(core)]) {
-            completion += std::max(0.0,
-                running_estimated_finish_us[static_cast<size_t>(core)] - now);
-        }
-        for (size_t index : queues[static_cast<size_t>(core)]) {
-            if (depth++ >= config.scan_depth) break;
-            ++(*scanned);
-            const Descriptor& descriptor = descriptors[index];
-            completion += estimated_work(descriptor);
-            if (completion > descriptor.view.deadline_abs_us) ++risk;
-        }
-        return risk;
-    }
-
     Choice choose_work_stealing_for_target(int target, double now) const {
         Choice choice;
         choice.target_core = target;
@@ -442,6 +455,14 @@ struct PhysicalRuntime::Impl {
         double largest_work = -1.0;
         for (int core = 0; core < config.worker_count; ++core) {
             if (core == target || queues[static_cast<size_t>(core)].empty()) continue;
+            const size_t front = queues[static_cast<size_t>(core)].front();
+            const Descriptor& front_descriptor = descriptors[front];
+            if (config.policy == PolicyKind::M1_RESCUE_SCHED
+                && (front_descriptor.central_rescue_protect_until_us
+                        > now + 1e-9
+                    || (front_descriptor.centrally_rescued
+                        && front_descriptor.view.migration_count >= 2)))
+                continue;
             const double work = core_work_us(core, now);
             if (work > largest_work) {
                 largest_work = work;
@@ -511,12 +532,26 @@ struct PhysicalRuntime::Impl {
         std::vector<Target> targets;
         int total_scanned = 0;
         for (int core = 0; core < config.worker_count; ++core) {
-            int risk_scanned = 0;
-            targets.push_back(Target{
-                core, target_risk_before(core, now, &risk_scanned),
-                core_work_us(core, now)
-            });
-            total_scanned += risk_scanned;
+            double work = reservations_us[static_cast<size_t>(core)];
+            double completion = now;
+            if (running[static_cast<size_t>(core)]) {
+                const double remaining = std::max(0.0,
+                    running_estimated_finish_us[static_cast<size_t>(core)] - now);
+                work += remaining;
+                completion += remaining;
+            }
+            int risk = 0;
+            int depth = 0;
+            for (size_t index : queues[static_cast<size_t>(core)]) {
+                const Descriptor& descriptor = descriptors[index];
+                const double descriptor_work = estimated_work(descriptor);
+                work += descriptor_work;
+                if (depth++ >= config.scan_depth) continue;
+                ++total_scanned;
+                completion += descriptor_work;
+                if (completion > descriptor.view.deadline_abs_us) ++risk;
+            }
+            targets.push_back(Target{core, risk, work});
         }
         std::sort(targets.begin(), targets.end(), [](const Target& lhs, const Target& rhs) {
             if (lhs.risk != rhs.risk) return lhs.risk < rhs.risk;
@@ -529,15 +564,27 @@ struct PhysicalRuntime::Impl {
         double best_score = -std::numeric_limits<double>::infinity();
         int total_targets = 0;
         for (int source = 0; source < config.worker_count; ++source) {
+            double local = now;
+            if (running[static_cast<size_t>(source)]) {
+                local += std::max(0.0,
+                    running_estimated_finish_us[static_cast<size_t>(source)] - now);
+            }
             int depth = 0;
             int candidates = 0;
             for (size_t index : queues[static_cast<size_t>(source)]) {
                 if (depth++ >= config.scan_depth || candidates >= config.max_candidates) break;
                 ++total_scanned;
                 const Descriptor& descriptor = descriptors[index];
+                local += estimated_work(descriptor);
                 if (descriptor.view.migration_count > 0) continue;
-                const double local = local_completion_us(source, index, now);
-                if (local <= descriptor.view.deadline_abs_us) continue;
+                // Act before predicted doom. Waiting until the request is
+                // already late loses feasible rescue windows on a periodic
+                // scheduler. Keep the horizon independent of the check period
+                // so a coarse scheduler period cannot silently create an
+                // excessively aggressive lookahead.
+                if (local + config.rescue_lookahead_us
+                        <= descriptor.view.deadline_abs_us)
+                    continue;
                 ++candidates;
 
                 int tried = 0;
@@ -550,11 +597,21 @@ struct PhysicalRuntime::Impl {
                     if (remote + config.epsilon_us > descriptor.view.deadline_abs_us)
                         continue;
                     if (target.risk != 0) continue;
-                    const double local_lateness = std::max(
-                        0.0, local - descriptor.view.deadline_abs_us);
-                    const double score = descriptor.view.deadline_abs_us - remote
-                                       + 0.10 * local_lateness
-                                       - config.handoff_estimate_us;
+                    const double urgency =
+                        local - descriptor.view.deadline_abs_us;
+                    const double completion_gain = local - remote;
+                    // A deadline-feasible target is not sufficient: moving to
+                    // a slower completion only adds a handoff and can inflate
+                    // tails without rescuing the request. Distributed L1 idle
+                    // polling remains free to rebalance independently.
+                    if (completion_gain <= 1e-9) continue;
+                    // Remote slack is not comparable across RPC classes with
+                    // different deadlines (for example 40 us vs 200 us). Rank
+                    // primarily by impending local deadline, then by the amount
+                    // of completion time the move is predicted to recover.
+                    const double score = urgency
+                        + config.rescue_completion_gain_weight * completion_gain
+                        - config.rescue_target_backlog_penalty * target.work_us;
                     if (score <= best_score) continue;
                     best_score = score;
                     best.descriptor = index;
@@ -562,8 +619,28 @@ struct PhysicalRuntime::Impl {
                     best.target_core = target.core;
                     best.local_completion_us = local;
                     best.remote_completion_us = remote;
+                    best.deadline_rescue = true;
                     best.reason = "commit_local_doom_remote_feasible";
                 }
+            }
+        }
+        if (!best.descriptor && config.rescue_idle_pulls_per_check > 0) {
+            for (const Target& target : targets) {
+                if (target.work_us > 1e-9) break;
+                Choice fallback = choose_work_stealing_for_target(target.core, now);
+                total_scanned += fallback.scanned_entries;
+                if (!fallback.descriptor) continue;
+                if (queues[static_cast<size_t>(fallback.source_core)].size()
+                        < static_cast<size_t>(
+                            config.rescue_idle_pull_min_source_queue_depth))
+                    break;
+                if (core_work_us(fallback.source_core, now)
+                        < config.rescue_idle_pull_min_source_work_us)
+                    break;
+                fallback.scanned_entries = total_scanned;
+                fallback.evaluated_targets = total_targets;
+                fallback.reason = "commit_idle_pull_fallback";
+                return fallback;
             }
         }
         best.scanned_entries = total_scanned;
@@ -618,11 +695,10 @@ struct PhysicalRuntime::Impl {
             if (descriptor.cancel_pending) {
                 descriptor.view.state = DescriptorState::CANCELLED;
                 descriptor.finish_us = now_us();
-                ++terminal_count;
+                record_terminal_locked();
                 outcome = "cancelled_in_flight";
                 cancelled_outcome = outcome_for(descriptor);
                 callback = completion_callback;
-                terminal_cv.notify_all();
             } else {
                 descriptor.view.current_core = choice.target_core;
                 ++descriptor.view.migration_count;
@@ -630,15 +706,29 @@ struct PhysicalRuntime::Impl {
                 descriptor.view.state = DescriptorState::QUEUED;
                 worker_cvs[static_cast<size_t>(choice.target_core)]->notify_one();
             }
+            // Use one logical handoff-end timestamp for both the migration
+            // record and the post-rescue guard. Otherwise the guard can begin
+            // slightly before the recorded handoff end, making a valid repull
+            // appear to violate the configured protection window.
+            const double logical_end = now_us();
+            if (!descriptor.cancel_pending && choice.deadline_rescue) {
+                descriptor.centrally_rescued = true;
+                // Cover the immediate post-handoff repull window, then allow
+                // one distributed L1 rebalance. A third migration is treated
+                // as ping-pong and suppressed by source selection.
+                descriptor.central_rescue_protect_until_us =
+                    logical_end + config.handoff_estimate_us;
+            }
             const auto wall_end = Clock::now();
             migrations.push_back(MigrationRecord{
                 descriptor.view.id,
                 choice.source_core,
                 choice.target_core,
                 logical_start,
-                now_us(),
+                logical_end,
                 static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
                     wall_end - wall_start).count()),
+                choice.reason,
                 outcome
             });
         }
@@ -677,14 +767,17 @@ struct PhysicalRuntime::Impl {
             std::chrono::duration<double, std::micro>(
                 config.check_period_us * config.time_scale));
         auto next_epoch = Clock::now() + period;
-        while (!stopping.load(std::memory_order_acquire)) {
+        const auto should_stop = [this] {
+            return stopping.load(std::memory_order_acquire)
+                || terminal_run_complete.load(std::memory_order_acquire);
+        };
+        while (!should_stop()) {
             {
                 std::unique_lock<std::mutex> wait_lock(scheduler_wait_mutex);
-                wait_until_steady(scheduler_wait_cv, wait_lock, next_epoch, [&] {
-                    return stopping.load(std::memory_order_acquire);
-                });
+                wait_until_steady(scheduler_wait_cv, wait_lock, next_epoch,
+                                  should_stop);
             }
-            if (stopping.load(std::memory_order_acquire)) break;
+            if (should_stop()) break;
             const auto epoch_now = Clock::now();
             if (epoch_now < next_epoch) continue;
             const auto late = epoch_now - next_epoch;
@@ -702,6 +795,7 @@ struct PhysicalRuntime::Impl {
             }
             next_epoch += period * static_cast<Clock::duration::rep>(scheduled);
 
+            int idle_pull_commits = 0;
             for (int move = 0; move < config.moves_per_check; ++move) {
                 const auto decision_start = Clock::now();
                 const uint64_t cycles_start = read_cycles();
@@ -739,12 +833,19 @@ struct PhysicalRuntime::Impl {
                 record.decision_duration_ns = static_cast<uint64_t>(
                     std::chrono::duration_cast<std::chrono::nanoseconds>(
                         decision_end - decision_start).count());
+                const bool used_idle_fallback =
+                    choice.reason == "commit_idle_pull_fallback";
                 bool committed = false;
                 if (choice.descriptor) committed = handoff(choice);
                 if (choice.descriptor && !committed)
                     record.reason = "source_revalidation_reject";
                 record_decision(std::move(record));
-                if (!choice.descriptor || !committed) break;
+                if (used_idle_fallback && committed) ++idle_pull_commits;
+                if (!choice.descriptor || !committed
+                    || (used_idle_fallback
+                        && idle_pull_commits
+                            >= config.rescue_idle_pulls_per_check))
+                    break;
             }
         }
     }
@@ -808,7 +909,9 @@ struct PhysicalRuntime::Impl {
             uint64_t poll_cycles_start = 0;
             {
                 std::unique_lock<std::mutex> lock(mutex);
-                if (config.policy == PolicyKind::L1_WORK_STEALING_POLLING) {
+                if (config.policy == PolicyKind::L1_WORK_STEALING_POLLING
+                    || (config.policy == PolicyKind::M1_RESCUE_SCHED
+                        && config.rescue_distributed_l1_enabled)) {
                     while (!stopping.load(std::memory_order_acquire)
                            && queues[static_cast<size_t>(worker_id)].empty()) {
                         wait_until_steady(
@@ -934,7 +1037,12 @@ struct PhysicalRuntime::Impl {
                 }
                 descriptor.actual_thread_cpu_service_us = actual_cpu_us;
                 descriptor.service_wall_us = service_wall_us;
-                estimator.observe(descriptor.view.method, actual_cpu_us);
+                // estimated_service_us is payload-only; host overhead is added by
+                // estimated_work(). Remove it from the measured total before the
+                // completion-updated EWMA to avoid charging it twice.
+                const double measured_payload_us = std::max(
+                    0.001, actual_cpu_us - config.host_overhead_us);
+                estimator.observe(descriptor.view.method, measured_payload_us);
                 descriptor.finish_us = now_us();
                 ++descriptor.completion_count;
                 if (descriptor.completion_count > 1) ++duplicate_completion_count;
@@ -942,10 +1050,9 @@ struct PhysicalRuntime::Impl {
                 descriptor.view.current_core = worker_id;
                 running[static_cast<size_t>(worker_id)].reset();
                 running_estimated_finish_us[static_cast<size_t>(worker_id)] = 0.0;
-                ++terminal_count;
+                record_terminal_locked();
                 completed_outcome = outcome_for(descriptor);
                 callback = completion_callback;
-                terminal_cv.notify_all();
             }
             if (callback) callback(completed_outcome);
         }
@@ -1144,7 +1251,7 @@ RuntimeResult PhysicalRuntime::run() {
 
     {
         std::unique_lock<std::mutex> lock(impl_->mutex);
-        impl_->submission_done = true;
+        impl_->mark_submission_done_locked();
         impl_->terminal_cv.wait(lock, [&] {
             return impl_->terminal_count == impl_->descriptors.size();
         });
@@ -1212,14 +1319,14 @@ RuntimeResult PhysicalRuntime::finish_network_ingress(bool cancel_unreceived) {
                 if (descriptor.view.state != DescriptorState::PENDING) continue;
                 descriptor.view.state = DescriptorState::CANCELLED;
                 descriptor.finish_us = impl_->now_us();
-                ++impl_->terminal_count;
+                impl_->record_terminal_locked();
                 if (impl_->completion_callback) {
                     callbacks.emplace_back(
                         impl_->completion_callback, impl_->outcome_for(descriptor));
                 }
             }
         }
-        impl_->submission_done = true;
+        impl_->mark_submission_done_locked();
         impl_->terminal_cv.wait(lock, [&] {
             return impl_->terminal_count == impl_->descriptors.size();
         });
@@ -1242,7 +1349,7 @@ bool PhysicalRuntime::request_cancel(uint64_t request_id) {
             case DescriptorState::PENDING:
                 descriptor.view.state = DescriptorState::CANCELLED;
                 descriptor.finish_us = impl_->now_us();
-                ++impl_->terminal_count;
+                impl_->record_terminal_locked();
                 terminal_now = true;
                 break;
             case DescriptorState::QUEUED:
@@ -1250,7 +1357,7 @@ bool PhysicalRuntime::request_cancel(uint64_t request_id) {
                     return false;
                 descriptor.view.state = DescriptorState::CANCELLED;
                 descriptor.finish_us = impl_->now_us();
-                ++impl_->terminal_count;
+                impl_->record_terminal_locked();
                 terminal_now = true;
                 break;
             case DescriptorState::IN_FLIGHT:
@@ -1266,7 +1373,6 @@ bool PhysicalRuntime::request_cancel(uint64_t request_id) {
         if (terminal_now) {
             outcome = impl_->outcome_for(descriptor);
             callback = impl_->completion_callback;
-            impl_->terminal_cv.notify_all();
         }
     }
     if (callback) callback(outcome);
@@ -1363,13 +1469,14 @@ void PhysicalRuntime::write_outputs(const RuntimeResult& result) const {
     {
         std::ofstream csv(root / "migrations.csv");
         csv << "request_id,source_core,target_core,handoff_start_us,handoff_end_us,"
-               "handoff_duration_ns,target_insert_policy,outcome\n";
+               "handoff_duration_ns,target_insert_policy,migration_reason,outcome\n";
         csv << std::setprecision(17);
         for (const auto& migration : result.migrations) {
             csv << migration.request_id << ',' << migration.source_core << ','
                 << migration.target_core << ',' << migration.start_us << ','
                 << migration.end_us << ',' << migration.handoff_duration_ns
-                << ",append_tail," << migration.outcome << '\n';
+                << ",append_tail," << migration.reason << ','
+                << migration.outcome << '\n';
         }
     }
 
@@ -1458,11 +1565,25 @@ void PhysicalRuntime::write_outputs(const RuntimeResult& result) const {
                  << "target_count=" << impl_->config.target_count << '\n'
                  << "moves_per_check=" << impl_->config.moves_per_check << '\n'
                  << "epsilon_us=" << impl_->config.epsilon_us << '\n'
+                 << "rescue_lookahead_us="
+                 << impl_->config.rescue_lookahead_us << '\n'
+                 << "rescue_completion_gain_weight="
+                 << impl_->config.rescue_completion_gain_weight << '\n'
+                 << "rescue_target_backlog_penalty="
+                 << impl_->config.rescue_target_backlog_penalty << '\n'
+                 << "rescue_distributed_l1_enabled="
+                 << (impl_->config.rescue_distributed_l1_enabled ? 1 : 0) << '\n'
+                 << "rescue_idle_pulls_per_check="
+                 << impl_->config.rescue_idle_pulls_per_check << '\n'
+                 << "rescue_idle_pull_min_source_queue_depth="
+                 << impl_->config.rescue_idle_pull_min_source_queue_depth << '\n'
+                 << "rescue_idle_pull_min_source_work_us="
+                 << impl_->config.rescue_idle_pull_min_source_work_us << '\n'
                  << "handoff_estimate_us=" << impl_->config.handoff_estimate_us << '\n'
                  << "host_overhead_us=" << impl_->config.host_overhead_us << '\n'
                  << "ewma_alpha=" << impl_->config.ewma_alpha << '\n'
                  << "synthetic_service_clock=CLOCK_THREAD_CPUTIME_ID\n"
-                 << "ewma_observation=completed_measured_thread_cpu_service\n"
+                 << "ewma_observation=completed_measured_payload_cpu_service\n"
                  << "decision_logging=bounded\n"
                  << "decision_sample_cap=" << impl_->config.decision_sample_cap << '\n'
                  << "decision_bucket_us=" << impl_->config.decision_bucket_us << '\n'

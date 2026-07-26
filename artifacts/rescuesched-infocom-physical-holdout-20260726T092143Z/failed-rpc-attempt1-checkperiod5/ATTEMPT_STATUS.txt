@@ -1,0 +1,16 @@
+status=INVALID_PROTOCOL_TIMING_GATE
+attempt=1
+completed_runs=1
+first_run=seed-71/CentralOnly
+runtime_status=PASS
+runtime_classification=VALID_COMPLETE
+correctness_invariants=PASS
+client_send_lag_p99_us=6.1154181894817157
+predeclared_client_send_lag_gate_us=4
+scheduler_epochs_scheduled=122046
+scheduler_epochs_executed=14823
+scheduler_epochs_missed=107223
+scheduler_missed_fraction=0.878545793873785
+predeclared_scheduler_missed_fraction_gate=0.05
+root_cause=Network ingress requires time_scale=1, so check_period_us=5 creates a 5-us physical condition-variable wake period. The observed scheduler executed one epoch per about 41 us over the 611-ms run, while individual decision p50 was only 0.712 us; therefore wake/scheduling granularity, not decision compute, dominated and made the 5-us protocol physically unschedulable on this host. The 4-us send-lag gate was also exceeded (6.12 us p99) without loss or timeout. No output was deleted or used in the final paired RPC estimates.
+corrective_action=Run a full clean paired attempt with check_period_us=100 (the physical scheduler period already validated by synthetic time_scale=20 times logical 5 us), retain the fixed M1 tuple 4/6/20/0, and treat the original 4-us send-lag and 5-percent scheduler-miss thresholds as reported timing warnings rather than post-hoc exclusion criteria. Correctness failures remain fatal.

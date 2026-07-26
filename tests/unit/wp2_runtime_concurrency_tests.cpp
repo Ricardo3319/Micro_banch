@@ -117,13 +117,16 @@ void test_measured_cpu_service_updates_only_after_completion() {
     config.arrival_mode = physical::ArrivalMode::NETWORK_INGRESS;
     config.initial_short_service_us = 10.0;
     config.ewma_alpha = 1.0;
+    config.host_overhead_us = 8.0;
+    // Callback-captured synchronization state must outlive the runtime that
+    // owns and may invoke the callback, including during runtime destruction.
+    std::mutex completion_mutex;
+    std::condition_variable completion_cv;
+    bool first_completed = false;
     physical::FrozenTrace trace = physical::FrozenTrace::load_csv(
         trace_path.string(), config.worker_count);
     physical::PhysicalRuntime runtime(std::move(trace), config);
 
-    std::mutex completion_mutex;
-    std::condition_variable completion_cv;
-    bool first_completed = false;
     runtime.set_completion_callback([&](const physical::RequestOutcome& outcome) {
         if (outcome.id != 1 || outcome.state != physical::DescriptorState::DONE) return;
         {
@@ -139,9 +142,13 @@ void test_measured_cpu_service_updates_only_after_completion() {
             "first EWMA request was not accepted");
     {
         std::unique_lock<std::mutex> lock(completion_mutex);
-        require(completion_cv.wait_for(lock, std::chrono::seconds(5), [&] {
-                    return first_completed;
-                }),
+        // Use the CLOCK_REALTIME condition-variable path because GCC 11
+        // ThreadSanitizer does not model pthread_cond_clockwait used by the
+        // steady-clock wait_for overload; that produces a false double-lock.
+        require(completion_cv.wait_until(
+                    lock, std::chrono::system_clock::now()
+                        + std::chrono::seconds(5),
+                    [&] { return first_completed; }),
                 "first EWMA request did not complete before timeout");
     }
     require(runtime.submit_network_request(2, 202, 0)
@@ -155,14 +162,16 @@ void test_measured_cpu_service_updates_only_after_completion() {
     require(first.estimated_service_us == 10.0
             && first.estimator_prior_samples == 0,
             "scheduler observed hidden current-request service");
-    require(std::abs(first.actual_thread_cpu_service_us - 24.0) <= 2.0,
+    require(std::abs(first.actual_thread_cpu_service_us - 32.0) <= 2.0,
             "runtime CPU service measurement exceeded threshold");
     require(first.service_wall_us + 0.05 >= first.actual_thread_cpu_service_us,
             "runtime wall service was smaller than CPU service");
+    const double first_measured_payload_us = std::max(
+        0.001, first.actual_thread_cpu_service_us - config.host_overhead_us);
     require(second.estimator_prior_samples == 1
             && std::abs(second.estimated_service_us
-                        - first.actual_thread_cpu_service_us) < 0.001,
-            "EWMA did not consume the completed measured CPU service");
+                        - first_measured_payload_us) < 0.001,
+            "EWMA did not remove host overhead from measured CPU service");
     fs::remove(trace_path);
 }
 
@@ -206,6 +215,67 @@ void test_distributed_l1_polling_and_bounded_logging() {
             "decision aggregates do not cover all decisions");
     require(result.migrations.size() == result.summary.l1_poll_successes,
             "L1 did not reuse the production handoff primitive");
+    fs::remove(trace_path);
+}
+
+void test_hybrid_keeps_distributed_idle_polling_without_deadline_rescue() {
+    const fs::path trace_path = temp_path("hybrid-idle-poll.csv");
+    std::string rows;
+    for (int id = 1; id <= 16; ++id) {
+        rows += "rescuesched-trace-v2," + embedded_hash() + ","
+            + std::to_string(id) + ",0,short,100,10000,0,0\n";
+    }
+    write_v2(trace_path, rows);
+    auto config = base_config(physical::PolicyKind::M1_RESCUE_SCHED);
+    config.check_period_us = 5.0;
+    config.decision_sample_cap = 10000;
+    physical::FrozenTrace trace = physical::FrozenTrace::load_csv(
+        trace_path.string(), config.worker_count);
+    physical::PhysicalRuntime runtime(std::move(trace), config);
+    const auto result = runtime.run();
+
+    require(result.summary.invariants_pass, "hybrid idle-poll invariants failed");
+    require(result.summary.scheduler_epochs_executed > 0,
+            "hybrid policy did not run the central scheduler");
+    require(result.summary.l1_poll_attempts > 0
+            && result.summary.l1_poll_successes > 0,
+            "hybrid policy disabled distributed idle polling");
+    require(result.summary.migration_count == result.summary.l1_poll_successes,
+            "hybrid no-rescue trace used a non-L1 migration path");
+    require(std::none_of(result.decisions.begin(), result.decisions.end(),
+                [](const physical::DecisionRecord& decision) {
+                    return decision.reason == "commit_local_doom_remote_feasible";
+                }),
+            "long-deadline hybrid trace unexpectedly used central rescue");
+    fs::remove(trace_path);
+}
+
+void test_central_rescue_only_disables_distributed_idle_polling() {
+    const fs::path trace_path = temp_path("central-only-no-idle-poll.csv");
+    std::string rows;
+    for (int id = 1; id <= 16; ++id) {
+        rows += "rescuesched-trace-v2," + embedded_hash() + ","
+            + std::to_string(id) + ",0,short,100,10000,0,0\n";
+    }
+    write_v2(trace_path, rows);
+    auto config = base_config(physical::PolicyKind::M1_RESCUE_SCHED);
+    config.check_period_us = 5.0;
+    config.rescue_distributed_l1_enabled = false;
+    config.decision_sample_cap = 10000;
+    physical::FrozenTrace trace = physical::FrozenTrace::load_csv(
+        trace_path.string(), config.worker_count);
+    physical::PhysicalRuntime runtime(std::move(trace), config);
+    const auto result = runtime.run();
+
+    require(result.summary.invariants_pass,
+            "central-only idle-poll invariants failed");
+    require(result.summary.scheduler_epochs_executed > 0,
+            "central-only policy did not run the central scheduler");
+    require(result.summary.l1_poll_attempts == 0
+            && result.summary.l1_poll_successes == 0,
+            "central-only ablation still executed distributed L1 polling");
+    require(result.summary.migration_count == 0,
+            "long-deadline central-only trace unexpectedly migrated requests");
     fs::remove(trace_path);
 }
 
@@ -264,6 +334,8 @@ int main() {
         test_receiver_lifecycle_race_100_each_policy();
         test_measured_cpu_service_updates_only_after_completion();
         test_distributed_l1_polling_and_bounded_logging();
+        test_hybrid_keeps_distributed_idle_polling_without_deadline_rescue();
+        test_central_rescue_only_disables_distributed_idle_polling();
         test_scheduler_epoch_accounting_and_ingress_progress();
         std::cout << "WP2 runtime concurrency tests: PASS\n";
         return 0;

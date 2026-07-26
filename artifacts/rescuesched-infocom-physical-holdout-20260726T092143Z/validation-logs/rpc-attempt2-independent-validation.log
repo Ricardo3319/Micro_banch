@@ -1,0 +1,17 @@
+runs=25
+unique_runs=25
+parameter_tuples=[('4', '6', '20', '0')]
+check_period_us_values=['100']
+distributed_l1_flags={'CentralOnly': ['0'], 'FIFO': ['1'], 'FullHybrid': ['1'], 'L1Only': ['1'], 'M0': ['1']}
+trace_hash_tuple_counts_by_seed={'seed-109': 1, 'seed-127': 1, 'seed-71': 1, 'seed-83': 1, 'seed-97': 1}
+total_decision_records_dropped=0
+send_lag_p99_us_min=5.944374872 median=6.409354720 max=13.435866599
+client_rtt_p99_us_min=250.290000000 median=273.204000000 max=8001.662000000
+client_rtt_p999_us_min=337.795000000 median=778.535000000 max=9367.882000000
+central_scheduler_runs=15
+scheduler_missed_fraction_min=0.001127214 median=0.003081414 max=0.039428850
+scheduler_max_lag_us_min=441.656000000 median=468.493000000 max=10924.219000000
+send_lag_warning_runs=25
+scheduler_miss_warning_runs=0
+errors=0
+status=PASS_WITH_SEND_TIMING_WARNINGS

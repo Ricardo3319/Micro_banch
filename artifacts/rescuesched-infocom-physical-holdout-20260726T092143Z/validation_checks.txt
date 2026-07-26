@@ -1,0 +1,38 @@
+total_runs=185
+local_synthetic_runtime_runs=160
+loopback_udp_rpc_runs=25
+valid_runs=185
+invalid_runs=0
+timing_warning_runs=25
+decision_capture_complete_runs=185
+decision_capture_dropped_runs=0
+m1_fixed_parameter_tuples=[('4', '6', '20', '0')]
+paired_rows=195
+aggregate_rows=285
+bootstrap_draws=10000
+bootstrap_seed=2026072603
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=109 variant=CentralOnly warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=109 variant=FIFO warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=109 variant=FullHybrid warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=109 variant=L1Only warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=109 variant=M0 warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=127 variant=CentralOnly warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=127 variant=FIFO warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=127 variant=FullHybrid warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=127 variant=L1Only warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=127 variant=M0 warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=71 variant=CentralOnly warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=71 variant=FIFO warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=71 variant=FullHybrid warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=71 variant=L1Only warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=71 variant=M0 warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=83 variant=CentralOnly warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=83 variant=FIFO warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=83 variant=FullHybrid warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=83 variant=L1Only warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=83 variant=M0 warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=97 variant=CentralOnly warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=97 variant=FIFO warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=97 variant=FullHybrid warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=97 variant=L1Only warnings=client_send_lag_p99_gt_4us
+WARNING loopback_udp_rpc RPC-W3-rho085-w8-scale10 seed=97 variant=M0 warnings=client_send_lag_p99_gt_4us
