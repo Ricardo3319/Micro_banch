@@ -1,0 +1,22 @@
+{
+  "date": "2026-09-26",
+  "artifact_integrity": [
+    {
+      "directory": "artifacts/qbr-main-v3",
+      "runs": 1800,
+      "traces": 200,
+      "status": "PASS"
+    },
+    {
+      "directory": "artifacts/qbr-sensitivity-v3",
+      "runs": 2840,
+      "traces": 550,
+      "status": "PASS"
+    }
+  ],
+  "correctness_suite": "PASS; C++ release and ASan/LSan/UBSan test executions",
+  "udp_probe": "PASS; loopback trains 1 and 8, no measured packet loss; not cluster performance evidence",
+  "cloudlab_profile": "Prepared against documented API; not instantiated in CloudLab",
+  "papers": 25,
+  "cluster_experiments": "Not run; CloudLab nodes not yet allocated/provided"
+}

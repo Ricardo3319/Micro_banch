@@ -15,7 +15,12 @@
 #include <deque>
 #include <mutex>
 #include <thread>
+#ifdef _WIN32
 #include <direct.h>
+#else
+#include <sys/stat.h>
+#include <sys/types.h>
+#endif
 
 static const char* method_name(sim::MethodType m) {
     switch (m) {
@@ -76,7 +81,11 @@ static void write_diag_value_suffix(std::ofstream& csv,
 }
 
 static void ensure_dir(const std::string& path) {
+#ifdef _WIN32
     _mkdir(path.c_str());
+#else
+    mkdir(path.c_str(), 0755);
+#endif
 }
 
 // ========== Experiment B: Parameter Sensitivity Scan ==========
@@ -636,6 +645,110 @@ static int run_dqb_focus(const std::string& title,
     csv.close();
     std::cout << "\nFocused DQB check done -> " << csv_path << "\n";
     return 0;
+}
+
+// First-paper matrix: B1/B2/M0/M1/M2 on one frozen scenario.
+static int run_paper_matrix(const std::string& title,
+                            const char* scenario,
+                            const char* wl_name,
+                            sim::WorkloadType wl,
+                            double rho,
+                            const std::string& csv_path) {
+    std::ofstream csv(csv_path);
+    if (!csv.is_open()) { std::cerr << "Cannot open " << csv_path << "\n"; return 1; }
+
+    sim::MethodType methods[] = {
+        sim::MethodType::B1_POWER_OF_K,
+        sim::MethodType::B2_REACTIVE_MIGRATION,
+        sim::MethodType::M0_PROACTIVE_MIGRATION,
+        sim::MethodType::M1_AQB_PROACTIVE_MIGRATION,
+        sim::MethodType::M2_DQB_PROACTIVE_MIGRATION
+    };
+
+    csv << "scenario,workload,cluster,method,rho,seed,"
+           "P99_us,P999_us,slo_violation_rate,"
+           "migration_rate,invalid_migration_ratio,total_finished,total_generated,"
+           "batch_candidate_count,batch_selected_count,batch_move_count,"
+           "summary_update_count,reservation_reject_count,saturation_guard_count,"
+           "batch_size_1_count,batch_size_2_7_count,batch_size_8_31_count,batch_size_32_plus_count,"
+           "batch_type_generic_count,batch_type_short_count,batch_type_mice_count,"
+           "batch_type_slow_count,batch_type_distribution_count,"
+           "target_plan_reject_count";
+    write_diag_header_suffix(csv);
+    csv << "\n";
+
+    const int total_runs =
+        static_cast<int>(sizeof(methods) / sizeof(methods[0])) * sim::SEED_COUNT;
+    int run_count = 0;
+
+    std::cout << "=== " << title << " ===\n";
+    for (auto method : methods) {
+        for (int si = 0; si < sim::SEED_COUNT; ++si) {
+            unsigned seed = sim::SEEDS[si];
+            sim::Simulator eng;
+            sim::M0Config cfg;
+            eng.configure(method, rho, seed, wl,
+                          sim::ClusterProfile::HOMOGENEOUS, cfg);
+            eng.run();
+            const auto& m = eng.metrics();
+            uint64_t gen = eng.total_generated();
+
+            csv << scenario << "," << wl_name << ",HOMOGENEOUS,"
+                << method_name(method) << ","
+                << rho << "," << seed << ","
+                << std::setprecision(3) << m.p99() << "," << m.p999() << ","
+                << std::setprecision(6) << m.slo_violation_rate() << ","
+                << m.migration_rate(gen) << "," << m.invalid_migration_ratio() << ","
+                << m.total_finished << "," << gen << ","
+                << m.batch_candidate_count << "," << m.batch_selected_count << ","
+                << m.batch_move_count << "," << m.summary_update_count << ","
+                << m.reservation_reject_count << "," << m.saturation_guard_count << ","
+                << m.batch_size_1_count << "," << m.batch_size_2_7_count << ","
+                << m.batch_size_8_31_count << "," << m.batch_size_32_plus_count << ","
+                << m.batch_type_generic_count << "," << m.batch_type_short_count << ","
+                << m.batch_type_mice_count << "," << m.batch_type_slow_count << ","
+                << m.batch_type_distribution_count << ","
+                << m.target_plan_reject_count;
+            write_diag_value_suffix(csv, m, eng.total_generated_work_us());
+            csv << "\n";
+
+            ++run_count;
+            std::cout << "[" << run_count << "/" << total_runs << "] "
+                      << method_name(method) << " seed=" << seed
+                      << " P99=" << std::setprecision(1) << m.p99()
+                      << " P999=" << m.p999()
+                      << " slo=" << std::setprecision(4) << m.slo_violation_rate()
+                      << " mr=" << m.migration_rate(gen)
+                      << " imr=" << m.invalid_migration_ratio()
+                      << " sel=" << m.batch_selected_count
+                      << " sat=" << m.saturation_guard_count << "\n";
+        }
+    }
+
+    csv.close();
+    std::cout << "\n" << title << " done -> " << csv_path << "\n";
+    return 0;
+}
+
+static int run_paper_w1_main(const std::string& csv_path) {
+    return run_paper_matrix(
+        "First-paper W1 saturation: B1/B2/M0/M1/M2 rho=0.95",
+        "W1_saturation_homo", "W1",
+        sim::WorkloadType::W1_POISSON_BIMODAL, 0.95, csv_path);
+}
+
+static int run_paper_w2_main(const std::string& csv_path) {
+    return run_paper_matrix(
+        "First-paper W2 flagship: B1/B2/M0/M1/M2 rho=0.85",
+        "W2_burst_homo", "W2",
+        sim::WorkloadType::W2_MMPP_BIMODAL, 0.85, csv_path);
+}
+
+static int run_paper_w3_main(const std::string& csv_path) {
+    return run_paper_matrix(
+        "First-paper W3 boundary: B1/B2/M0/M1/M2 rho=0.85",
+        "W3_heavytail_homo", "W3",
+        sim::WorkloadType::W3_POISSON_LOGNORMAL, 0.85, csv_path);
 }
 
 static const char* workload_name(sim::WorkloadType wl) {
@@ -2031,6 +2144,9 @@ int main(int argc, char** argv) {
     ensure_dir("artifacts/step-15-rescuesched");
     ensure_dir("artifacts/step-17-rescuesched-closure");
     ensure_dir("artifacts/step-18-infocom-readiness");
+    ensure_dir("artifacts/step-19-paper-w2");
+    ensure_dir("artifacts/step-20-paper-w1");
+    ensure_dir("artifacts/step-21-paper-w3");
 
     int rc = 0;
 
@@ -2297,6 +2413,18 @@ int main(int argc, char** argv) {
 
     if (mode == "dqb-eval") {
         rc = run_aqb_eval("artifacts/step-08-dqb-batch/dqb_eval.csv");
+    }
+
+    if (mode == "paper-w1") {
+        rc = run_paper_w1_main("artifacts/step-20-paper-w1/paper_w1.csv");
+    }
+
+    if (mode == "paper-w2") {
+        rc = run_paper_w2_main("artifacts/step-19-paper-w2/paper_w2.csv");
+    }
+
+    if (mode == "paper-w3") {
+        rc = run_paper_w3_main("artifacts/step-21-paper-w3/paper_w3.csv");
     }
 
     if (mode == "dqb-w2-only") {

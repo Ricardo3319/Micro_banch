@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rspec xmlns="http://www.geni.net/resources/rspec/3"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:emulab="http://www.protogeni.net/resources/rspec/ext/emulab/1"
+       xsi:schemaLocation="http://www.geni.net/resources/rspec/3 http://www.geni.net/resources/rspec/3/request.xsd"
+       type="request">
+  <rspec_tour xmlns="http://www.protogeni.net/resources/rspec/ext/apt-tour/1">
+    <description type="markdown">QBR inter-host RPC scheduling: five bare-metal c6525-25g nodes at CloudLab Utah, Ubuntu 22.04, one experiment LAN.</description>
+    <instructions type="markdown">Roles and experiment IP addresses:
+- client: 10.10.1.1 - open-loop RPC load generation and trace replay.
+- dispatcher: 10.10.1.2 - ingress scheduling and optional central waiting queue.
+- worker1: 10.10.1.11 - RPC execution and host-local shared queue.
+- worker2: 10.10.1.12 - RPC execution and host-local shared queue.
+- worker3: 10.10.1.13 - RPC execution and host-local shared queue.
+
+Start with eight execution cores and one separate controller core on each worker.
+Select physical CPU IDs after inspecting NUMA/SMT topology; the profile does not pin CPUs.
+Three workers permit two-source/one-target reservation experiments.
+Use only experiment IP addresses for requests, replies, load reports and migration.
+Collect logs after timed runs; no dedicated logger node is requested.
+
+Each experiment LAN attachment requests 25,000,000 Kbps (25 Gbps).
+Check the allocated manifest, NIC link speed, MTU and routes before benchmarking.
+Same-site placement does not guarantee one physical rack or an uncontended fabric.
+The profile allocates resources only; it does not install or start QBR software.
+</instructions>
+  </rspec_tour>
+
+  <node client_id="client" exclusive="true" component_manager_id="urn:publicid:IDN+utah.cloudlab.us+authority+cm">
+    <sliver_type name="raw">
+      <disk_image name="urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU22-64-STD"/>
+    </sliver_type>
+    <hardware_type name="c6525-25g"/>
+    <interface client_id="client:if0">
+      <ip address="10.10.1.1" netmask="255.255.255.0" type="ipv4"/>
+    </interface>
+  </node>
+  <node client_id="dispatcher" exclusive="true" component_manager_id="urn:publicid:IDN+utah.cloudlab.us+authority+cm">
+    <sliver_type name="raw">
+      <disk_image name="urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU22-64-STD"/>
+    </sliver_type>
+    <hardware_type name="c6525-25g"/>
+    <interface client_id="dispatcher:if0">
+      <ip address="10.10.1.2" netmask="255.255.255.0" type="ipv4"/>
+    </interface>
+  </node>
+  <node client_id="worker1" exclusive="true" component_manager_id="urn:publicid:IDN+utah.cloudlab.us+authority+cm">
+    <sliver_type name="raw">
+      <disk_image name="urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU22-64-STD"/>
+    </sliver_type>
+    <hardware_type name="c6525-25g"/>
+    <interface client_id="worker1:if0">
+      <ip address="10.10.1.11" netmask="255.255.255.0" type="ipv4"/>
+    </interface>
+  </node>
+  <node client_id="worker2" exclusive="true" component_manager_id="urn:publicid:IDN+utah.cloudlab.us+authority+cm">
+    <sliver_type name="raw">
+      <disk_image name="urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU22-64-STD"/>
+    </sliver_type>
+    <hardware_type name="c6525-25g"/>
+    <interface client_id="worker2:if0">
+      <ip address="10.10.1.12" netmask="255.255.255.0" type="ipv4"/>
+    </interface>
+  </node>
+  <node client_id="worker3" exclusive="true" component_manager_id="urn:publicid:IDN+utah.cloudlab.us+authority+cm">
+    <sliver_type name="raw">
+      <disk_image name="urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU22-64-STD"/>
+    </sliver_type>
+    <hardware_type name="c6525-25g"/>
+    <interface client_id="worker3:if0">
+      <ip address="10.10.1.13" netmask="255.255.255.0" type="ipv4"/>
+    </interface>
+  </node>
+
+  <link client_id="exp-lan">
+    <interface_ref client_id="client:if0"/>
+    <interface_ref client_id="dispatcher:if0"/>
+    <interface_ref client_id="worker1:if0"/>
+    <interface_ref client_id="worker2:if0"/>
+    <interface_ref client_id="worker3:if0"/>
+    <link_type name="lan"/>
+    <component_manager name="urn:publicid:IDN+utah.cloudlab.us+authority+cm"/>
+    <!-- LAN attachment capacity is in Kbps, matching geni-lib LAN serialization. -->
+    <property source_id="client:if0" dest_id="exp-lan" capacity="25000000"/>
+    <property source_id="dispatcher:if0" dest_id="exp-lan" capacity="25000000"/>
+    <property source_id="worker1:if0" dest_id="exp-lan" capacity="25000000"/>
+    <property source_id="worker2:if0" dest_id="exp-lan" capacity="25000000"/>
+    <property source_id="worker3:if0" dest_id="exp-lan" capacity="25000000"/>
+  </link>
+</rspec>

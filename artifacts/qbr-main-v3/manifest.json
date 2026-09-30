@@ -1,0 +1,10822 @@
+{
+  "identity": {
+    "suite": "main",
+    "warmup_us": 5000,
+    "duration_us": 20000,
+    "source_sha256": {
+      "include/qbr/model.h": "1c5c1b447fdb7834cc89dea0bb5d38fc0a3c24e981e6458b9665d47885a8ac78",
+      "src/qbr/main.cpp": "21a0e2da54bfa998a8de7cecbdabd49f89a439e70b5f2d4b4f2dc7a4391fbe87",
+      "src/qbr/simulator.cpp": "97d81a7a8778d62de82503df1d1ff560580321206521b565f7a7c7ba52639775",
+      "scripts/qbr_trace.py": "61397eb9e08227b4ef3988639fa2f8b920bed6109d14d517d06913efd6027700"
+    },
+    "binary_sha256": "d2edc30e0c4c20d8d09ed9d790051327eac229b9a6f7a69529bc466693168e15"
+  },
+  "cases": [
+    {
+      "group": "steady-0.5-11",
+      "scenario": "steady",
+      "rho": 0.5,
+      "seed": 11,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.5-12",
+      "scenario": "steady",
+      "rho": 0.5,
+      "seed": 12,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.5-13",
+      "scenario": "steady",
+      "rho": 0.5,
+      "seed": 13,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.5-14",
+      "scenario": "steady",
+      "rho": 0.5,
+      "seed": 14,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.5-15",
+      "scenario": "steady",
+      "rho": 0.5,
+      "seed": 15,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.5-16",
+      "scenario": "steady",
+      "rho": 0.5,
+      "seed": 16,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.5-17",
+      "scenario": "steady",
+      "rho": 0.5,
+      "seed": 17,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.5-18",
+      "scenario": "steady",
+      "rho": 0.5,
+      "seed": 18,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.5-19",
+      "scenario": "steady",
+      "rho": 0.5,
+      "seed": 19,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.5-20",
+      "scenario": "steady",
+      "rho": 0.5,
+      "seed": 20,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.7-11",
+      "scenario": "steady",
+      "rho": 0.7,
+      "seed": 11,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.7-12",
+      "scenario": "steady",
+      "rho": 0.7,
+      "seed": 12,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.7-13",
+      "scenario": "steady",
+      "rho": 0.7,
+      "seed": 13,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.7-14",
+      "scenario": "steady",
+      "rho": 0.7,
+      "seed": 14,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.7-15",
+      "scenario": "steady",
+      "rho": 0.7,
+      "seed": 15,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.7-16",
+      "scenario": "steady",
+      "rho": 0.7,
+      "seed": 16,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.7-17",
+      "scenario": "steady",
+      "rho": 0.7,
+      "seed": 17,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.7-18",
+      "scenario": "steady",
+      "rho": 0.7,
+      "seed": 18,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.7-19",
+      "scenario": "steady",
+      "rho": 0.7,
+      "seed": 19,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.7-20",
+      "scenario": "steady",
+      "rho": 0.7,
+      "seed": 20,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.85-11",
+      "scenario": "steady",
+      "rho": 0.85,
+      "seed": 11,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.85-12",
+      "scenario": "steady",
+      "rho": 0.85,
+      "seed": 12,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.85-13",
+      "scenario": "steady",
+      "rho": 0.85,
+      "seed": 13,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.85-14",
+      "scenario": "steady",
+      "rho": 0.85,
+      "seed": 14,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.85-15",
+      "scenario": "steady",
+      "rho": 0.85,
+      "seed": 15,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.85-16",
+      "scenario": "steady",
+      "rho": 0.85,
+      "seed": 16,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.85-17",
+      "scenario": "steady",
+      "rho": 0.85,
+      "seed": 17,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.85-18",
+      "scenario": "steady",
+      "rho": 0.85,
+      "seed": 18,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.85-19",
+      "scenario": "steady",
+      "rho": 0.85,
+      "seed": 19,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.85-20",
+      "scenario": "steady",
+      "rho": 0.85,
+      "seed": 20,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.95-11",
+      "scenario": "steady",
+      "rho": 0.95,
+      "seed": 11,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.95-12",
+      "scenario": "steady",
+      "rho": 0.95,
+      "seed": 12,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.95-13",
+      "scenario": "steady",
+      "rho": 0.95,
+      "seed": 13,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.95-14",
+      "scenario": "steady",
+      "rho": 0.95,
+      "seed": 14,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.95-15",
+      "scenario": "steady",
+      "rho": 0.95,
+      "seed": 15,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.95-16",
+      "scenario": "steady",
+      "rho": 0.95,
+      "seed": 16,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.95-17",
+      "scenario": "steady",
+      "rho": 0.95,
+      "seed": 17,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.95-18",
+      "scenario": "steady",
+      "rho": 0.95,
+      "seed": 18,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.95-19",
+      "scenario": "steady",
+      "rho": 0.95,
+      "seed": 19,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "steady-0.95-20",
+      "scenario": "steady",
+      "rho": 0.95,
+      "seed": 20,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.5-11",
+      "scenario": "capacity",
+      "rho": 0.5,
+      "seed": 11,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.5-12",
+      "scenario": "capacity",
+      "rho": 0.5,
+      "seed": 12,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.5-13",
+      "scenario": "capacity",
+      "rho": 0.5,
+      "seed": 13,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.5-14",
+      "scenario": "capacity",
+      "rho": 0.5,
+      "seed": 14,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.5-15",
+      "scenario": "capacity",
+      "rho": 0.5,
+      "seed": 15,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.5-16",
+      "scenario": "capacity",
+      "rho": 0.5,
+      "seed": 16,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.5-17",
+      "scenario": "capacity",
+      "rho": 0.5,
+      "seed": 17,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.5-18",
+      "scenario": "capacity",
+      "rho": 0.5,
+      "seed": 18,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.5-19",
+      "scenario": "capacity",
+      "rho": 0.5,
+      "seed": 19,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.5-20",
+      "scenario": "capacity",
+      "rho": 0.5,
+      "seed": 20,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.7-11",
+      "scenario": "capacity",
+      "rho": 0.7,
+      "seed": 11,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.7-12",
+      "scenario": "capacity",
+      "rho": 0.7,
+      "seed": 12,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.7-13",
+      "scenario": "capacity",
+      "rho": 0.7,
+      "seed": 13,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.7-14",
+      "scenario": "capacity",
+      "rho": 0.7,
+      "seed": 14,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.7-15",
+      "scenario": "capacity",
+      "rho": 0.7,
+      "seed": 15,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.7-16",
+      "scenario": "capacity",
+      "rho": 0.7,
+      "seed": 16,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.7-17",
+      "scenario": "capacity",
+      "rho": 0.7,
+      "seed": 17,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.7-18",
+      "scenario": "capacity",
+      "rho": 0.7,
+      "seed": 18,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.7-19",
+      "scenario": "capacity",
+      "rho": 0.7,
+      "seed": 19,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.7-20",
+      "scenario": "capacity",
+      "rho": 0.7,
+      "seed": 20,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.85-11",
+      "scenario": "capacity",
+      "rho": 0.85,
+      "seed": 11,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.85-12",
+      "scenario": "capacity",
+      "rho": 0.85,
+      "seed": 12,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.85-13",
+      "scenario": "capacity",
+      "rho": 0.85,
+      "seed": 13,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.85-14",
+      "scenario": "capacity",
+      "rho": 0.85,
+      "seed": 14,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.85-15",
+      "scenario": "capacity",
+      "rho": 0.85,
+      "seed": 15,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.85-16",
+      "scenario": "capacity",
+      "rho": 0.85,
+      "seed": 16,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.85-17",
+      "scenario": "capacity",
+      "rho": 0.85,
+      "seed": 17,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.85-18",
+      "scenario": "capacity",
+      "rho": 0.85,
+      "seed": 18,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.85-19",
+      "scenario": "capacity",
+      "rho": 0.85,
+      "seed": 19,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.85-20",
+      "scenario": "capacity",
+      "rho": 0.85,
+      "seed": 20,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.95-11",
+      "scenario": "capacity",
+      "rho": 0.95,
+      "seed": 11,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.95-12",
+      "scenario": "capacity",
+      "rho": 0.95,
+      "seed": 12,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.95-13",
+      "scenario": "capacity",
+      "rho": 0.95,
+      "seed": 13,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.95-14",
+      "scenario": "capacity",
+      "rho": 0.95,
+      "seed": 14,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.95-15",
+      "scenario": "capacity",
+      "rho": 0.95,
+      "seed": 15,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.95-16",
+      "scenario": "capacity",
+      "rho": 0.95,
+      "seed": 16,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.95-17",
+      "scenario": "capacity",
+      "rho": 0.95,
+      "seed": 17,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.95-18",
+      "scenario": "capacity",
+      "rho": 0.95,
+      "seed": 18,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.95-19",
+      "scenario": "capacity",
+      "rho": 0.95,
+      "seed": 19,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "capacity-0.95-20",
+      "scenario": "capacity",
+      "rho": 0.95,
+      "seed": 20,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.5-11",
+      "scenario": "stall",
+      "rho": 0.5,
+      "seed": 11,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.5-12",
+      "scenario": "stall",
+      "rho": 0.5,
+      "seed": 12,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.5-13",
+      "scenario": "stall",
+      "rho": 0.5,
+      "seed": 13,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.5-14",
+      "scenario": "stall",
+      "rho": 0.5,
+      "seed": 14,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.5-15",
+      "scenario": "stall",
+      "rho": 0.5,
+      "seed": 15,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.5-16",
+      "scenario": "stall",
+      "rho": 0.5,
+      "seed": 16,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.5-17",
+      "scenario": "stall",
+      "rho": 0.5,
+      "seed": 17,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.5-18",
+      "scenario": "stall",
+      "rho": 0.5,
+      "seed": 18,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.5-19",
+      "scenario": "stall",
+      "rho": 0.5,
+      "seed": 19,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.5-20",
+      "scenario": "stall",
+      "rho": 0.5,
+      "seed": 20,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.7-11",
+      "scenario": "stall",
+      "rho": 0.7,
+      "seed": 11,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.7-12",
+      "scenario": "stall",
+      "rho": 0.7,
+      "seed": 12,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.7-13",
+      "scenario": "stall",
+      "rho": 0.7,
+      "seed": 13,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.7-14",
+      "scenario": "stall",
+      "rho": 0.7,
+      "seed": 14,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.7-15",
+      "scenario": "stall",
+      "rho": 0.7,
+      "seed": 15,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.7-16",
+      "scenario": "stall",
+      "rho": 0.7,
+      "seed": 16,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.7-17",
+      "scenario": "stall",
+      "rho": 0.7,
+      "seed": 17,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.7-18",
+      "scenario": "stall",
+      "rho": 0.7,
+      "seed": 18,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.7-19",
+      "scenario": "stall",
+      "rho": 0.7,
+      "seed": 19,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.7-20",
+      "scenario": "stall",
+      "rho": 0.7,
+      "seed": 20,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.85-11",
+      "scenario": "stall",
+      "rho": 0.85,
+      "seed": 11,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.85-12",
+      "scenario": "stall",
+      "rho": 0.85,
+      "seed": 12,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.85-13",
+      "scenario": "stall",
+      "rho": 0.85,
+      "seed": 13,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.85-14",
+      "scenario": "stall",
+      "rho": 0.85,
+      "seed": 14,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.85-15",
+      "scenario": "stall",
+      "rho": 0.85,
+      "seed": 15,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.85-16",
+      "scenario": "stall",
+      "rho": 0.85,
+      "seed": 16,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.85-17",
+      "scenario": "stall",
+      "rho": 0.85,
+      "seed": 17,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.85-18",
+      "scenario": "stall",
+      "rho": 0.85,
+      "seed": 18,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.85-19",
+      "scenario": "stall",
+      "rho": 0.85,
+      "seed": 19,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.85-20",
+      "scenario": "stall",
+      "rho": 0.85,
+      "seed": 20,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.95-11",
+      "scenario": "stall",
+      "rho": 0.95,
+      "seed": 11,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.95-12",
+      "scenario": "stall",
+      "rho": 0.95,
+      "seed": 12,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.95-13",
+      "scenario": "stall",
+      "rho": 0.95,
+      "seed": 13,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.95-14",
+      "scenario": "stall",
+      "rho": 0.95,
+      "seed": 14,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.95-15",
+      "scenario": "stall",
+      "rho": 0.95,
+      "seed": 15,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.95-16",
+      "scenario": "stall",
+      "rho": 0.95,
+      "seed": 16,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.95-17",
+      "scenario": "stall",
+      "rho": 0.95,
+      "seed": 17,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.95-18",
+      "scenario": "stall",
+      "rho": 0.95,
+      "seed": 18,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.95-19",
+      "scenario": "stall",
+      "rho": 0.95,
+      "seed": 19,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "stall-0.95-20",
+      "scenario": "stall",
+      "rho": 0.95,
+      "seed": 20,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.5-11",
+      "scenario": "burst",
+      "rho": 0.5,
+      "seed": 11,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.5-12",
+      "scenario": "burst",
+      "rho": 0.5,
+      "seed": 12,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.5-13",
+      "scenario": "burst",
+      "rho": 0.5,
+      "seed": 13,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.5-14",
+      "scenario": "burst",
+      "rho": 0.5,
+      "seed": 14,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.5-15",
+      "scenario": "burst",
+      "rho": 0.5,
+      "seed": 15,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.5-16",
+      "scenario": "burst",
+      "rho": 0.5,
+      "seed": 16,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.5-17",
+      "scenario": "burst",
+      "rho": 0.5,
+      "seed": 17,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.5-18",
+      "scenario": "burst",
+      "rho": 0.5,
+      "seed": 18,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.5-19",
+      "scenario": "burst",
+      "rho": 0.5,
+      "seed": 19,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.5-20",
+      "scenario": "burst",
+      "rho": 0.5,
+      "seed": 20,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.7-11",
+      "scenario": "burst",
+      "rho": 0.7,
+      "seed": 11,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.7-12",
+      "scenario": "burst",
+      "rho": 0.7,
+      "seed": 12,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.7-13",
+      "scenario": "burst",
+      "rho": 0.7,
+      "seed": 13,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.7-14",
+      "scenario": "burst",
+      "rho": 0.7,
+      "seed": 14,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.7-15",
+      "scenario": "burst",
+      "rho": 0.7,
+      "seed": 15,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.7-16",
+      "scenario": "burst",
+      "rho": 0.7,
+      "seed": 16,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.7-17",
+      "scenario": "burst",
+      "rho": 0.7,
+      "seed": 17,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.7-18",
+      "scenario": "burst",
+      "rho": 0.7,
+      "seed": 18,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.7-19",
+      "scenario": "burst",
+      "rho": 0.7,
+      "seed": 19,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.7-20",
+      "scenario": "burst",
+      "rho": 0.7,
+      "seed": 20,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.85-11",
+      "scenario": "burst",
+      "rho": 0.85,
+      "seed": 11,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.85-12",
+      "scenario": "burst",
+      "rho": 0.85,
+      "seed": 12,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.85-13",
+      "scenario": "burst",
+      "rho": 0.85,
+      "seed": 13,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.85-14",
+      "scenario": "burst",
+      "rho": 0.85,
+      "seed": 14,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.85-15",
+      "scenario": "burst",
+      "rho": 0.85,
+      "seed": 15,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.85-16",
+      "scenario": "burst",
+      "rho": 0.85,
+      "seed": 16,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.85-17",
+      "scenario": "burst",
+      "rho": 0.85,
+      "seed": 17,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.85-18",
+      "scenario": "burst",
+      "rho": 0.85,
+      "seed": 18,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.85-19",
+      "scenario": "burst",
+      "rho": 0.85,
+      "seed": 19,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.85-20",
+      "scenario": "burst",
+      "rho": 0.85,
+      "seed": 20,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.95-11",
+      "scenario": "burst",
+      "rho": 0.95,
+      "seed": 11,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.95-12",
+      "scenario": "burst",
+      "rho": 0.95,
+      "seed": 12,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.95-13",
+      "scenario": "burst",
+      "rho": 0.95,
+      "seed": 13,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.95-14",
+      "scenario": "burst",
+      "rho": 0.95,
+      "seed": 14,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.95-15",
+      "scenario": "burst",
+      "rho": 0.95,
+      "seed": 15,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.95-16",
+      "scenario": "burst",
+      "rho": 0.95,
+      "seed": 16,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.95-17",
+      "scenario": "burst",
+      "rho": 0.95,
+      "seed": 17,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.95-18",
+      "scenario": "burst",
+      "rho": 0.95,
+      "seed": 18,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.95-19",
+      "scenario": "burst",
+      "rho": 0.95,
+      "seed": 19,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "burst-0.95-20",
+      "scenario": "burst",
+      "rho": 0.95,
+      "seed": 20,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.5-11",
+      "scenario": "heavy",
+      "rho": 0.5,
+      "seed": 11,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.5-12",
+      "scenario": "heavy",
+      "rho": 0.5,
+      "seed": 12,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.5-13",
+      "scenario": "heavy",
+      "rho": 0.5,
+      "seed": 13,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.5-14",
+      "scenario": "heavy",
+      "rho": 0.5,
+      "seed": 14,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.5-15",
+      "scenario": "heavy",
+      "rho": 0.5,
+      "seed": 15,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.5-16",
+      "scenario": "heavy",
+      "rho": 0.5,
+      "seed": 16,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.5-17",
+      "scenario": "heavy",
+      "rho": 0.5,
+      "seed": 17,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.5-18",
+      "scenario": "heavy",
+      "rho": 0.5,
+      "seed": 18,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.5-19",
+      "scenario": "heavy",
+      "rho": 0.5,
+      "seed": 19,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.5-20",
+      "scenario": "heavy",
+      "rho": 0.5,
+      "seed": 20,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.7-11",
+      "scenario": "heavy",
+      "rho": 0.7,
+      "seed": 11,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.7-12",
+      "scenario": "heavy",
+      "rho": 0.7,
+      "seed": 12,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.7-13",
+      "scenario": "heavy",
+      "rho": 0.7,
+      "seed": 13,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.7-14",
+      "scenario": "heavy",
+      "rho": 0.7,
+      "seed": 14,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.7-15",
+      "scenario": "heavy",
+      "rho": 0.7,
+      "seed": 15,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.7-16",
+      "scenario": "heavy",
+      "rho": 0.7,
+      "seed": 16,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.7-17",
+      "scenario": "heavy",
+      "rho": 0.7,
+      "seed": 17,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.7-18",
+      "scenario": "heavy",
+      "rho": 0.7,
+      "seed": 18,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.7-19",
+      "scenario": "heavy",
+      "rho": 0.7,
+      "seed": 19,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.7-20",
+      "scenario": "heavy",
+      "rho": 0.7,
+      "seed": 20,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.85-11",
+      "scenario": "heavy",
+      "rho": 0.85,
+      "seed": 11,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.85-12",
+      "scenario": "heavy",
+      "rho": 0.85,
+      "seed": 12,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.85-13",
+      "scenario": "heavy",
+      "rho": 0.85,
+      "seed": 13,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.85-14",
+      "scenario": "heavy",
+      "rho": 0.85,
+      "seed": 14,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.85-15",
+      "scenario": "heavy",
+      "rho": 0.85,
+      "seed": 15,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.85-16",
+      "scenario": "heavy",
+      "rho": 0.85,
+      "seed": 16,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.85-17",
+      "scenario": "heavy",
+      "rho": 0.85,
+      "seed": 17,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.85-18",
+      "scenario": "heavy",
+      "rho": 0.85,
+      "seed": 18,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.85-19",
+      "scenario": "heavy",
+      "rho": 0.85,
+      "seed": 19,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.85-20",
+      "scenario": "heavy",
+      "rho": 0.85,
+      "seed": 20,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.95-11",
+      "scenario": "heavy",
+      "rho": 0.95,
+      "seed": 11,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.95-12",
+      "scenario": "heavy",
+      "rho": 0.95,
+      "seed": 12,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.95-13",
+      "scenario": "heavy",
+      "rho": 0.95,
+      "seed": 13,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.95-14",
+      "scenario": "heavy",
+      "rho": 0.95,
+      "seed": 14,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.95-15",
+      "scenario": "heavy",
+      "rho": 0.95,
+      "seed": 15,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.95-16",
+      "scenario": "heavy",
+      "rho": 0.95,
+      "seed": 16,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.95-17",
+      "scenario": "heavy",
+      "rho": 0.95,
+      "seed": 17,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.95-18",
+      "scenario": "heavy",
+      "rho": 0.95,
+      "seed": 18,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.95-19",
+      "scenario": "heavy",
+      "rho": 0.95,
+      "seed": 19,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    },
+    {
+      "group": "heavy-0.95-20",
+      "scenario": "heavy",
+      "rho": 0.95,
+      "seed": 20,
+      "options": {},
+      "variants": [
+        [
+          "jsw",
+          "jsw",
+          {}
+        ],
+        [
+          "p2c",
+          "p2c",
+          {}
+        ],
+        [
+          "jbsq",
+          "jbsq",
+          {}
+        ],
+        [
+          "steal",
+          "steal",
+          {}
+        ],
+        [
+          "threshold",
+          "threshold",
+          {}
+        ],
+        [
+          "single",
+          "single",
+          {}
+        ],
+        [
+          "qbr",
+          "qbr",
+          {}
+        ],
+        [
+          "work",
+          "work",
+          {}
+        ],
+        [
+          "bwc",
+          "bwc",
+          {}
+        ]
+      ]
+    }
+  ],
+  "python": "3.14.7",
+  "platform": "Linux-7.2.6-1-cachyos-x86_64-with-glibc2.44",
+  "compiler": "g++ (GCC) 16.2.1 20260810",
+  "runner_sha256": "293afc17d3a0e549179247cabf489b07b5ea78147973f15dd83adfc79d5cec8c",
+  "git_status": " M .gitignore\n M CMakeLists.txt\n M src/app/main.cpp\n?? artifacts/qbr-pilot-v1/\n?? artifacts/qbr-pilot-v2/\n?? artifacts/step-19-paper-w2/\n?? artifacts/step-20-paper-w1/\n?? artifacts/step-21-paper-w3/\n?? build-linux/\n?? docs/FIRST_PAPER.md\n?? docs/INTER_HOST_RESEARCH_EVIDENCE_AUDIT_2026-09-25.md\n?? docs/QBR_RESEARCH_SPEC.md\n?? include/qbr/\n?? scripts/build_qbr.sh\n?? scripts/qbr_study.py\n?? scripts/qbr_trace.py\n?? src/qbr/\n?? tests/\n?? \"\\345\\217\\202\\350\\200\\203\\346\\226\\207\\347\\214\\256/\"\n?? \"\\347\\240\\224\\347\\251\\266\\346\\226\\271\\345\\220\\221\\350\\257\\204\\344\\274\\260_2026-09-25.md\"\n?? \"\\347\\240\\224\\347\\251\\266\\346\\226\\271\\345\\220\\221\\350\\257\\204\\344\\274\\260_2026-09-25_\\345\\244\\215\\346\\240\\270\\350\\241\\245\\345\\205\\205.md\"\n",
+  "note": "Policy-level simulation; CPU/link parameters are assumptions, not hardware measurements."
+}

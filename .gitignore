@@ -54,3 +54,16 @@ Desktop.ini
 *.temp
 *.swp
 *.swo
+
+# Current queue scheduling study
+build-qbr/
+build-linux/
+.venv-research/
+.mplconfig/
+
+# Large local experiment dumps (keep summaries/figures if added)
+artifacts/qbr-*/raw/
+artifacts/qbr-*/traces/
+
+# Copyrighted paper PDFs stay local
+参考文献/*.pdf

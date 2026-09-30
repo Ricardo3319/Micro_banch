@@ -24,6 +24,20 @@ add_executable(simulator
 
 target_link_libraries(simulator PRIVATE sim_core)
 
+add_library(qbr_core src/qbr/simulator.cpp)
+target_include_directories(qbr_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+add_executable(batchsched src/qbr/main.cpp)
+target_link_libraries(batchsched PRIVATE qbr_core)
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(qbr_tests tests/qbr_tests.cpp)
+    target_link_libraries(qbr_tests PRIVATE qbr_core)
+    add_test(NAME qbr_invariants COMMAND qbr_tests)
+endif()
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(qbr_core PRIVATE -O2 -Wall -Wextra -Wpedantic)
+endif()
+
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(simulator PRIVATE -O2)
 endif()
